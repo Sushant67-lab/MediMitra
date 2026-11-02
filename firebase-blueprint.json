@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with demographic and contact details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 150 },
+        "age": { "type": "number" },
+        "ageCategory": { "type": "string", "enum": ["kid", "child", "adult", "senior"] },
+        "sex": { "type": "string", "enum": ["female", "male", "other"] },
+        "isPregnantOrNursing": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "email", "name"]
+    },
+    "MedicalRecord": {
+      "title": "MedicalRecord",
+      "description": "Patient digital check-up assessment record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "patientName": { "type": "string", "maxLength": 100 },
+        "patientEmail": { "type": "string", "maxLength": 150 },
+        "primarySymptom": { "type": "string", "maxLength": 64 },
+        "severity": { "type": "string", "enum": ["mild", "moderate", "severe", "emergency"] },
+        "clinicalSummary": { "type": "string", "maxLength": 2000 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "primarySymptom", "severity"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Private profile document for each authenticated patient"
+    },
+    "/users/{userId}/records/{recordId}": {
+      "schema": "MedicalRecord",
+      "description": "Health checkup history and medical assessments for a patient"
+    }
+  }
+}
