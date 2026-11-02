@@ -1,6 +1,6 @@
 {
   "name": "CuraHealth - AI Medical Triage & Health Assistant",
   "description": "Intelligent medical symptom triage, conversational clinical assessment, adaptive diagnosis assistance, OTC medicine guidance, and nearby doctor locator.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

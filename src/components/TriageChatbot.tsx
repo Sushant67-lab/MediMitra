@@ -70,7 +70,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
       {
         id: 'msg-welcome-1',
         sender: 'bot',
-        text: `Hello ${currentProfile.name.split(' ')[0]}! I am MediMitra, your digital health companion. I will ask you 10 quick questions to understand your ${symptomInfo.name} and recommend the right basic medicine or doctor.`,
+        text: `Hello ${currentProfile.name ? currentProfile.name.split(' ')[0] : 'there'}! I am MediMitra, your digital health companion. I will ask you quick questions to understand your ${symptomInfo.name} and recommend the right basic medicine or doctor.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         badge: 'Health Check Started'
       }

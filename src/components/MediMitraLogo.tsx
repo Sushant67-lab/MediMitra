@@ -5,13 +5,15 @@ interface MediMitraLogoProps {
   showTagline?: boolean;
   className?: string;
   imageOnly?: boolean;
+  showBadge?: boolean;
 }
 
 export const MediMitraLogo: React.FC<MediMitraLogoProps> = ({
   size = 'md',
   showTagline = false,
   className = '',
-  imageOnly = false
+  imageOnly = false,
+  showBadge = false
 }) => {
   const iconDimensions = {
     sm: 'w-8 h-8',
@@ -43,9 +45,11 @@ export const MediMitraLogo: React.FC<MediMitraLogoProps> = ({
             <span className={`font-semibold tracking-tight text-slate-900 ${textSize}`}>
               Medi<span className="text-teal-600 font-semibold">Mitra</span>
             </span>
-            <span className="text-[10px] font-medium bg-teal-50 text-teal-800 px-2 py-0.5 rounded-full border border-teal-200/70 hidden sm:inline-block">
-              Your Health Friend
-            </span>
+            {showBadge && (
+              <span className="text-[10px] font-medium bg-teal-50 text-teal-800 px-2 py-0.5 rounded-full border border-teal-200/70 hidden sm:inline-block">
+                Your Health Friend
+              </span>
+            )}
           </div>
           {showTagline && (
             <p className="text-[11px] text-slate-500 font-normal leading-tight mt-0.5">

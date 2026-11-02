@@ -133,7 +133,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
-          How are you feeling today, {currentProfile.name.split(' ')[0]}?
+          How are you feeling today, {currentProfile.name ? currentProfile.name.split(' ')[0] : 'there'}?
         </h1>
         <p className="text-xs sm:text-sm text-slate-600 font-normal max-w-lg mx-auto leading-relaxed">
           Select what problem you are facing below, or type your symptom. MediMitra will guide you through 10 simple questions and recommend safe medicine or the nearest doctor on Google Maps.

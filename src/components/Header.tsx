@@ -36,14 +36,6 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Navigation Controls */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Firebase Live Database Badge */}
-            <div 
-              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-[11px] text-emerald-800"
-              title="Realtime Firebase Firestore: medimitra-3be2c"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="font-medium">Firebase Connected</span>
-            </div>
 
             {/* Find Doctors Button */}
             <button

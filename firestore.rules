@@ -20,6 +20,11 @@ service cloud.firestore {
              data.email is string && data.email.size() <= 150;
     }
 
+    // Health check / connection test doc
+    match /test/{docId} {
+      allow read: if true;
+    }
+
     // Patient User Profiles
     match /users/{userId} {
       allow get: if isOwner(userId) || isValidId(userId);

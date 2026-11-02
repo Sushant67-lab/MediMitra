@@ -7,7 +7,6 @@ import {
   Mail, 
   Lock, 
   Edit3,
-  Database,
   CheckCircle2,
   AlertCircle,
   Loader2
@@ -149,17 +148,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         transition={{ duration: 0.3 }}
         className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden"
       >
-        {/* Calming Header with MediMitra Logo */}
+        {/* MediMitra Header with Logo, Name & Health Proverb */}
         <div className="bg-gradient-to-r from-teal-700 to-teal-800 text-white p-6 text-center space-y-2">
-          <div className="flex justify-center mb-1">
+          <div className="flex justify-center">
             <MediMitraLogo size="md" className="[&_span]:text-white [&_.text-teal-600]:text-teal-200" />
           </div>
-          <p className="text-xs text-teal-100/90 font-normal">
-            Your Medical Checkup & Doctor Referral Companion
-          </p>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-teal-900/60 border border-teal-500/30 text-[10px] text-teal-200 font-medium">
-            <Database className="w-3 h-3 text-teal-300" />
-            <span>Firebase Connected: medimitra-3be2c</span>
+          <div className="pt-1">
+            <p className="text-xs sm:text-sm text-teal-100 font-medium italic tracking-wide">
+              &ldquo;Health is the greatest wealth&rdquo;
+            </p>
+            <p className="text-[11px] text-teal-200/90 font-normal mt-0.5">
+              पहला सुख निरोगी काया
+            </p>
           </div>
         </div>
 
