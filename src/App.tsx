@@ -38,7 +38,11 @@ function MainApp() {
   const { t } = useLanguage();
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('curahealth_auth') === 'true';
+    try {
+      return localStorage.getItem('curahealth_auth') === 'true';
+    } catch {
+      return false;
+    }
   });
 
   // Patient profile state
