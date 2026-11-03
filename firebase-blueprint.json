@@ -33,6 +33,75 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["id", "userId", "primarySymptom", "severity"]
+    },
+    "DispensingCommand": {
+      "title": "DispensingCommand",
+      "description": "Physical ESP32 servo medicine dispensing command transaction",
+      "type": "object",
+      "properties": {
+        "commandId": { "type": "string", "maxLength": 128 },
+        "medicineId": { "type": "string", "maxLength": 64 },
+        "medicineName": { "type": "string", "maxLength": 100 },
+        "requestedQuantity": { "type": "number" },
+        "cycles": { "type": "number" },
+        "deviceId": { "type": "string", "maxLength": 64 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 150 },
+        "status": { 
+          "type": "string", 
+          "enum": ["PENDING", "PROCESSING", "COMPLETED", "FAILED", "CANCELLED", "UNKNOWN"] 
+        },
+        "executionResult": { "type": "string", "maxLength": 500 },
+        "servoConfig": {
+          "type": "object",
+          "properties": {
+            "initialAngle": { "type": "number" },
+            "dispenseAngle": { "type": "number" },
+            "returnAngle": { "type": "number" },
+            "holdTimeMs": { "type": "number" },
+            "gpioPin": { "type": "number" }
+          }
+        },
+        "createdAt": { "type": "string" },
+        "claimedAt": { "type": "string" },
+        "completedAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["commandId", "medicineId", "medicineName", "requestedQuantity", "deviceId", "userId", "status", "createdAt"]
+    },
+    "MedicineInventory": {
+      "title": "MedicineInventory",
+      "description": "Stock inventory levels for dispenser slots",
+      "type": "object",
+      "properties": {
+        "medicineId": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 100 },
+        "availableQuantity": { "type": "number" },
+        "reservedQuantity": { "type": "number" },
+        "dispensedQuantity": { "type": "number" },
+        "unit": { "type": "string", "maxLength": 20 },
+        "slotNumber": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["medicineId", "name", "availableQuantity"]
+    },
+    "DeviceRegistry": {
+      "title": "DeviceRegistry",
+      "description": "Registered ESP32 hardware dispensing units",
+      "type": "object",
+      "properties": {
+        "deviceId": { "type": "string", "maxLength": 64 },
+        "deviceName": { "type": "string", "maxLength": 100 },
+        "deviceToken": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["ONLINE", "OFFLINE"] },
+        "lastHeartbeat": { "type": "string" },
+        "ipAddress": { "type": "string" },
+        "servoPin": { "type": "number" },
+        "servoInitialAngle": { "type": "number" },
+        "servoDispenseAngle": { "type": "number" },
+        "servoHoldTimeMs": { "type": "number" }
+      },
+      "required": ["deviceId", "deviceName", "status"]
     }
   },
   "firestore": {
@@ -43,6 +112,18 @@
     "/users/{userId}/records/{recordId}": {
       "schema": "MedicalRecord",
       "description": "Health checkup history and medical assessments for a patient"
+    },
+    "/dispensing_commands/{commandId}": {
+      "schema": "DispensingCommand",
+      "description": "Command queue for physical ESP32 medicine dispatch"
+    },
+    "/inventory/{medicineId}": {
+      "schema": "MedicineInventory",
+      "description": "Real-time medicine inventory stock tracking"
+    },
+    "/devices/{deviceId}": {
+      "schema": "DeviceRegistry",
+      "description": "ESP32 dispenser unit metadata, heartbeat, and calibration"
     }
   }
 }

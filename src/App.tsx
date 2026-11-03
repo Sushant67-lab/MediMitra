@@ -11,6 +11,7 @@ import { TriageResultView } from './components/TriageResultView';
 import { DoctorLocator } from './components/DoctorLocator';
 import { AuthScreen } from './components/AuthScreen';
 import { AuthModal } from './components/AuthModal';
+import { Esp32HardwareGuideModal } from './components/Esp32HardwareGuideModal';
 import { 
   UserProfile, 
   SymptomCategory, 
@@ -70,6 +71,7 @@ function MainApp() {
   const [currentAssessment, setCurrentAssessment] = useState<TriageAssessment | null>(null);
   const [isAssessmentSaved, setIsAssessmentSaved] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isHardwareGuideOpen, setIsHardwareGuideOpen] = useState(false);
 
   // Save profile to localStorage
   useEffect(() => {
@@ -146,6 +148,7 @@ function MainApp() {
         onOpenDoctors={() => setCurrentView('doctors')}
         onGoHome={() => setCurrentView('front')}
         onSignOut={handleSignOut}
+        onOpenHardwareGuide={() => setIsHardwareGuideOpen(true)}
       />
 
       {/* Main Views */}
@@ -202,6 +205,12 @@ function MainApp() {
         onClose={() => setIsAuthModalOpen(false)}
         currentProfile={currentProfile}
         onSelectProfile={(p) => setCurrentProfile(p)}
+      />
+
+      {/* Global ESP32 IoT Dispenser Hardware Guide Modal */}
+      <Esp32HardwareGuideModal
+        isOpen={isHardwareGuideOpen}
+        onClose={() => setIsHardwareGuideOpen(false)}
       />
 
       {/* Simple Footer */}

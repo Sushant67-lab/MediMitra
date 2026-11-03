@@ -1,8 +1,8 @@
-import React from 'react';
 import { 
   MapPin, 
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Cpu
 } from 'lucide-react';
 import { UserProfile } from '../types/medical';
 import { MediMitraLogo } from './MediMitraLogo';
@@ -15,6 +15,7 @@ interface HeaderProps {
   onOpenDoctors: () => void;
   onGoHome: () => void;
   onSignOut: () => void;
+  onOpenHardwareGuide?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,7 +23,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuth,
   onOpenDoctors,
   onGoHome,
-  onSignOut
+  onSignOut,
+  onOpenHardwareGuide
 }) => {
   const { t } = useLanguage();
 
@@ -48,6 +50,18 @@ export const Header: React.FC<HeaderProps> = ({
               <MapPin className="w-3.5 h-3.5 text-teal-600" />
               <span>{t.nearestDoctors}</span>
             </button>
+
+            {/* IoT Dispenser Hardware Setup Button */}
+            {onOpenHardwareGuide && (
+              <button
+                onClick={onOpenHardwareGuide}
+                className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition-colors cursor-pointer"
+                title="ESP32 IoT Dispenser Setup & Schematic"
+              >
+                <Cpu className="w-3.5 h-3.5 text-teal-700" />
+                <span>ESP32 Dispenser</span>
+              </button>
+            )}
 
             {/* Active User Profile Pill */}
             <button

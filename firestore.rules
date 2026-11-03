@@ -42,10 +42,40 @@ service cloud.firestore {
       }
     }
 
+    // Physical Dispensing Commands for ESP32
+    match /dispensing_commands/{commandId} {
+      // Anyone with valid ID or auth can read commands (for real-time web UI listener & device polling)
+      allow get, list: if true;
+      
+      // User creates a pending command with required fields
+      allow create: if isValidId(commandId) &&
+        request.resource.data.status in ['PENDING'] &&
+        request.resource.data.requestedQuantity > 0;
+        
+      // Status update: from PENDING to PROCESSING, COMPLETED, FAILED, CANCELLED
+      allow update: if isValidId(commandId) &&
+        request.resource.data.status in ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED', 'UNKNOWN'];
+        
+      allow delete: if false;
+    }
+
+    // Medicine Inventory
+    match /inventory/{medicineId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(medicineId);
+      allow delete: if false;
+    }
+
+    // Device Registry & Heartbeats
+    match /devices/{deviceId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(deviceId);
+      allow delete: if false;
+    }
+
     // Default Deny
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
-

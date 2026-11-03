@@ -32,6 +32,14 @@ import {
   fetchRealNearbyClinics 
 } from '../services/realLocationDoctorService';
 import { useLanguage } from '../context/LanguageContext';
+import { DispenseModal } from './DispenseModal';
+import { PaymentQrModal, getMedicinePrice } from './PaymentQrModal';
+import { DispenseStatusTracker } from './DispenseStatusTracker';
+import { Esp32HardwareGuideModal } from './Esp32HardwareGuideModal';
+import { OtcMedicine } from '../types/medical';
+import { DispensingCommand, ServoConfig } from '../types/dispensing';
+import { createDispensingCommand } from '../services/dispensingService';
+import { Cpu, QrCode } from 'lucide-react';
 
 interface TriageResultViewProps {
   assessment: TriageAssessment;
@@ -77,6 +85,39 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
   const [reportId] = useState(() => `MM-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`);
+
+  // IoT Dispenser & Payment States
+  const [selectedMedicineForDispense, setSelectedMedicineForDispense] = useState<OtcMedicine | null>(null);
+  const [isDispenseModalOpen, setIsDispenseModalOpen] = useState(false);
+  const [isPaymentQrModalOpen, setIsPaymentQrModalOpen] = useState(false);
+  const [isHardwareGuideOpen, setIsHardwareGuideOpen] = useState(false);
+  const [activeDispenseCommand, setActiveDispenseCommand] = useState<DispensingCommand | null>(null);
+  const [dispenseQuantity, setDispenseQuantity] = useState(1);
+  const [configuredServoConfig, setConfiguredServoConfig] = useState<ServoConfig | undefined>(undefined);
+
+  const handleProceedToPayment = (qty: number, sConf: ServoConfig) => {
+    setDispenseQuantity(qty);
+    setConfiguredServoConfig(sConf);
+    setIsPaymentQrModalOpen(true);
+  };
+
+  const handlePaymentSuccess = async () => {
+    if (!selectedMedicineForDispense) return;
+    try {
+      const command = await createDispensingCommand({
+        medicineName: selectedMedicineForDispense.name,
+        quantity: dispenseQuantity,
+        userId: currentProfile.id,
+        userEmail: currentProfile.email,
+        customServoConfig: configuredServoConfig
+      });
+      setActiveDispenseCommand(command);
+      setIsPaymentQrModalOpen(false);
+      window.scrollTo({ top: 200, behavior: 'smooth' });
+    } catch (err: any) {
+      console.error('Failed to create command after payment:', err);
+    }
+  };
 
   // Detect user's real location and fetch real nearby clinics/doctors
   useEffect(() => {
@@ -288,39 +329,100 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
           )}
         </div>
 
+        {/* Live Dispensing Status Tracker (when command active) */}
+        {activeDispenseCommand && (
+          <DispenseStatusTracker
+            command={activeDispenseCommand}
+            onDismiss={() => setActiveDispenseCommand(null)}
+            onOpenHardwareGuide={() => setIsHardwareGuideOpen(true)}
+          />
+        )}
+
         {/* IF MILD: Recommend Basic Medicine */}
         {!isSevere && assessment.recommendedOtcs.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-slate-800">
-              <Pill className="w-4 h-4 text-teal-600" />
-              <h2 className="text-sm font-semibold text-slate-900">Recommended Basic Medicine</h2>
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-slate-800">
+                <Pill className="w-4 h-4 text-teal-600" />
+                <h2 className="text-sm font-semibold text-slate-900">Recommended Basic Medicine & IoT Dispenser</h2>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsHardwareGuideOpen(true)}
+                className="text-xs font-medium text-teal-700 hover:text-teal-900 flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+              >
+                <Cpu className="w-3.5 h-3.5 text-teal-600" />
+                <span>ESP32 Hardware Schematic & Code</span>
+              </button>
             </div>
 
-            <div className="space-y-2.5">
-              {assessment.recommendedOtcs.map((otc, idx) => (
-                <div 
-                  key={idx}
-                  className="p-4 rounded-2xl bg-teal-50/40 border border-teal-200/60 space-y-1.5"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm text-slate-900">{otc.name}</span>
-                    <span className="text-[10px] font-medium bg-teal-100 text-teal-800 px-2 py-0.5 rounded-md">
-                      OTC Relief
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-700 font-normal">
-                    <span className="font-medium text-slate-900">Dosage: </span>{otc.dosageGuide}
-                  </p>
-                  {otc.childDosageNote && (
-                    <p className="text-xs text-amber-900 bg-amber-50 p-2 rounded-lg border border-amber-200 font-normal">
-                      <span className="font-medium text-amber-950">Pediatric Note: </span>{otc.childDosageNote}
+            <div className="space-y-3">
+              {assessment.recommendedOtcs.map((otc, idx) => {
+                const price = getMedicinePrice(otc.name);
+                return (
+                  <div 
+                    key={idx}
+                    className="p-5 rounded-2xl bg-teal-50/40 border border-teal-200/70 hover:border-teal-400 transition-all space-y-3"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-base text-slate-900">{otc.name}</span>
+                          <span className="text-[10px] font-semibold bg-teal-100 text-teal-800 px-2 py-0.5 rounded-md">
+                            OTC Relief
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">Category: {otc.category || 'General Health'}</p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          ₹{price} / tablet
+                        </span>
+                        <span className="text-[11px] font-medium text-slate-500">
+                          Dispenser Slot #{idx + 1}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-700 font-normal leading-relaxed">
+                      <strong className="text-slate-900">Dosage Guide: </strong>{otc.dosageGuide}
                     </p>
-                  )}
-                  <p className="text-[11px] text-slate-500 font-normal">
-                    <span className="font-medium text-slate-700">Caution: </span>{otc.safetyCaution}
-                  </p>
-                </div>
-              ))}
+
+                    {otc.childDosageNote && (
+                      <p className="text-xs text-amber-900 bg-amber-50 p-2.5 rounded-xl border border-amber-200 font-normal">
+                        <strong className="text-amber-950">Pediatric Note: </strong>{otc.childDosageNote}
+                      </p>
+                    )}
+
+                    <p className="text-[11px] text-slate-500 font-normal">
+                      <strong className="text-slate-700">Safety Caution: </strong>{otc.safetyCaution}
+                    </p>
+
+                    {/* Dispense Action Strip */}
+                    <div className="pt-3 border-t border-teal-200/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <div className="flex items-center gap-1.5 text-xs text-teal-800 font-medium">
+                        <Cpu className="w-3.5 h-3.5 text-teal-600" />
+                        <span>Connected to ESP32 Dispenser Unit (SG90 Servo GPIO 18)</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedMedicineForDispense(otc);
+                          setDispenseQuantity(1);
+                          setIsDispenseModalOpen(true);
+                        }}
+                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md cursor-pointer"
+                      >
+                        <Pill className="w-4 h-4" />
+                        <span>DISPENSE MEDICINE</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Simple Home Care Measures */}
@@ -502,6 +604,36 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Dispense Authorization & Clinical Verification Modal */}
+      {selectedMedicineForDispense && (
+        <DispenseModal
+          isOpen={isDispenseModalOpen}
+          onClose={() => setIsDispenseModalOpen(false)}
+          medicine={selectedMedicineForDispense}
+          patientProfile={currentProfile}
+          onProceedToPayment={handleProceedToPayment}
+          onOpenHardwareGuide={() => setIsHardwareGuideOpen(true)}
+        />
+      )}
+
+      {/* Payment QR Code Modal */}
+      {selectedMedicineForDispense && (
+        <PaymentQrModal
+          isOpen={isPaymentQrModalOpen}
+          onClose={() => setIsPaymentQrModalOpen(false)}
+          medicine={selectedMedicineForDispense}
+          quantity={dispenseQuantity}
+          patientProfile={currentProfile}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
+
+      {/* ESP32 Hardware Wiring & Firmware Sketch Modal */}
+      <Esp32HardwareGuideModal
+        isOpen={isHardwareGuideOpen}
+        onClose={() => setIsHardwareGuideOpen(false)}
+      />
     </motion.div>
   );
 };
