@@ -27,12 +27,14 @@ export const MediMitraLogo: React.FC<MediMitraLogoProps> = ({
     lg: 'text-2xl'
   }[size];
 
+  const logoUrl = `${import.meta.env.BASE_URL || './'}assets/aistudio/image_8f9dd967.png`.replace(/\/\//g, '/');
+
   return (
     <div className={`flex items-center gap-2.5 select-none ${className}`}>
       {/* Official User Healthcare Emblem */}
       <div className={`relative ${iconDimensions} rounded-2xl overflow-hidden flex items-center justify-center shrink-0 shadow-xs ring-1 ring-teal-200/50 bg-white`}>
         <img 
-          src="/assets/aistudio/image_8f9dd967.png" 
+          src={logoUrl} 
           alt="MediMitra Logo" 
           className="w-full h-full object-contain p-0.5 hover:scale-105 transition-transform" 
         />

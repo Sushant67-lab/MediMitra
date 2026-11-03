@@ -27,6 +27,7 @@ import {
   fetchRealNearbyClinics,
   generateRealCityClinics 
 } from '../services/realLocationDoctorService';
+import { useLanguage } from '../context/LanguageContext';
 
 interface DoctorLocatorProps {
   onBack: () => void;
@@ -37,6 +38,7 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
   onBack,
   preferredSpecialty
 }) => {
+  const { t } = useLanguage();
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>(preferredSpecialty || 'All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [doctorsList, setDoctorsList] = useState<Doctor[]>(NEARBY_DOCTORS);
@@ -143,15 +145,15 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
-                Clinics & Doctors Near You
+                {t.locatorHeading}
               </h1>
               <span className="text-[10px] font-medium bg-emerald-50 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Live Location
+                {t.currentLocationLabel}
               </span>
             </div>
             <p className="text-xs text-slate-500 font-normal">
-              Showing verified medical clinics, general physicians, pediatricians, and 24x7 hospitals
+              {t.locatorSubtitle}
             </p>
           </div>
         </div>
@@ -160,8 +162,8 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
         <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
           <ShieldAlert className="w-4 h-4 text-rose-600 animate-pulse shrink-0" />
           <div>
-            <span className="font-semibold block leading-tight">Critical Emergency?</span>
-            <span className="text-[11px] text-rose-700">Dial 112 / 911 / 108 immediately</span>
+            <span className="font-semibold block leading-tight">{t.emergencyTitle}</span>
+            <span className="text-[11px] text-rose-700">{t.emergencySubtitle}</span>
           </div>
         </div>
       </div>
@@ -174,7 +176,7 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
           </div>
           <div>
             <span className="text-[10px] uppercase font-semibold text-teal-800 tracking-wider block">
-              Current Detected Location
+              {t.currentLocationLabel}
             </span>
             <span className="font-medium text-slate-900 text-xs">
               {locationName}

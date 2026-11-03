@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { UserProfile } from '../types/medical';
 import { MediMitraLogo } from './MediMitraLogo';
+import { LanguageSelector } from './LanguageSelector';
+import { useLanguage } from '../context/LanguageContext';
 
 interface HeaderProps {
   currentProfile: UserProfile;
@@ -22,6 +24,8 @@ export const Header: React.FC<HeaderProps> = ({
   onGoHome,
   onSignOut
 }) => {
+  const { t } = useLanguage();
+
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-teal-100/80 shadow-xs">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -34,40 +38,39 @@ export const Header: React.FC<HeaderProps> = ({
             <MediMitraLogo size="sm" showTagline />
           </div>
 
-          {/* Navigation Controls */}
-          <div className="flex items-center gap-2 sm:gap-3">
-
+          {/* Navigation Controls (Top Right Side) */}
+          <div className="flex items-center gap-2 sm:gap-2.5">
             {/* Find Doctors Button */}
             <button
               onClick={onOpenDoctors}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-700 hover:text-teal-700 hover:bg-teal-50 border border-slate-200 transition-colors cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-700 hover:text-teal-700 hover:bg-teal-50 border border-slate-200 transition-colors cursor-pointer"
             >
               <MapPin className="w-3.5 h-3.5 text-teal-600" />
-              <span>Nearest Doctors</span>
+              <span>{t.nearestDoctors}</span>
             </button>
 
             {/* Active User Profile Pill */}
             <button
               onClick={onOpenAuth}
               className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-slate-800 text-xs font-medium transition-colors cursor-pointer"
-              title="Click to edit patient details (Synced with Firebase)"
+              title={t.editPatient}
             >
               <div className="w-6 h-6 rounded-full bg-teal-600 text-white flex items-center justify-center font-medium text-[11px]">
                 {currentProfile.name ? currentProfile.name.charAt(0).toUpperCase() : 'P'}
               </div>
-              <span className="font-medium text-slate-800 max-w-[90px] truncate">
+              <span className="font-medium text-slate-800 max-w-[80px] sm:max-w-[100px] truncate">
                 {currentProfile.name ? currentProfile.name.split(' ')[0] : 'Patient'}
               </span>
-              <span className="text-[10px] text-slate-500 capitalize hidden sm:inline font-normal">
-                ({currentProfile.ageCategory === 'child' ? 'Kid' : currentProfile.ageCategory === 'senior' ? 'Old' : 'Adult'})
-              </span>
             </button>
+
+            {/* Top Right Language Selector */}
+            <LanguageSelector variant="light" />
 
             {/* Sign Out / Switch */}
             <button
               onClick={onSignOut}
               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-              title="Sign Out / Switch Account"
+              title={t.signOut}
             >
               <LogOut className="w-4 h-4" />
             </button>

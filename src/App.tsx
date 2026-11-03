@@ -22,6 +22,7 @@ import {
   saveAssessmentToFirestore,
   logOutFromFirebase
 } from './services/firebase';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 const INITIAL_PROFILE: UserProfile = {
   id: 'user-default',
@@ -33,7 +34,8 @@ const INITIAL_PROFILE: UserProfile = {
   isPregnantOrNursing: false
 };
 
-export default function App() {
+function MainApp() {
+  const { t } = useLanguage();
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return localStorage.getItem('curahealth_auth') === 'true';
@@ -201,19 +203,27 @@ export default function App() {
       {/* Simple Footer */}
       <footer className="border-t border-slate-200/80 bg-white py-5 mt-8 text-center text-xs text-slate-400">
         <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>MediMitra • Digital Medical Companion & Doctor Referral</span>
+          <span>{t.footerTagline}</span>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsAuthModalOpen(true)}
               className="text-teal-600 hover:underline cursor-pointer"
             >
-              Switch Profile
+              {t.switchProfileBtn}
             </button>
             <span>•</span>
-            <span className="text-slate-500 font-semibold">Emergency: 112 / 911</span>
+            <span className="text-slate-500 font-semibold">{t.emergencyNumber}</span>
           </div>
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <MainApp />
+    </LanguageProvider>
   );
 }

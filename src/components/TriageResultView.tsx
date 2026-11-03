@@ -31,6 +31,7 @@ import {
   reverseGeocodeCoordinates, 
   fetchRealNearbyClinics 
 } from '../services/realLocationDoctorService';
+import { useLanguage } from '../context/LanguageContext';
 
 interface TriageResultViewProps {
   assessment: TriageAssessment;
@@ -49,6 +50,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
   onStartNew,
   isSaved
 }) => {
+  const { t } = useLanguage();
   const symptomInfo = COMMON_SYMPTOMS.find(s => s.id === assessment.primarySymptom) || COMMON_SYMPTOMS[0];
   const isSevere = assessment.severity === 'emergency' || assessment.severity === 'severe';
 
@@ -220,7 +222,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
             <div className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-teal-700" />
               <h2 className="text-xs font-semibold text-teal-950 uppercase tracking-wide">
-                Send Report to Your Registered Email
+                {t.sendReportEmailTitle}
               </h2>
             </div>
             <span className="text-[11px] text-teal-700 font-medium">Digital Medical Record</span>
@@ -229,11 +231,11 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
           <p className="text-xs text-slate-600 font-normal">
             {currentProfile.email ? (
               <>
-                The report will be sent to your sign-in email:{' '}
+                {t.sendReportEmailSubtitle}:{' '}
                 <strong className="text-teal-900 font-semibold">{currentProfile.email}</strong>.
               </>
             ) : (
-              'Enter your email address to receive your official clinical summary and doctor referral.'
+              t.sendReportEmailSubtitle
             )}
           </p>
 
@@ -257,12 +259,12 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
               {isSendingEmail ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Sending to Email...</span>
+                  <span>{t.sendingBtn}</span>
                 </>
               ) : (
                 <>
                   <Send className="w-3.5 h-3.5" />
-                  <span>Send Report to Email</span>
+                  <span>{t.sendReportBtn}</span>
                 </>
               )}
             </button>
@@ -469,7 +471,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
               className="text-xs font-semibold px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>{isDownloadingPdf ? 'Generating PDF...' : pdfDownloaded ? 'PDF Downloaded ✓' : 'Save as PDF'}</span>
+              <span>{isDownloadingPdf ? 'Generating PDF...' : pdfDownloaded ? 'PDF Downloaded ✓' : t.downloadPdfBtn}</span>
             </button>
 
             <button
@@ -480,7 +482,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
             >
-              {isSaved ? 'Saved to Records ✓' : 'Save Summary'}
+              {isSaved ? 'Saved ✓' : 'Save Summary'}
             </button>
           </div>
 
@@ -489,13 +491,13 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
               onClick={onOpenDoctors}
               className="px-4 py-2.5 rounded-xl border border-teal-600 text-teal-700 font-semibold text-xs hover:bg-teal-50 transition-colors cursor-pointer"
             >
-              Find Doctors
+              {t.nearestDoctors}
             </button>
             <button
               onClick={onStartNew}
               className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
             >
-              Start New Check
+              {t.startNewCheckupBtn}
             </button>
           </div>
         </div>

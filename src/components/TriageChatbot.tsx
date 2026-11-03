@@ -23,6 +23,7 @@ import {
 } from '../types/medical';
 import { getAdaptiveQuestion, evaluateTriage, COMMON_SYMPTOMS } from '../data/medicalKnowledge';
 import { MediMitraLogo } from './MediMitraLogo';
+import { useLanguage } from '../context/LanguageContext';
 
 interface TriageChatbotProps {
   currentProfile: UserProfile;
@@ -43,6 +44,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
   onCompleteAssessment,
   onDirectDoctorReferral
 }) => {
+  const { t } = useLanguage();
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -70,9 +72,9 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
       {
         id: 'msg-welcome-1',
         sender: 'bot',
-        text: `Hello ${currentProfile.name ? currentProfile.name.split(' ')[0] : 'there'}! I am MediMitra, your digital health companion. I will ask you quick questions to understand your ${symptomInfo.name} and recommend the right basic medicine or doctor.`,
+        text: `${t.chatWelcome} (${symptomInfo.name})`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        badge: 'Health Check Started'
+        badge: `${t.brandName} Check-up`
       }
     ];
 
@@ -408,7 +410,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200 uppercase tracking-wider">
-                Question {currentStep} of 10
+                {t.question} {currentStep} {t.of} 10
               </span>
               {currentQuestionData.badge && (
                 <span className="text-[11px] font-medium text-slate-600">
@@ -451,7 +453,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
               type="text"
               value={customInput}
               onChange={(e) => setCustomInput(e.target.value)}
-              placeholder="Or type your answer in your own words..."
+              placeholder={t.customInputPlaceholder}
               className="flex-1 px-4 py-3 text-sm font-semibold rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 bg-slate-50 text-slate-950 placeholder:text-slate-400"
             />
             <button
@@ -463,7 +465,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
                   : 'bg-slate-100 text-slate-400 cursor-not-allowed'
               }`}
             >
-              <span>Submit</span>
+              <span>{t.sendBtn}</span>
               <Send className="w-4 h-4" />
             </button>
           </form>

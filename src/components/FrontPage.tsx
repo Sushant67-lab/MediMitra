@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { SymptomCategory, UserProfile } from '../types/medical';
 import { MediMitraLogo } from './MediMitraLogo';
+import { useLanguage } from '../context/LanguageContext';
 
 interface FrontPageProps {
   currentProfile: UserProfile;
@@ -18,80 +19,72 @@ interface FrontPageProps {
   onOpenDoctors: () => void;
 }
 
-interface SimpleProblem {
-  id: SymptomCategory;
-  title: string;
-  subTitle: string;
-  emoji: string;
-  color: string;
-  badgeBg: string;
-}
-
-const PRIMARY_PROBLEMS: SimpleProblem[] = [
-  {
-    id: 'headache',
-    title: 'Headache',
-    subTitle: 'Sar dard, throbbing forehead, tension, or migraine',
-    emoji: '🤕',
-    color: 'hover:border-purple-300 hover:bg-purple-50/50',
-    badgeBg: 'bg-purple-100 text-purple-800'
-  },
-  {
-    id: 'fever',
-    title: 'Fever (Bukhar)',
-    subTitle: 'Hot body, chills, sweating, or general sickness',
-    emoji: '🌡️',
-    color: 'hover:border-orange-300 hover:bg-orange-50/50',
-    badgeBg: 'bg-orange-100 text-orange-800'
-  },
-  {
-    id: 'skin_rash',
-    title: 'Rashes Problem',
-    subTitle: 'Skin itching, red patches, bumps, or allergy',
-    emoji: '🌸',
-    color: 'hover:border-rose-300 hover:bg-rose-50/50',
-    badgeBg: 'bg-rose-100 text-rose-800'
-  },
-  {
-    id: 'cold_sneezing',
-    title: 'Cough & Cold',
-    subTitle: 'Khansi, continuous sneezing, or runny nose',
-    emoji: '🤧',
-    color: 'hover:border-teal-300 hover:bg-teal-50/50',
-    badgeBg: 'bg-teal-100 text-teal-800'
-  },
-  {
-    id: 'stomach_upset',
-    title: 'Stomach Ache',
-    subTitle: 'Pet dard, cramps, gas, acidity, or nausea',
-    emoji: '🤢',
-    color: 'hover:border-amber-300 hover:bg-amber-50/50',
-    badgeBg: 'bg-amber-100 text-amber-800'
-  },
-  {
-    id: 'small_cuts',
-    title: 'Small Cut Problem',
-    subTitle: 'Chhoti chot, kitchen scrape, or minor bleeding',
-    emoji: '🩹',
-    color: 'hover:border-sky-300 hover:bg-sky-50/50',
-    badgeBg: 'bg-sky-100 text-sky-800'
-  },
-  {
-    id: 'body_ache',
-    title: 'General Illness',
-    subTitle: 'Badan dard, body weakness, or exhaustion',
-    emoji: '🤒',
-    color: 'hover:border-emerald-300 hover:bg-emerald-50/50',
-    badgeBg: 'bg-emerald-100 text-emerald-800'
-  }
-];
-
 export const FrontPage: React.FC<FrontPageProps> = ({
   currentProfile,
   onStartTriage,
   onOpenDoctors
 }) => {
+  const { t } = useLanguage();
   const [customComplaint, setCustomComplaint] = useState('');
+
+  const primaryProblems = [
+    {
+      id: 'headache' as SymptomCategory,
+      title: t.symptomHeadache,
+      subTitle: t.symptomHeadacheDesc,
+      emoji: '🤕',
+      color: 'hover:border-purple-300 hover:bg-purple-50/50',
+      badgeBg: 'bg-purple-100 text-purple-800'
+    },
+    {
+      id: 'fever' as SymptomCategory,
+      title: t.symptomFever,
+      subTitle: t.symptomFeverDesc,
+      emoji: '🌡️',
+      color: 'hover:border-orange-300 hover:bg-orange-50/50',
+      badgeBg: 'bg-orange-100 text-orange-800'
+    },
+    {
+      id: 'skin_rash' as SymptomCategory,
+      title: t.symptomRash,
+      subTitle: t.symptomRashDesc,
+      emoji: '🌸',
+      color: 'hover:border-rose-300 hover:bg-rose-50/50',
+      badgeBg: 'bg-rose-100 text-rose-800'
+    },
+    {
+      id: 'cold_sneezing' as SymptomCategory,
+      title: t.symptomCold,
+      subTitle: t.symptomColdDesc,
+      emoji: '🤧',
+      color: 'hover:border-teal-300 hover:bg-teal-50/50',
+      badgeBg: 'bg-teal-100 text-teal-800'
+    },
+    {
+      id: 'stomach_upset' as SymptomCategory,
+      title: t.symptomStomach,
+      subTitle: t.symptomStomachDesc,
+      emoji: '🤢',
+      color: 'hover:border-amber-300 hover:bg-amber-50/50',
+      badgeBg: 'bg-amber-100 text-amber-800'
+    },
+    {
+      id: 'small_cuts' as SymptomCategory,
+      title: t.symptomCuts,
+      subTitle: t.symptomCutsDesc,
+      emoji: '🩹',
+      color: 'hover:border-sky-300 hover:bg-sky-50/50',
+      badgeBg: 'bg-sky-100 text-sky-800'
+    },
+    {
+      id: 'body_ache' as SymptomCategory,
+      title: t.symptomBodyAche,
+      subTitle: t.symptomBodyAcheDesc,
+      emoji: '🤒',
+      color: 'hover:border-emerald-300 hover:bg-emerald-50/50',
+      badgeBg: 'bg-emerald-100 text-emerald-800'
+    }
+  ];
 
   const handleCustomSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,17 +93,17 @@ export const FrontPage: React.FC<FrontPageProps> = ({
     const text = customComplaint.toLowerCase();
     let detected: SymptomCategory = 'fever';
 
-    if (text.includes('head') || text.includes('sar')) {
+    if (text.includes('head') || text.includes('sar') || text.includes('matha') || text.includes('doke') || text.includes('thala')) {
       detected = 'headache';
-    } else if (text.includes('rash') || text.includes('itch') || text.includes('khujli') || text.includes('skin')) {
+    } else if (text.includes('rash') || text.includes('itch') || text.includes('khujli') || text.includes('skin') || text.includes('purall') || text.includes('aripu')) {
       detected = 'skin_rash';
-    } else if (text.includes('cough') || text.includes('cold') || text.includes('sneeze') || text.includes('zukam') || text.includes('khansi')) {
+    } else if (text.includes('cough') || text.includes('cold') || text.includes('sneeze') || text.includes('zukam') || text.includes('khansi') || text.includes('khokla') || text.includes('sardi')) {
       detected = 'cold_sneezing';
-    } else if (text.includes('stomach') || text.includes('pet') || text.includes('gas') || text.includes('vomit') || text.includes('loose')) {
+    } else if (text.includes('stomach') || text.includes('pet') || text.includes('gas') || text.includes('vomit') || text.includes('loose') || text.includes('pot')) {
       detected = 'stomach_upset';
-    } else if (text.includes('cut') || text.includes('bleed') || text.includes('wound') || text.includes('chot')) {
+    } else if (text.includes('cut') || text.includes('bleed') || text.includes('wound') || text.includes('chot') || text.includes('jakham')) {
       detected = 'small_cuts';
-    } else if (text.includes('fever') || text.includes('bukhar') || text.includes('hot')) {
+    } else if (text.includes('fever') || text.includes('bukhar') || text.includes('hot') || text.includes('taap') || text.includes('jwar')) {
       detected = 'fever';
     } else {
       detected = 'body_ache';
@@ -133,10 +126,10 @@ export const FrontPage: React.FC<FrontPageProps> = ({
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
-          How are you feeling today, {currentProfile.name ? currentProfile.name.split(' ')[0] : 'there'}?
+          {t.greeting}, {currentProfile.name ? currentProfile.name.split(' ')[0] : 'there'}?
         </h1>
         <p className="text-xs sm:text-sm text-slate-600 font-normal max-w-lg mx-auto leading-relaxed">
-          Select what problem you are facing below, or type your symptom. MediMitra will guide you through 10 simple questions and recommend safe medicine or the nearest doctor on Google Maps.
+          {t.frontSubtitle}
         </p>
       </motion.div>
 
@@ -151,7 +144,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
             type="text"
             value={customComplaint}
             onChange={(e) => setCustomComplaint(e.target.value)}
-            placeholder="Type your problem in simple words (e.g. headache since morning, bukhar)..."
+            placeholder={t.customSearchPlaceholder}
             className="w-full pl-5 pr-28 py-4 text-sm font-normal rounded-2xl border border-slate-300 bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-900 placeholder:text-slate-400"
           />
           <button
@@ -163,7 +156,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed'
             }`}
           >
-            <span>Ask</span>
+            <span>{t.startCheckupBtn}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </form>
@@ -178,13 +171,13 @@ export const FrontPage: React.FC<FrontPageProps> = ({
       >
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Select Your Problem
+            {t.commonIssuesTitle}
           </span>
-          <span className="text-xs text-slate-400 font-normal">Tap any category to start</span>
+          <span className="text-xs text-slate-400 font-normal">{t.commonIssuesSubtitle}</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
-          {PRIMARY_PROBLEMS.map((prob) => (
+          {primaryProblems.map((prob) => (
             <motion.div
               key={prob.id}
               whileHover={{ y: -2 }}
@@ -209,7 +202,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
         </div>
       </motion.div>
 
-      {/* How MediMitra Works in 3 Simple Steps (Elongated Content) */}
+      {/* How MediMitra Works in 3 Simple Steps */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -218,9 +211,9 @@ export const FrontPage: React.FC<FrontPageProps> = ({
       >
         <div className="text-center space-y-1">
           <span className="text-xs font-semibold uppercase tracking-wider text-teal-800">
-            Simple 3-Step Health Guidance
+            MediMitra Care
           </span>
-          <h2 className="text-base font-semibold text-slate-900">How MediMitra Helps You</h2>
+          <h2 className="text-base font-semibold text-slate-900">{t.commonIssuesSubtitle}</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
@@ -228,9 +221,9 @@ export const FrontPage: React.FC<FrontPageProps> = ({
             <div className="w-8 h-8 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center font-semibold text-xs">
               1
             </div>
-            <h3 className="font-semibold text-xs text-slate-900">Choose Problem</h3>
+            <h3 className="font-semibold text-xs text-slate-900">{t.commonIssuesTitle}</h3>
             <p className="text-xs text-slate-500 font-normal leading-relaxed">
-              Select or type what you are feeling (headache, fever, rashes, cough, cuts, stomach ache).
+              {t.symptomHeadache}, {t.symptomFever}, {t.symptomCold}, {t.symptomRash}, {t.symptomStomach}.
             </p>
           </div>
 
@@ -248,9 +241,9 @@ export const FrontPage: React.FC<FrontPageProps> = ({
             <div className="w-8 h-8 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center font-semibold text-xs">
               3
             </div>
-            <h3 className="font-semibold text-xs text-slate-900">Medicine & Maps Referral</h3>
+            <h3 className="font-semibold text-xs text-slate-900">{t.nearestDoctors}</h3>
             <p className="text-xs text-slate-500 font-normal leading-relaxed">
-              Get safe basic medicine dosage if mild, or navigate to nearby doctors on Google Maps if serious.
+              {t.needDoctorSubtitle}
             </p>
           </div>
         </div>
@@ -266,10 +259,10 @@ export const FrontPage: React.FC<FrontPageProps> = ({
         <div className="space-y-1 text-center sm:text-left">
           <div className="flex items-center justify-center sm:justify-start gap-2">
             <MapPin className="w-4 h-4 text-teal-400" />
-            <span className="font-semibold text-sm text-white">Google Maps Clinic & Doctor Locator</span>
+            <span className="font-semibold text-sm text-white">{t.needDoctorTitle}</span>
           </div>
           <p className="text-xs text-teal-100/90 font-normal max-w-lg">
-            View live clinics, pediatric centers, and 24x7 emergency trauma hospitals near you with turn-by-turn directions.
+            {t.needDoctorSubtitle}
           </p>
         </div>
         <button
@@ -277,7 +270,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
           className="px-5 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-sm"
         >
           <Navigation className="w-3.5 h-3.5" />
-          <span>Open Google Maps</span>
+          <span>{t.findDoctorsBtn}</span>
         </button>
       </motion.div>
     </div>
