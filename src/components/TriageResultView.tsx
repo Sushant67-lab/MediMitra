@@ -380,7 +380,19 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                         <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
                           ₹{price} / tablet
                         </span>
-                        <span className="text-[11px] font-medium text-slate-500">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedMedicineForDispense(otc);
+                            setDispenseQuantity(1);
+                            setIsDispenseModalOpen(true);
+                          }}
+                          className="sm:hidden px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                        >
+                          <Pill className="w-3.5 h-3.5" />
+                          <span>Dispense</span>
+                        </button>
+                        <span className="hidden sm:inline-block text-[11px] font-medium text-slate-500">
                           Dispenser Slot #{idx + 1}
                         </span>
                       </div>
@@ -400,10 +412,10 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                       <strong className="text-slate-700">Safety Caution: </strong>{otc.safetyCaution}
                     </p>
 
-                    {/* Dispense Action Strip */}
-                    <div className="pt-3 border-t border-teal-200/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    {/* Dispense Action Strip - Ultra Visible on Mobile & Desktop */}
+                    <div className="pt-3 border-t border-teal-200/60 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                       <div className="flex items-center gap-1.5 text-xs text-teal-800 font-medium">
-                        <Cpu className="w-3.5 h-3.5 text-teal-600" />
+                        <Cpu className="w-4 h-4 text-teal-600 shrink-0" />
                         <span>Connected to ESP32 Dispenser Unit (SG90 Servo GPIO 18)</span>
                       </div>
 
@@ -414,10 +426,10 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                           setDispenseQuantity(1);
                           setIsDispenseModalOpen(true);
                         }}
-                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md cursor-pointer"
+                        className="w-full sm:w-auto px-6 py-3.5 sm:py-2.5 rounded-2xl sm:rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white font-bold text-sm sm:text-xs flex items-center justify-center gap-2.5 transition-all shadow-md hover:shadow-lg cursor-pointer ring-2 ring-teal-500/30"
                       >
-                        <Pill className="w-4 h-4" />
-                        <span>DISPENSE MEDICINE</span>
+                        <Pill className="w-4 h-4 shrink-0" />
+                        <span>DISPENSE MEDICINE (₹{price})</span>
                       </button>
                     </div>
                   </div>
@@ -440,87 +452,89 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
           </div>
         )}
 
-        {/* Real Clinics and Doctors near user's current location */}
-        <div className={`space-y-3 ${isSevere ? 'pt-1' : 'pt-3 border-t border-slate-100'}`}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-slate-800">
-              <Stethoscope className="w-4 h-4 text-teal-600" />
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">
-                  {isSevere ? 'Recommended Doctors to Visit' : 'Nearest Clinics & Doctors (If Problem Persists)'}
-                </h2>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-normal mt-0.5">
-                  <MapPin className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                  <span>Near: <strong className="text-slate-700">{userLocationName}</strong></span>
-                  <button
-                    onClick={detectLocationAndDoctors}
-                    disabled={isLoadingLocation}
-                    className="text-[11px] text-teal-600 hover:text-teal-800 font-medium ml-1 flex items-center gap-0.5 cursor-pointer"
-                    title="Update current location"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${isLoadingLocation ? 'animate-spin' : ''}`} />
-                    <span>{isLoadingLocation ? 'Locating...' : 'Refresh GPS'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={onOpenDoctors}
-              className="text-xs font-semibold text-teal-700 hover:underline cursor-pointer"
-            >
-              View All Doctors on Google Maps →
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {realDoctors.slice(0, 2).map((doc) => (
-              <div
-                key={doc.id}
-                className="p-4 rounded-2xl border border-slate-200 bg-white hover:border-teal-400 transition-all flex flex-col justify-between space-y-3"
-              >
+        {/* Real Clinics and Doctors: ONLY shown when problem is big/severe (NO medicine dispensed) */}
+        {isSevere && (
+          <div className="space-y-3 pt-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-slate-800">
+                <Stethoscope className="w-4 h-4 text-rose-600" />
                 <div>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold text-sm text-slate-900">{doc.name}</h3>
-                      <p className="text-xs text-teal-700 font-medium">{doc.specialty}</p>
-                    </div>
-                    <span className="text-[11px] font-medium bg-amber-50 text-amber-800 px-2 py-0.5 rounded-md border border-amber-200">
-                      ★ {doc.rating}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 font-normal mt-1">{doc.hospital}</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1 font-normal">
-                    <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                    <span>{doc.distanceKm} km away • {doc.address}</span>
-                  </p>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <span className="text-xs text-slate-600 font-normal">{doc.nextAvailable}</span>
-                  <div className="flex items-center gap-1.5">
-                    <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${doc.hospital}, ${doc.address}`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2.5 py-1.5 rounded-xl border border-teal-200 hover:bg-teal-50 text-teal-700 font-medium text-xs flex items-center gap-1 transition-colors"
-                      title="Open Google Maps directions"
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    Recommended Doctors & Clinics to Visit
+                  </h2>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 font-normal mt-0.5">
+                    <MapPin className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                    <span>Near: <strong className="text-slate-700">{userLocationName}</strong></span>
+                    <button
+                      onClick={detectLocationAndDoctors}
+                      disabled={isLoadingLocation}
+                      className="text-[11px] text-teal-600 hover:text-teal-800 font-medium ml-1 flex items-center gap-0.5 cursor-pointer"
+                      title="Update current location"
                     >
-                      <Navigation className="w-3 h-3 text-teal-600" />
-                      <span>Directions</span>
-                    </a>
-                    <a
-                      href={`tel:${doc.phone}`}
-                      className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Phone className="w-3 h-3" />
-                      <span>Call</span>
-                    </a>
+                      <RefreshCw className={`w-3 h-3 ${isLoadingLocation ? 'animate-spin' : ''}`} />
+                      <span>{isLoadingLocation ? 'Locating...' : 'Refresh GPS'}</span>
+                    </button>
                   </div>
                 </div>
               </div>
-            ))}
+              <button
+                onClick={onOpenDoctors}
+                className="text-xs font-semibold text-teal-700 hover:underline cursor-pointer"
+              >
+                View All Doctors on Google Maps →
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {realDoctors.slice(0, 2).map((doc) => (
+                <div
+                  key={doc.id}
+                  className="p-4 rounded-2xl border border-slate-200 bg-white hover:border-teal-400 transition-all flex flex-col justify-between space-y-3"
+                >
+                  <div>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-semibold text-sm text-slate-900">{doc.name}</h3>
+                        <p className="text-xs text-teal-700 font-medium">{doc.specialty}</p>
+                      </div>
+                      <span className="text-[11px] font-medium bg-amber-50 text-amber-800 px-2 py-0.5 rounded-md border border-amber-200">
+                        ★ {doc.rating}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-normal mt-1">{doc.hospital}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1 font-normal">
+                      <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                      <span>{doc.distanceKm} km away • {doc.address}</span>
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <span className="text-xs text-slate-600 font-normal">{doc.nextAvailable}</span>
+                    <div className="flex items-center gap-1.5">
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${doc.hospital}, ${doc.address}`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1.5 rounded-xl border border-teal-200 hover:bg-teal-50 text-teal-700 font-medium text-xs flex items-center gap-1 transition-colors"
+                        title="Open Google Maps directions"
+                      >
+                        <Navigation className="w-3 h-3 text-teal-600" />
+                        <span>Directions</span>
+                      </a>
+                      <a
+                        href={`tel:${doc.phone}`}
+                        className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Phone className="w-3 h-3" />
+                        <span>Call</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Expandable Full Report Preview */}
         <div className="pt-2 border-t border-slate-100">
@@ -589,12 +603,14 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={onOpenDoctors}
-              className="px-4 py-2.5 rounded-xl border border-teal-600 text-teal-700 font-semibold text-xs hover:bg-teal-50 transition-colors cursor-pointer"
-            >
-              {t.nearestDoctors}
-            </button>
+            {isSevere && (
+              <button
+                onClick={onOpenDoctors}
+                className="px-4 py-2.5 rounded-xl border border-rose-600 text-rose-700 font-semibold text-xs hover:bg-rose-50 transition-colors cursor-pointer"
+              >
+                {t.nearestDoctors}
+              </button>
+            )}
             <button
               onClick={onStartNew}
               className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
@@ -604,6 +620,30 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Floating Sticky Dispense Action Bar for Mobile Devices */}
+      {!isSevere && assessment.recommendedOtcs.length > 0 && !activeDispenseCommand && (
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-teal-200 px-4 py-3 shadow-2xl flex items-center justify-between gap-3">
+          <div className="truncate">
+            <span className="text-[10px] text-teal-700 font-bold uppercase tracking-wider block">Recommended</span>
+            <span className="text-xs font-bold text-slate-900 truncate block">
+              {assessment.recommendedOtcs[0].name}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedMedicineForDispense(assessment.recommendedOtcs[0]);
+              setDispenseQuantity(1);
+              setIsDispenseModalOpen(true);
+            }}
+            className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0"
+          >
+            <Pill className="w-3.5 h-3.5" />
+            <span>DISPENSE (₹{getMedicinePrice(assessment.recommendedOtcs[0].name)})</span>
+          </button>
+        </div>
+      )}
 
       {/* Dispense Authorization & Clinical Verification Modal */}
       {selectedMedicineForDispense && (
