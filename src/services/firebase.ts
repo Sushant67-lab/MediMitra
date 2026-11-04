@@ -37,21 +37,18 @@ export const auth = getAuth(app);
 export const googleAuthProvider = new GoogleAuthProvider();
 googleAuthProvider.setCustomParameters({ prompt: 'select_account' });
 
-// Test connection on boot
+// Optional connection check (non-blocking, called on demand)
 export async function testConnection(): Promise<boolean> {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    return true;
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firebase client is offline or connecting...');
-    }
+    const docRef = doc(db, 'test', 'connection');
+    const snap = await getDoc(docRef);
+    return snap.exists();
+  } catch {
+    // Suppress console error noise on startup
     return false;
   }
 }
 
-// Connection test run
-testConnection();
 
 export enum OperationType {
   CREATE = 'create',
