@@ -13,11 +13,34 @@
     <meta property="og:image" content="./assets/aistudio/image_8f9dd967.png" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <script type="module" crossorigin src="./assets/index-mpCwLK0N.js"></script>
+    <script type="module" crossorigin src="./assets/index-BFZ9Ua0l.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-_EwZ4fPt.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #334155;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+          <div style="width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #0d9488, #059669); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px;">+</div>
+          <span style="font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -0.5px;">MediMitra</span>
+        </div>
+        <p style="font-size: 13px; color: #64748b; margin: 0;">Loading medical assistant...</p>
+      </div>
+    </div>
+    <script>
+      // Fallback for GitHub Pages "Deploy from branch -> / (root)":
+      // Since raw .tsx files cannot execute directly in browsers without a build step,
+      // redirect to the pre-compiled /docs/ bundle if served statically from GitHub Pages root.
+      (function() {
+        var isGitHubPages = window.location.hostname.indexOf('github.io') !== -1;
+        var isDocsPath = window.location.pathname.indexOf('/docs') !== -1;
+        var isUncompiled = document.querySelector('script[src*="main.tsx"]');
+        if (isGitHubPages && !isDocsPath && isUncompiled) {
+          var p = window.location.pathname;
+          if (!p.endsWith('/')) p += '/';
+          window.location.replace(p + 'docs/' + window.location.search + window.location.hash);
+        }
+      })();
+    </script>
   </body>
 </html>
 
