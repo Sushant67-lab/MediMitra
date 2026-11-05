@@ -284,9 +284,9 @@ async function startServer() {
       res.sendFile(path.resolve('dist/index.html'));
     });
   } else {
-    // Mount Vite middlewares in development
+    // Mount Vite middlewares in development with HMR disabled to prevent sandbox websocket errors
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: false },
       appType: 'spa',
     });
     app.use(vite.middlewares);

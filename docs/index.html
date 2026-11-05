@@ -13,8 +13,8 @@
     <meta property="og:image" content="./assets/aistudio/image_8f9dd967.png" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <script type="module" crossorigin src="./assets/index-CkK_oMFR.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-DraImDIW.css">
+    <script type="module" crossorigin src="./assets/index-BXNbPh6T.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CZYw0BpJ.css">
   </head>
   <body>
     <div id="root">
@@ -27,6 +27,20 @@
       </div>
     </div>
     <script>
+      // Gracefully prevent unhandled rejections and errors from Vite dev-mode WebSocket in sandbox
+      window.addEventListener('unhandledrejection', function(e) {
+        var reasonStr = (e && e.reason && (e.reason.message || e.reason.stack || String(e.reason))) || '';
+        if (reasonStr.indexOf('WebSocket') !== -1 || reasonStr.indexOf('websocket') !== -1) {
+          e.preventDefault();
+        }
+      });
+      window.addEventListener('error', function(e) {
+        var msg = (e && (e.message || String(e))) || '';
+        if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('websocket') !== -1 || msg.indexOf('[vite]') !== -1) {
+          e.preventDefault();
+        }
+      });
+
       // Fallback for GitHub Pages "Deploy from branch -> / (root)":
       // Since raw .tsx files cannot execute directly in browsers without a build step,
       // redirect to the pre-compiled /docs/ bundle if served statically from GitHub Pages root.

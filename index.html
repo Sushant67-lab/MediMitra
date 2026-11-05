@@ -25,6 +25,20 @@
       </div>
     </div>
     <script>
+      // Gracefully prevent unhandled rejections and errors from Vite dev-mode WebSocket in sandbox
+      window.addEventListener('unhandledrejection', function(e) {
+        var reasonStr = (e && e.reason && (e.reason.message || e.reason.stack || String(e.reason))) || '';
+        if (reasonStr.indexOf('WebSocket') !== -1 || reasonStr.indexOf('websocket') !== -1) {
+          e.preventDefault();
+        }
+      });
+      window.addEventListener('error', function(e) {
+        var msg = (e && (e.message || String(e))) || '';
+        if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('websocket') !== -1 || msg.indexOf('[vite]') !== -1) {
+          e.preventDefault();
+        }
+      });
+
       // Fallback for GitHub Pages "Deploy from branch -> / (root)":
       // Since raw .tsx files cannot execute directly in browsers without a build step,
       // redirect to the pre-compiled /docs/ bundle if served statically from GitHub Pages root.
