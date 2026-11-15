@@ -13,21 +13,18 @@ import {
   Navigation,
   Building2,
   ExternalLink,
-  LocateFixed,
   RefreshCw,
-  Compass,
   Map as MapIcon
 } from 'lucide-react';
 import { NEARBY_DOCTORS } from '../data/medicalKnowledge';
 import { Doctor } from '../types/medical';
-import { MediMitraLogo } from './MediMitraLogo';
 import { 
   getCurrentBrowserCoordinates, 
   reverseGeocodeCoordinates, 
-  fetchRealNearbyClinics,
-  generateRealCityClinics 
+  fetchRealNearbyClinics 
 } from '../services/realLocationDoctorService';
 import { useLanguage } from '../context/LanguageContext';
+import { getAppStrings } from '../data/appTranslations';
 
 interface DoctorLocatorProps {
   onBack: () => void;
@@ -38,49 +35,58 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
   onBack,
   preferredSpecialty
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const ui = getAppStrings(language);
+
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>(preferredSpecialty || 'All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [doctorsList, setDoctorsList] = useState<Doctor[]>(NEARBY_DOCTORS);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(NEARBY_DOCTORS[0]);
   const [bookedDoctorId, setBookedDoctorId] = useState<string | null>(null);
+  const [bookedToken, setBookedToken] = useState<number | null>(null);
   const [mapQueryType, setMapQueryType] = useState<'doctor' | 'all_clinics' | 'emergency'>('doctor');
 
   // Location state
   const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
-  const [locationName, setLocationName] = useState<string>('Detecting live location...');
+  const [detectedPlaceName, setDetectedPlaceName] = useState<string | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(true);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const [showGpsHint, setShowGpsHint] = useState<boolean>(false);
 
-  const specialties = ['All', 'General Physician', 'Pediatrician', 'Dermatologist', 'ENT', 'Emergency Medicine'];
+  const specialties = [
+    { id: 'All', label: ui.specAll },
+    { id: 'General Physician', label: ui.specGp },
+    { id: 'Pediatrician', label: ui.specPed },
+    { id: 'Dermatologist', label: ui.specDerm },
+    { id: 'ENT', label: ui.specEnt },
+    { id: 'Emergency Medicine', label: ui.specEr }
+  ];
 
-  // Automatically request user location on mount
   useEffect(() => {
-    handleDetectLocation();
+    handleDetectLocation(true);
   }, []);
 
-  const handleDetectLocation = async () => {
+  const handleDetectLocation = async (silent = false) => {
     setIsLoadingLocation(true);
-    setLocationError(null);
+    setShowGpsHint(false);
     try {
       const coords = await getCurrentBrowserCoordinates();
       setUserCoords({ lat: coords.latitude, lon: coords.longitude });
       const geo = await reverseGeocodeCoordinates(coords.latitude, coords.longitude);
-      const placeString = [geo.locality, geo.city, geo.state].filter(Boolean).join(', ') || 'Your Current Location';
-      setLocationName(placeString);
+      const placeString = [geo.locality, geo.city, geo.state].filter(Boolean).join(', ');
+      setDetectedPlaceName(placeString || null);
 
-      // Fetch real clinics near these coordinates
       const realClinics = await fetchRealNearbyClinics(coords.latitude, coords.longitude);
       if (realClinics.length > 0) {
         setDoctorsList(realClinics);
         setSelectedDoctor(realClinics[0]);
       }
-    } catch (err: any) {
-      console.warn('Geolocation detection error:', err);
-      setLocationError('Location permission needed. Click "Enable GPS" or search your city.');
-      setLocationName('Default Medical Center Area');
+    } catch {
+      setDetectedPlaceName(null);
       setDoctorsList(NEARBY_DOCTORS);
       setSelectedDoctor(NEARBY_DOCTORS[0]);
+      if (!silent) {
+        setShowGpsHint(true);
+      }
     } finally {
       setIsLoadingLocation(false);
     }
@@ -89,13 +95,16 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
   const filteredDoctors = doctorsList.filter((doc) => {
     const matchesSpecialty = 
       selectedSpecialty === 'All' || 
-      (selectedSpecialty === 'Emergency Medicine' ? doc.emergency24x7 : doc.specialty.toLowerCase().includes(selectedSpecialty.toLowerCase()));
+      (selectedSpecialty === 'Emergency Medicine'
+        ? doc.emergency24x7
+        : doc.specialty.toLowerCase().includes(selectedSpecialty.toLowerCase()));
 
+    const q = searchQuery.toLowerCase();
     const matchesSearch = 
-      doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.hospital.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.specialty.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.address.toLowerCase().includes(searchQuery.toLowerCase());
+      doc.name.toLowerCase().includes(q) ||
+      doc.hospital.toLowerCase().includes(q) ||
+      doc.specialty.toLowerCase().includes(q) ||
+      doc.address.toLowerCase().includes(q);
 
     return matchesSpecialty && matchesSearch;
   });
@@ -103,12 +112,12 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
   const handleBookToken = (doc: Doctor) => {
     setSelectedDoctor(doc);
     setBookedDoctorId(doc.id);
+    setBookedToken(Math.floor(100 + Math.random() * 900));
   };
 
-  // Live Google Maps Embed URL
   const getGoogleMapsUrl = () => {
-    const lat = userCoords?.lat || (selectedDoctor?.latitude || 22.7196);
-    const lon = userCoords?.lon || (selectedDoctor?.longitude || 75.8577);
+    const lat = userCoords?.lat || selectedDoctor?.latitude || 22.7196;
+    const lon = userCoords?.lon || selectedDoctor?.longitude || 75.8577;
 
     if (mapQueryType === 'emergency') {
       return `https://maps.google.com/maps?q=24+7+emergency+hospital+trauma+center+near+${lat},${lon}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
@@ -130,6 +139,10 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
     return `https://www.google.com/maps/search/clinics+and+doctors+near+me`;
   };
 
+  const displayLocation = isLoadingLocation
+    ? ui.detectingLocation
+    : detectedPlaceName || ui.localDirectoryLabel;
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Top Header */}
@@ -138,12 +151,12 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
           <button
             onClick={onBack}
             className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-            title="Go back"
+            title={ui.backToHome}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
                 {t.locatorHeading}
               </h1>
@@ -179,19 +192,19 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
               {t.currentLocationLabel}
             </span>
             <span className="font-medium text-slate-900 text-xs">
-              {locationName}
+              {displayLocation}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={handleDetectLocation}
+            onClick={() => handleDetectLocation(false)}
             disabled={isLoadingLocation}
             className="px-3 py-1.5 rounded-xl bg-white border border-teal-300 hover:bg-teal-50 text-teal-800 font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-teal-600 ${isLoadingLocation ? 'animate-spin' : ''}`} />
-            <span>{isLoadingLocation ? 'Locating...' : 'Refresh GPS Location'}</span>
+            <span>{isLoadingLocation ? ui.locatingText : ui.refreshGpsBtn}</span>
           </button>
 
           <a
@@ -201,62 +214,59 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
             className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-2xs"
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            <span>Google Maps Search</span>
+            <span>{ui.googleMapsSearchBtn}</span>
           </a>
         </div>
       </div>
 
-      {locationError && (
+      {showGpsHint && (
         <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-2">
-          <span>{locationError}</span>
+          <span>{ui.gpsHintMessage}</span>
           <button
-            onClick={handleDetectLocation}
-            className="font-semibold text-teal-700 underline cursor-pointer"
+            onClick={() => handleDetectLocation(false)}
+            className="font-semibold text-teal-700 underline cursor-pointer shrink-0"
           >
-            Retry GPS
+            {ui.retryGpsBtn}
           </button>
         </div>
       )}
 
       {/* Filter and Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        {/* Search Input */}
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by doctor, clinic name, or street..."
+            placeholder={t.searchClinicsPlaceholder}
             className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 bg-slate-50/50 text-slate-900"
           />
         </div>
 
-        {/* Specialty Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
           {specialties.map((spec) => (
             <button
-              key={spec}
-              onClick={() => setSelectedSpecialty(spec)}
+              key={spec.id}
+              onClick={() => setSelectedSpecialty(spec.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
-                selectedSpecialty === spec
+                selectedSpecialty === spec.id
                   ? 'bg-teal-600 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              {spec}
+              {spec.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Two Column Layout: Doctors List on Left, Live Google Maps on Right */}
+      {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Doctor Cards List */}
         <div className="lg:col-span-6 space-y-3.5">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center justify-between">
-            <span>Verified Clinics & Doctors ({filteredDoctors.length})</span>
-            <span className="text-teal-700 font-medium">Sorted by live distance</span>
+            <span>{ui.verifiedClinicsCount} ({filteredDoctors.length})</span>
+            <span className="text-teal-700 font-medium">{ui.sortedByDistance}</span>
           </div>
 
           <div className="space-y-3">
@@ -289,11 +299,11 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
                         {doc.emergency24x7 ? <Building2 className="w-5 h-5" /> : (doc.name.charAt(4) || 'Dr')}
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-sm text-slate-900">{doc.name}</h3>
                           {doc.emergency24x7 && (
                             <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-rose-600 text-white">
-                              24x7 ER
+                              {ui.er24x7Tab}
                             </span>
                           )}
                         </div>
@@ -314,7 +324,7 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
                         <span className="text-[10px] text-slate-400 font-normal">({doc.reviewsCount})</span>
                       </div>
                       <span className="text-[11px] font-semibold text-slate-700 block mt-1">
-                        {doc.distanceKm} km away
+                        {doc.distanceKm} {ui.kmAway}
                       </span>
                     </div>
                   </div>
@@ -334,10 +344,9 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
                         className="px-2.5 py-1.5 rounded-lg border border-teal-200 hover:bg-teal-50 text-teal-700 font-medium flex items-center gap-1 text-xs transition-colors"
-                        title="Open directions in Google Maps"
                       >
                         <Navigation className="w-3 h-3 text-teal-600" />
-                        <span>Directions</span>
+                        <span>{ui.directionsBtn}</span>
                       </a>
 
                       <a
@@ -346,7 +355,7 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
                         className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 font-medium flex items-center gap-1 text-xs transition-colors"
                       >
                         <Phone className="w-3 h-3 text-teal-600" />
-                        <span>Call</span>
+                        <span>{ui.callBtn}</span>
                       </a>
 
                       <button
@@ -363,12 +372,12 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
                         {isBooked ? (
                           <>
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Reserved ✓</span>
+                            <span>{ui.reservedBtn}</span>
                           </>
                         ) : (
                           <>
                             <Calendar className="w-3.5 h-3.5" />
-                            <span>Book Token</span>
+                            <span>{ui.bookTokenBtn}</span>
                           </>
                         )}
                       </button>
@@ -380,15 +389,14 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Real Google Maps Integration */}
+        {/* Right Column: Live Google Maps */}
         <div className="lg:col-span-6 space-y-4 sticky top-20">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
               <MapIcon className="w-3.5 h-3.5 text-teal-600" />
-              <span>Google Maps Live Locator</span>
+              <span>{ui.googleMapsLiveTitle}</span>
             </span>
 
-            {/* Quick Map Presets */}
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setMapQueryType('doctor')}
@@ -398,7 +406,7 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                Selected Clinic
+                {ui.selectedClinicTab}
               </button>
               <button
                 onClick={() => setMapQueryType('all_clinics')}
@@ -408,7 +416,7 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                All Nearby
+                {ui.allNearbyTab}
               </button>
               <button
                 onClick={() => setMapQueryType('emergency')}
@@ -418,31 +426,28 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
                     : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
                 }`}
               >
-                24x7 ER
+                {ui.er24x7Tab}
               </button>
             </div>
           </div>
 
-          {/* Real Google Maps Embedded Iframe */}
           <div className="bg-slate-100 rounded-3xl border border-slate-200 overflow-hidden shadow-sm relative h-96">
             <iframe
-              title="Google Maps Doctor & Clinic Locator"
+              title="Google Maps Clinic Locator"
               width="100%"
               height="100%"
-              style={{ border: 0 }}
               loading="lazy"
               allowFullScreen
               referrerPolicy="no-referrer-when-downgrade"
               src={getGoogleMapsUrl()}
-              className="w-full h-full"
+              className="w-full h-full border-0"
             />
 
-            {/* Floating Quick Action Overlay */}
             {selectedDoctor && (
               <div className="absolute top-3 left-3 right-3 bg-white/95 backdrop-blur-md p-3 rounded-2xl border border-slate-200 shadow-md flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <span className="text-[10px] font-semibold text-teal-700 uppercase tracking-wider block">
-                    Google Maps Target
+                    {ui.googleMapsTarget}
                   </span>
                   <h4 className="text-xs font-semibold text-slate-900 truncate">
                     {selectedDoctor.hospital}
@@ -459,14 +464,13 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
                   className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs flex items-center gap-1 shadow-xs transition-colors shrink-0"
                 >
                   <Navigation className="w-3.5 h-3.5" />
-                  <span>Navigate</span>
+                  <span>{ui.navigateBtn}</span>
                   <ExternalLink className="w-3 h-3 ml-0.5" />
                 </a>
               </div>
             )}
           </div>
 
-          {/* Selected Doctor Summary Card */}
           {selectedDoctor && (
             <motion.div
               initial={{ opacity: 0, y: 5 }}
@@ -488,14 +492,14 @@ export const DoctorLocator: React.FC<DoctorLocatorProps> = ({
               </div>
 
               <p className="text-slate-600 font-normal">
-                <strong>Address:</strong> {selectedDoctor.address} ({selectedDoctor.distanceKm} km from your location)
+                <strong>{ui.addressLabel}:</strong> {selectedDoctor.address} ({selectedDoctor.distanceKm} {ui.kmFromLocation})
               </p>
 
-              {bookedDoctorId === selectedDoctor.id && (
+              {bookedDoctorId === selectedDoctor.id && bookedToken && (
                 <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span className="font-medium text-[11px]">
-                    Consultation token #MM-{Math.floor(100 + Math.random() * 900)} confirmed.
+                    #MM-{bookedToken} • {ui.tokenConfirmedMsg}
                   </span>
                 </div>
               )}

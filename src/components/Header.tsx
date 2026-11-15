@@ -1,13 +1,13 @@
 import { 
   MapPin, 
   LogOut,
-  ChevronDown,
   Cpu
 } from 'lucide-react';
 import { UserProfile } from '../types/medical';
 import { MediMitraLogo } from './MediMitraLogo';
 import { LanguageSelector } from './LanguageSelector';
 import { useLanguage } from '../context/LanguageContext';
+import { getAppStrings } from '../data/appTranslations';
 
 interface HeaderProps {
   currentProfile: UserProfile;
@@ -26,13 +26,16 @@ export const Header: React.FC<HeaderProps> = ({
   onSignOut,
   onOpenHardwareGuide
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const ui = getAppStrings(language);
+  const displayName = currentProfile.name ? currentProfile.name.split(' ')[0] : ui.patientWord;
+  const avatarChar = (currentProfile.name || ui.patientWord).charAt(0).toUpperCase();
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-teal-100/80 shadow-xs">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
-          {/* Brand Logo & Title with new MediMitra Logo */}
+          {/* Brand Logo & Title */}
           <div 
             onClick={onGoHome}
             className="cursor-pointer group"
@@ -41,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Navigation Controls (Top Right Side) */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             {/* Find Doctors Button */}
             <button
               onClick={onOpenDoctors}
@@ -51,29 +54,29 @@ export const Header: React.FC<HeaderProps> = ({
               <span>{t.nearestDoctors}</span>
             </button>
 
-            {/* IoT Dispenser Hardware Setup Button */}
+            {/* IoT Dispenser Hardware Setup Button (Password Protected) */}
             {onOpenHardwareGuide && (
               <button
                 onClick={onOpenHardwareGuide}
-                className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition-colors cursor-pointer"
-                title="ESP32 IoT Dispenser Setup & Schematic"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition-colors cursor-pointer"
+                title={ui.esp32DispenserTooltip}
               >
                 <Cpu className="w-3.5 h-3.5 text-teal-700" />
-                <span>ESP32 Dispenser</span>
+                <span className="hidden sm:inline">{ui.esp32DispenserBtn}</span>
               </button>
             )}
 
             {/* Active User Profile Pill */}
             <button
               onClick={onOpenAuth}
-              className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-slate-800 text-xs font-medium transition-colors cursor-pointer"
+              className="flex items-center gap-2 pl-2 pr-2.5 sm:pr-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-slate-800 text-xs font-medium transition-colors cursor-pointer"
               title={t.editPatient}
             >
               <div className="w-6 h-6 rounded-full bg-teal-600 text-white flex items-center justify-center font-medium text-[11px]">
-                {currentProfile.name ? currentProfile.name.charAt(0).toUpperCase() : 'P'}
+                {avatarChar}
               </div>
-              <span className="font-medium text-slate-800 max-w-[80px] sm:max-w-[100px] truncate">
-                {currentProfile.name ? currentProfile.name.split(' ')[0] : 'Patient'}
+              <span className="font-medium text-slate-800 max-w-[70px] sm:max-w-[100px] truncate hidden xs:inline sm:inline">
+                {displayName}
               </span>
             </button>
 

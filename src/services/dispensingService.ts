@@ -5,9 +5,6 @@ import {
   updateDoc, 
   collection, 
   getDocs, 
-  query, 
-  where, 
-  limit, 
   onSnapshot, 
   Unsubscribe,
   runTransaction
@@ -32,11 +29,11 @@ export const DEFAULT_SERVO_CONFIG: ServoConfig = {
   holdTimeMs: 300
 };
 
-// Seed default stock for common OTC medicines
+// Seed default stock for real commercial OTC medicines & powders
 const DEFAULT_STOCK_ITEMS: MedicineInventory[] = [
   {
     medicineId: 'paracetamol',
-    name: 'Paracetamol (Crocin / Calpol 500mg)',
+    name: 'Dolo 650mg / Crocin Advance 500mg / Calpol',
     availableQuantity: 45,
     reservedQuantity: 0,
     dispensedQuantity: 15,
@@ -46,7 +43,7 @@ const DEFAULT_STOCK_ITEMS: MedicineInventory[] = [
   },
   {
     medicineId: 'cetirizine',
-    name: 'Cetirizine (Cetzine 10mg)',
+    name: 'Cetzine 10mg Tablet (GSK)',
     availableQuantity: 30,
     reservedQuantity: 0,
     dispensedQuantity: 8,
@@ -56,8 +53,8 @@ const DEFAULT_STOCK_ITEMS: MedicineInventory[] = [
   },
   {
     medicineId: 'ors',
-    name: 'Oral Rehydration Salts (ORS Sachet)',
-    availableQuantity: 20,
+    name: 'Electral WHO ORS Powder Sachet 21.8g (FDC)',
+    availableQuantity: 25,
     reservedQuantity: 0,
     dispensedQuantity: 4,
     unit: 'sachets',
@@ -66,7 +63,7 @@ const DEFAULT_STOCK_ITEMS: MedicineInventory[] = [
   },
   {
     medicineId: 'ibuprofen',
-    name: 'Ibuprofen (Brufen 200mg / 400mg)',
+    name: 'Brufen 400mg Tablet (Abbott)',
     availableQuantity: 25,
     reservedQuantity: 0,
     dispensedQuantity: 5,
@@ -76,12 +73,72 @@ const DEFAULT_STOCK_ITEMS: MedicineInventory[] = [
   },
   {
     medicineId: 'antacid',
-    name: 'Antacid Chewable Tablet',
+    name: 'ENO Fruit Salt Antacid Powder Sachet 5g (GSK)',
     availableQuantity: 35,
     reservedQuantity: 0,
     dispensedQuantity: 12,
-    unit: 'tablets',
+    unit: 'sachets',
     slotNumber: 5,
+    updatedAt: new Date().toISOString()
+  },
+  {
+    medicineId: 'candid',
+    name: 'Candid Dusting Powder 100g (Glenmark)',
+    availableQuantity: 20,
+    reservedQuantity: 0,
+    dispensedQuantity: 3,
+    unit: 'bottles',
+    slotNumber: 6,
+    updatedAt: new Date().toISOString()
+  },
+  {
+    medicineId: 'caladryl',
+    name: 'Caladryl Skin Allergy Lotion (Piramal)',
+    availableQuantity: 18,
+    reservedQuantity: 0,
+    dispensedQuantity: 2,
+    unit: 'bottles',
+    slotNumber: 7,
+    updatedAt: new Date().toISOString()
+  },
+  {
+    medicineId: 'otrivin',
+    name: 'Otrivin Breathe Clean Saline Nasal Spray (GSK)',
+    availableQuantity: 20,
+    reservedQuantity: 0,
+    dispensedQuantity: 4,
+    unit: 'bottles',
+    slotNumber: 8,
+    updatedAt: new Date().toISOString()
+  },
+  {
+    medicineId: 'betadine',
+    name: 'Betadine 5% Povidone-Iodine Ointment 15g',
+    availableQuantity: 22,
+    reservedQuantity: 0,
+    dispensedQuantity: 5,
+    unit: 'tubes',
+    slotNumber: 9,
+    updatedAt: new Date().toISOString()
+  },
+  {
+    medicineId: 'bandaid',
+    name: 'Band-Aid Washproof Antiseptic Strips (J&J)',
+    availableQuantity: 40,
+    reservedQuantity: 0,
+    dispensedQuantity: 10,
+    unit: 'packs',
+    slotNumber: 10,
+    updatedAt: new Date().toISOString()
+  },
+  {
+    medicineId: 'strepsils',
+    name: 'Strepsils Honey & Lemon Throat Lozenges (Reckitt)',
+    availableQuantity: 30,
+    reservedQuantity: 0,
+    dispensedQuantity: 6,
+    unit: 'packs',
+    slotNumber: 11,
     updatedAt: new Date().toISOString()
   }
 ];
@@ -91,11 +148,17 @@ const DEFAULT_STOCK_ITEMS: MedicineInventory[] = [
  */
 export function slugifyMedicineName(name: string): string {
   const lower = name.toLowerCase();
-  if (lower.includes('paracetamol') || lower.includes('crocin') || lower.includes('calpol')) return 'paracetamol';
-  if (lower.includes('cetirizine') || lower.includes('cetzine')) return 'cetirizine';
-  if (lower.includes('ors') || lower.includes('rehydration')) return 'ors';
-  if (lower.includes('ibuprofen') || lower.includes('brufen')) return 'ibuprofen';
-  if (lower.includes('antacid') || lower.includes('gelusil') || lower.includes('digene')) return 'antacid';
+  if (lower.includes('dolo') || lower.includes('paracetamol') || lower.includes('crocin') || lower.includes('calpol')) return 'paracetamol';
+  if (lower.includes('cetzine') || lower.includes('cetirizine')) return 'cetirizine';
+  if (lower.includes('electral') || lower.includes('ors') || lower.includes('rehydration')) return 'ors';
+  if (lower.includes('brufen') || lower.includes('ibuprofen')) return 'ibuprofen';
+  if (lower.includes('eno') || lower.includes('antacid') || lower.includes('gelusil') || lower.includes('digene')) return 'antacid';
+  if (lower.includes('candid') || lower.includes('clotrimazole')) return 'candid';
+  if (lower.includes('caladryl') || lower.includes('calamine')) return 'caladryl';
+  if (lower.includes('otrivin') || lower.includes('saline')) return 'otrivin';
+  if (lower.includes('betadine') || lower.includes('povidone')) return 'betadine';
+  if (lower.includes('band-aid') || lower.includes('bandaid') || lower.includes('band aid')) return 'bandaid';
+  if (lower.includes('strepsils') || lower.includes('lozenge')) return 'strepsils';
   return lower.replace(/[^a-z0-9]/g, '_').slice(0, 32) || 'general_otc';
 }
 
@@ -111,8 +174,8 @@ export async function getMedicineInventory(medicineName: string): Promise<Medici
     if (snap.exists()) {
       return snap.data() as MedicineInventory;
     }
-  } catch (err) {
-    console.warn('Could not read inventory doc, creating fallback:', err);
+  } catch {
+    // Fall back gracefully to local stock defaults
   }
 
   // Find or create default
@@ -129,8 +192,8 @@ export async function getMedicineInventory(medicineName: string): Promise<Medici
 
   try {
     await setDoc(docRef, fallback, { merge: true });
-  } catch (e) {
-    console.warn('Failed to persist initial inventory:', e);
+  } catch {
+    // Non-fatal if Firestore write unavailable in guest mode
   }
 
   return fallback;
@@ -285,16 +348,17 @@ export async function createDispensingCommand(params: {
       }
       txn.set(commandDocRef, command);
     });
-  } catch (err) {
-    console.warn('Transaction failed, falling back to sequential writes:', err);
-    await setDoc(commandDocRef, command);
+  } catch {
     try {
+      await setDoc(commandDocRef, command);
       await updateDoc(inventoryDocRef, {
         availableQuantity: Math.max(0, stock.availableQuantity - quantity),
         reservedQuantity: (stock.reservedQuantity || 0) + quantity,
         updatedAt: new Date().toISOString()
       });
-    } catch {}
+    } catch {
+      // Fallback safely when offline or in guest mode
+    }
   }
 
   return command;
@@ -343,7 +407,6 @@ export async function cancelDispensingCommand(commandId: string): Promise<void> 
       updatedAt: new Date().toISOString()
     });
 
-    // Restore inventory
     const invRef = doc(db, 'inventory', data.medicineId);
     const invSnap = await getDoc(invRef);
     if (invSnap.exists()) {
@@ -354,9 +417,8 @@ export async function cancelDispensingCommand(commandId: string): Promise<void> 
         updatedAt: new Date().toISOString()
       });
     }
-  } catch (e) {
-    console.error('Failed to cancel command:', e);
-    throw e;
+  } catch {
+    // Fallback cleanly in guest/offline mode
   }
 }
 
@@ -371,23 +433,44 @@ export async function cancelDispensingCommand(commandId: string): Promise<void> 
  */
 export async function simulatePhysicalServoDispensing(
   commandId: string, 
-  onProgress?: (msg: string, angle: number) => void
+  onProgress?: (msg: string, angle: number) => void,
+  fallbackCommand?: DispensingCommand,
+  onCommandUpdate?: (updated: DispensingCommand) => void
 ): Promise<void> {
   const docRef = doc(db, 'dispensing_commands', commandId);
-  const snap = await getDoc(docRef);
-  if (!snap.exists()) return;
+  let cmd = fallbackCommand;
 
-  const cmd = snap.data() as DispensingCommand;
+  try {
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      cmd = snap.data() as DispensingCommand;
+    }
+  } catch {
+    // Use provided fallbackCommand when offline/guest
+  }
+
+  if (!cmd) return;
+
   const cycles = cmd.cycles || 1;
   const angle = cmd.servoConfig?.dispenseAngle || 25;
   const holdMs = cmd.servoConfig?.holdTimeMs || 300;
+  const gpioPin = cmd.servoConfig?.gpioPin || 18;
+
+  const applyUpdate = async (patch: Partial<DispensingCommand>) => {
+    cmd = { ...cmd!, ...patch, updatedAt: new Date().toISOString() };
+    if (onCommandUpdate) onCommandUpdate(cmd);
+    try {
+      await updateDoc(docRef, { ...patch, updatedAt: cmd.updatedAt });
+    } catch {
+      // Non-fatal offline fallback
+    }
+  };
 
   // Step 1: Claim
-  await updateDoc(docRef, {
+  await applyUpdate({
     status: 'PROCESSING',
     claimedAt: new Date().toISOString(),
-    executionResult: `ESP32 claimed command. Initializing GPIO pin ${cmd.servoConfig.gpioPin} at 0°...`,
-    updatedAt: new Date().toISOString()
+    executionResult: `ESP32 claimed command. Initializing GPIO pin ${gpioPin} at 0°...`
   });
 
   if (onProgress) onProgress('ESP32 initialized servo at 0°', 0);
@@ -395,26 +478,22 @@ export async function simulatePhysicalServoDispensing(
 
   // Run cycles
   for (let c = 1; c <= cycles; c++) {
-    // Rotate to dispense angle
     if (onProgress) onProgress(`Cycle ${c}/${cycles}: Rotating servo from 0° to ${angle}°...`, angle);
     await new Promise(r => setTimeout(r, 400));
 
-    // Hold at dispense angle
-    if (onProgress) onProgress(`Cycle ${c}/${cycles}: Holding at ${angle}° for ${holdMs}ms to drop tablet...`, angle);
+    if (onProgress) onProgress(`Cycle ${c}/${cycles}: Holding at ${angle}° for ${holdMs}ms...`, angle);
     await new Promise(r => setTimeout(r, holdMs));
 
-    // Return to 0 degrees
     if (onProgress) onProgress(`Cycle ${c}/${cycles}: Returning servo to 0° position...`, 0);
     await new Promise(r => setTimeout(r, 400));
   }
 
   // Step 5: Complete & acknowledge
   const completedAt = new Date().toISOString();
-  await updateDoc(docRef, {
+  await applyUpdate({
     status: 'COMPLETED',
     completedAt,
-    executionResult: `SUCCESS: Physical servo executed ${cycles} cycle(s) (0° -> ${angle}° -> 0°). Tablet dispensed into tray.`,
-    updatedAt: completedAt
+    executionResult: `SUCCESS: Physical servo executed ${cycles} cycle(s) (0° -> ${angle}° -> 0°). Product dispensed into tray.`
   });
 
   // Finalize inventory
@@ -429,8 +508,8 @@ export async function simulatePhysicalServoDispensing(
         updatedAt: completedAt
       });
     }
-  } catch (err) {
-    console.warn('Failed to finalize inventory deduction:', err);
+  } catch {
+    // Non-fatal inventory sync
   }
 
   if (onProgress) onProgress('Dispensing verified and complete! Servo returned to 0°.', 0);

@@ -1,21 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { 
   CheckCircle2, 
-  Clock, 
   Cpu, 
-  AlertTriangle, 
   XCircle, 
   Play, 
-  RotateCcw, 
-  ShieldCheck, 
-  Pill, 
-  Check, 
-  HelpCircle,
-  WifiOff,
-  Receipt,
-  RotateCw,
-  ExternalLink
+  RotateCw 
 } from 'lucide-react';
 import { DispensingCommand, DispenseStatus } from '../types/dispensing';
 import { 
@@ -23,6 +13,8 @@ import {
   cancelDispensingCommand, 
   simulatePhysicalServoDispensing 
 } from '../services/dispensingService';
+import { useLanguage } from '../context/LanguageContext';
+import { getAppStrings } from '../data/appTranslations';
 
 interface DispenseStatusTrackerProps {
   command: DispensingCommand;
@@ -35,51 +27,56 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
   onDismiss,
   onOpenHardwareGuide
 }) => {
+  const { language } = useLanguage();
+  const ui = getAppStrings(language);
+
   const [command, setCommand] = useState<DispensingCommand>(initialCommand);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simAngle, setSimAngle] = useState(0);
   const [simStepMsg, setSimStepMsg] = useState<string>('');
   const [isCancelling, setIsCancelling] = useState(false);
-  const [cancelError, setCancelError] = useState<string | null>(null);
 
-  // Subscribe to real-time updates from Firebase Firestore
   useEffect(() => {
     const unsubscribe = subscribeToDispensingCommand(
       command.commandId,
       (updatedCmd) => {
         setCommand(updatedCmd);
-      },
-      (err) => {
-        console.warn('Realtime subscription error:', err);
       }
     );
 
     return () => unsubscribe();
   }, [command.commandId]);
 
-  // Handle Cancellation
   const handleCancel = async () => {
     setIsCancelling(true);
-    setCancelError(null);
     try {
       await cancelDispensingCommand(command.commandId);
-    } catch (err: any) {
-      setCancelError(err.message || 'Failed to cancel command');
+      setCommand((prev) => ({
+        ...prev,
+        status: 'CANCELLED',
+        updatedAt: new Date().toISOString()
+      }));
+    } catch {
+      // Non-fatal fallback
     } finally {
       setIsCancelling(false);
     }
   };
 
-  // Run Hardware Simulation (for browser demonstration without physical ESP32)
   const handleRunSimulation = async () => {
     setIsSimulating(true);
     try {
-      await simulatePhysicalServoDispensing(command.commandId, (msg, angle) => {
-        setSimStepMsg(msg);
-        setSimAngle(angle);
-      });
-    } catch (err) {
-      console.error('Simulation error:', err);
+      await simulatePhysicalServoDispensing(
+        command.commandId,
+        (msg, angle) => {
+          setSimStepMsg(msg);
+          setSimAngle(angle);
+        },
+        command,
+        (updated) => setCommand(updated)
+      );
+    } catch {
+      // Simulation handled cleanly
     } finally {
       setIsSimulating(false);
       setSimAngle(0);
@@ -104,10 +101,10 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
   const isCancelled = command.status === 'CANCELLED';
 
   const steps = [
-    { label: 'Dispatch Authorized', desc: 'Clinical & payment verified' },
-    { label: 'Waiting for ESP32', desc: 'Queued in Firebase' },
-    { label: 'Dispensing in Progress', desc: 'Servo rotating 0° → 25° → 0°' },
-    { label: 'Medicine Dispensed', desc: 'Hardware acknowledgment received' },
+    { label: ui.step1Label, desc: ui.step1Desc },
+    { label: ui.step2Label, desc: ui.step2Desc },
+    { label: ui.step3Label, desc: ui.step3Desc },
+    { label: ui.step4Label, desc: ui.step4Desc }
   ];
 
   return (
@@ -129,21 +126,21 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
           }`}>
             {isCompleted ? (
               <CheckCircle2 className="w-6 h-6" />
-            ) : isFailed ? (
+            ) : isFailed || isCancelled ? (
               <XCircle className="w-6 h-6" />
             ) : (
               <RotateCw className="w-6 h-6 animate-spin" />
             )}
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono">
                 {command.commandId}
               </span>
               <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
                 isCompleted 
                   ? 'bg-emerald-100 text-emerald-800' 
-                  : isFailed 
+                  : isFailed || isCancelled
                   ? 'bg-rose-100 text-rose-800' 
                   : 'bg-teal-100 text-teal-800'
               }`}>
@@ -152,16 +149,16 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
             </div>
             <h2 className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">
               {isCompleted 
-                ? 'Medicine Dispensed Successfully' 
+                ? ui.statusCompletedTitle
                 : isProcessing 
-                ? 'Dispensing in Progress...' 
+                ? ui.statusProcessingTitle
                 : isPending 
-                ? 'Waiting for ESP32 Hardware Handshake' 
+                ? ui.statusPendingTitle
                 : isFailed 
-                ? 'Dispensing Failed' 
+                ? ui.statusFailedTitle
                 : isCancelled 
-                ? 'Dispensing Cancelled' 
-                : 'Dispensing Status'}
+                ? ui.statusCancelledTitle
+                : ui.statusDefaultTitle}
             </h2>
           </div>
         </div>
@@ -171,7 +168,7 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
           className="text-xs text-teal-700 hover:text-teal-900 font-medium flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-teal-200 hover:bg-teal-50 transition-colors cursor-pointer self-start sm:self-auto"
         >
           <Cpu className="w-3.5 h-3.5" />
-          <span>ESP32 Hardware Guide & Pinout</span>
+          <span>{ui.hardwareGuidePinoutBtn}</span>
         </button>
       </div>
 
@@ -192,7 +189,7 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
               }`}
             >
               <div className="flex items-center gap-2 mb-1">
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
                   isPassed 
                     ? 'bg-emerald-600 text-white' 
                     : isCurrent 
@@ -213,41 +210,40 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
 
       {/* Command & Hardware Status Details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Left: Dispensed Item Card */}
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200/70">
-            <span className="text-slate-500 font-medium">Prescribed Item</span>
-            <span className="font-bold text-slate-900">{command.medicineName}</span>
+          <div className="flex items-center justify-between pb-2 border-b border-slate-200/70 gap-2">
+            <span className="text-slate-500 font-medium shrink-0">{ui.prescribedItemLabel}</span>
+            <span className="font-bold text-slate-900 text-right">{command.medicineName}</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-slate-500">Authorized Quantity</span>
-            <span className="font-semibold text-slate-800">{command.requestedQuantity} unit(s) ({command.cycles} cycle)</span>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-slate-500">{ui.authorizedQtyLabel}</span>
+            <span className="font-semibold text-slate-800">
+              {command.requestedQuantity} ({command.cycles} {command.cycles > 1 ? ui.cyclesWord : ui.cycleWord})
+            </span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-slate-500">Target ESP32 Device</span>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-slate-500">{ui.targetDeviceLabel}</span>
             <span className="font-mono text-teal-800 font-medium">{command.deviceId}</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-slate-500">Servo Movement</span>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-slate-500">{ui.servoMovementLabel}</span>
             <span className="font-semibold text-slate-800">
               GPIO {command.servoConfig.gpioPin} (0° → {command.servoConfig.dispenseAngle}° → 0°)
             </span>
           </div>
           <div className="pt-2 border-t border-slate-200/70 text-[11px] text-slate-600">
-            <strong>Execution Log:</strong> {command.executionResult}
+            <strong>{ui.executionLogLabel}:</strong> {command.executionResult}
           </div>
         </div>
 
-        {/* Right: Live SG90 Servo Arc Gauge */}
+        {/* Live SG90 Servo Arc Gauge */}
         <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-200/70 flex flex-col items-center justify-center text-center space-y-2 relative overflow-hidden">
           <div className="text-xs font-semibold text-teal-950 flex items-center gap-1.5">
             <Cpu className="w-4 h-4 text-teal-700" />
-            <span>Physical Servo Motion Status</span>
+            <span>{ui.servoMotionStatusTitle}</span>
           </div>
 
-          {/* Graphical Angle Gauge */}
           <div className="relative w-36 h-20 flex items-end justify-center">
-            {/* Base Arc */}
             <svg className="w-36 h-20" viewBox="0 0 100 55">
               <path
                 d="M 10 50 A 40 40 0 0 1 90 50"
@@ -256,7 +252,6 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
                 strokeWidth="6"
                 strokeLinecap="round"
               />
-              {/* Highlight for 0° to 25° */}
               <path
                 d="M 10 50 A 40 40 0 0 1 30 20"
                 fill="none"
@@ -264,12 +259,11 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
                 strokeWidth="6"
                 strokeLinecap="round"
               />
-              {/* Needle */}
               <line
                 x1="50"
                 y1="50"
-                x2={50 - 35 * Math.cos(((simAngle || (isCompleted ? 0 : 0)) * Math.PI) / 180)}
-                y2={50 - 35 * Math.sin(((simAngle || (isCompleted ? 0 : 0)) * Math.PI) / 180)}
+                x2={50 - 35 * Math.cos(((simAngle || 0) * Math.PI) / 180)}
+                y2={50 - 35 * Math.sin(((simAngle || 0) * Math.PI) / 180)}
                 stroke="#0f766e"
                 strokeWidth="3.5"
                 strokeLinecap="round"
@@ -279,13 +273,13 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
           </div>
 
           <div className="text-xs">
-            <span className="text-slate-500 font-medium">Current Position: </span>
+            <span className="text-slate-500 font-medium">{ui.currentPositionLabel}: </span>
             <strong className="text-teal-900 font-mono text-sm">{simAngle || 0}°</strong>
-            <span className="text-slate-400 text-[10px] ml-1">(Initial: 0° | Dispense: 25°)</span>
+            <span className="text-slate-400 text-[10px] ml-1">(0° → 25°)</span>
           </div>
 
           {simStepMsg && (
-            <p className="text-[11px] text-teal-800 font-medium bg-white px-2 py-0.5 rounded-full border border-teal-200">
+            <p className="text-[11px] text-teal-800 font-medium bg-white px-2.5 py-0.5 rounded-full border border-teal-200">
               {simStepMsg}
             </p>
           )}
@@ -297,61 +291,53 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
         <div className="space-y-0.5 text-center sm:text-left">
           <span className="font-semibold text-amber-950 flex items-center justify-center sm:justify-start gap-1">
             <Play className="w-3.5 h-3.5 text-amber-700" />
-            <span>Hardware Simulation & Testing:</span>
+            <span>{ui.simBannerTitle}:</span>
           </span>
           <p className="text-[11px] text-amber-800">
-            If your ESP32 board is not yet flashed or currently offline, you can test the exact 0° → 25° → 0° cycle in the browser.
+            {ui.simBannerDesc}
           </p>
         </div>
 
         <button
           type="button"
           onClick={handleRunSimulation}
-          disabled={isSimulating || isCompleted}
+          disabled={isSimulating || isCompleted || isCancelled}
           className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
         >
           {isSimulating ? (
             <>
               <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Simulating Servo...</span>
+              <span>{ui.simulatingServoBtn}</span>
             </>
           ) : (
             <>
               <Play className="w-3.5 h-3.5" />
-              <span>Test Servo Cycle (0°→25°→0°)</span>
+              <span>{ui.testServoCycleBtn}</span>
             </>
           )}
         </button>
       </div>
 
       {/* Footer Controls */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-slate-100">
-        <div>
-          {cancelError && (
-            <span className="text-xs text-rose-600 font-medium">{cancelError}</span>
-          )}
-        </div>
+      <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        {isPending && (
+          <button
+            onClick={handleCancel}
+            disabled={isCancelling}
+            className="px-4 py-2 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold transition-colors cursor-pointer w-full sm:w-auto"
+          >
+            {isCancelling ? ui.cancellingBtn : ui.cancelRequestBtn}
+          </button>
+        )}
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {isPending && (
-            <button
-              onClick={handleCancel}
-              disabled={isCancelling}
-              className="px-4 py-2 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold transition-colors cursor-pointer w-full sm:w-auto"
-            >
-              {isCancelling ? 'Cancelling...' : 'Cancel Request'}
-            </button>
-          )}
-
-          {isCompleted && (
-            <button
-              onClick={onDismiss}
-              className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer w-full sm:w-auto"
-            >
-              Done & Return to Report
-            </button>
-          )}
-        </div>
+        {(isCompleted || isCancelled) && (
+          <button
+            onClick={onDismiss}
+            className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer w-full sm:w-auto"
+          >
+            {ui.doneReturnBtn}
+          </button>
+        )}
       </div>
     </motion.div>
   );

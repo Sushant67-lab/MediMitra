@@ -13,13 +13,7 @@ import {
   getFirestore, 
   doc, 
   getDoc, 
-  getDocFromServer, 
-  setDoc, 
-  collection, 
-  getDocs, 
-  query, 
-  orderBy, 
-  serverTimestamp 
+  setDoc
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { UserProfile, TriageAssessment } from '../types/medical';
@@ -44,11 +38,9 @@ export async function testConnection(): Promise<boolean> {
     const snap = await getDoc(docRef);
     return snap.exists();
   } catch {
-    // Suppress console error noise on startup
     return false;
   }
 }
-
 
 export enum OperationType {
   CREATE = 'create',
@@ -93,7 +85,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
 
@@ -112,15 +103,16 @@ export function sanitizeUserId(email: string, rawUid?: string): string {
  * Save / Update patient profile directly into Firestore database /users/{userId}
  */
 export async function saveUserProfileToFirestore(profile: UserProfile): Promise<{ success: boolean; id: string }> {
-  const userId = sanitizeUserId(profile.email, profile.id);
-  const targetPath = `users/${userId}`;
+  const userId = sanitizeUserId(profile.email || 'patient@medimitra.local', profile.id);
 
   try {
     const userDocRef = doc(db, 'users', userId);
+    const cleanName = (profile.name?.trim() || 'Patient').slice(0, 100);
+    const cleanEmail = (profile.email?.trim().toLowerCase() || 'patient@medimitra.local').slice(0, 150);
     const profilePayload = {
       id: userId,
-      name: profile.name.trim() || 'Patient',
-      email: profile.email.trim().toLowerCase(),
+      name: cleanName,
+      email: cleanEmail,
       age: Number(profile.age) || 30,
       ageCategory: profile.ageCategory || 'adult',
       sex: profile.sex || 'female',
@@ -130,16 +122,10 @@ export async function saveUserProfileToFirestore(profile: UserProfile): Promise<
     };
 
     await setDoc(userDocRef, profilePayload, { merge: true });
-    console.info(`✓ Successfully saved user profile to Firebase Firestore database: /users/${userId}`);
     return { success: true, id: userId };
-  } catch (err) {
-    console.error('Error saving user profile to Firestore:', err);
-    try {
-      handleFirestoreError(err, OperationType.WRITE, targetPath);
-    } catch {
-      // Return fallback to not hard-crash the user experience
-      return { success: false, id: userId };
-    }
+  } catch {
+    // Graceful fallback when Firestore permissions/offline prevent sync
+    return { success: false, id: userId };
   }
 }
 

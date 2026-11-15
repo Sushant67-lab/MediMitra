@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface MediMitraLogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -15,6 +16,8 @@ export const MediMitraLogo: React.FC<MediMitraLogoProps> = ({
   imageOnly = false,
   showBadge = false
 }) => {
+  const { t } = useLanguage();
+
   const iconDimensions = {
     sm: 'w-8 h-8',
     md: 'w-10 h-10',
@@ -35,7 +38,7 @@ export const MediMitraLogo: React.FC<MediMitraLogoProps> = ({
       <div className={`relative ${iconDimensions} rounded-2xl overflow-hidden flex items-center justify-center shrink-0 shadow-xs ring-1 ring-teal-200/50 bg-white`}>
         <img 
           src={logoUrl} 
-          alt="MediMitra Logo" 
+          alt={t.brandName}
           className="w-full h-full object-contain p-0.5 hover:scale-105 transition-transform" 
         />
       </div>
@@ -45,17 +48,21 @@ export const MediMitraLogo: React.FC<MediMitraLogoProps> = ({
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5 leading-tight">
             <span className={`font-semibold tracking-tight text-slate-900 ${textSize}`}>
-              Medi<span className="text-teal-600 font-semibold">Mitra</span>
+              {t.brandName === 'MediMitra' ? (
+                <>Medi<span className="text-teal-600 font-semibold">Mitra</span></>
+              ) : (
+                t.brandName
+              )}
             </span>
             {showBadge && (
               <span className="text-[10px] font-medium bg-teal-50 text-teal-800 px-2 py-0.5 rounded-full border border-teal-200/70 hidden sm:inline-block">
-                Your Health Friend
+                {t.brandTagline}
               </span>
             )}
           </div>
           {showTagline && (
             <p className="text-[11px] text-slate-500 font-normal leading-tight mt-0.5">
-              Aapka Digital Swasthya Saathi
+              {t.brandTagline}
             </p>
           )}
         </div>

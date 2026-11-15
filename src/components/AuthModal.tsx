@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   User 
 } from 'lucide-react';
 import { UserProfile, AgeCategory, BiologicalSex } from '../types/medical';
-
 import { saveUserProfileToFirestore } from '../services/firebase';
+import { useLanguage } from '../context/LanguageContext';
+import { getAppStrings } from '../data/appTranslations';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -20,9 +21,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   currentProfile,
   onSelectProfile
 }) => {
+  const { t, language } = useLanguage();
+  const ui = getAppStrings(language);
   const [name, setName] = useState(currentProfile.name);
   const [ageCategory, setAgeCategory] = useState<AgeCategory>(currentProfile.ageCategory);
   const [sex, setSex] = useState<BiologicalSex>(currentProfile.sex);
+
+  useEffect(() => {
+    if (isOpen) {
+      setName(currentProfile.name);
+      setAgeCategory(currentProfile.ageCategory);
+      setSex(currentProfile.sex);
+    }
+  }, [isOpen, currentProfile]);
 
   if (!isOpen) return null;
 
@@ -30,8 +41,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
     const updated: UserProfile = {
       id: currentProfile.id || `user-${Date.now()}`,
-      name: name.trim() || 'Patient',
-      email: currentProfile.email || 'patient@curahealth.local',
+      name: name.trim() || ui.patientWord,
+      email: currentProfile.email || 'patient@medimitra.local',
       age: ageCategory === 'child' ? 7 : ageCategory === 'senior' ? 65 : 30,
       ageCategory,
       sex,
@@ -48,8 +59,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* Header */}
         <div className="px-6 py-4 bg-gradient-to-r from-teal-700 to-teal-800 text-white flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-white">Edit Patient Information</h2>
-            <p className="text-xs text-teal-100/90">Update who is receiving checkup care</p>
+            <h2 className="text-base font-bold text-white">{t.editPatient}</h2>
+            <p className="text-xs text-teal-100/90">{ui.editPatientInfoSubtitle}</p>
           </div>
           <button 
             onClick={onClose}
@@ -63,7 +74,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <form onSubmit={handleSave} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-800 mb-1">
-                Name of the Patient <span className="text-rose-500">*</span>
+                {t.patientNameLabel} <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -72,7 +83,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Patient Name"
+                  placeholder={t.patientNamePlaceholder}
                   className="w-full pl-9 pr-3 py-2.5 text-xs font-semibold rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 bg-slate-50 text-slate-900"
                 />
               </div>
@@ -80,13 +91,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-800 mb-1">
-                Who is this for?
+                {t.whoIsThisFor}
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: 'child', label: 'Kid / Child', icon: '🧒' },
-                  { id: 'adult', label: 'Adult', icon: '🧑' },
-                  { id: 'senior', label: 'Old Person', icon: '👴' }
+                  { id: 'child', label: t.kidLabel, icon: '🧒' },
+                  { id: 'adult', label: t.adultLabel, icon: '🧑' },
+                  { id: 'senior', label: t.seniorLabel, icon: '👴' }
                 ].map((c) => (
                   <button
                     key={c.id}
@@ -107,7 +118,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-800 mb-1">
-                Gender
+                {t.genderLabel}
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -119,7 +130,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  Woman / Female
+                  {t.femaleLabel}
                 </button>
                 <button
                   type="button"
@@ -130,7 +141,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  Man / Male
+                  {t.maleLabel}
                 </button>
               </div>
             </div>
@@ -141,13 +152,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onClick={onClose}
                 className="flex-1 py-2.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                Cancel
+                {ui.cancelBtn}
               </button>
               <button
                 type="submit"
                 className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-teal-600 text-white hover:bg-teal-700 transition-colors cursor-pointer"
               >
-                Save Details
+                {ui.saveDetailsBtn}
               </button>
             </div>
           </form>

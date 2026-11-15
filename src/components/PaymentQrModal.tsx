@@ -4,16 +4,11 @@ import {
   X, 
   CheckCircle2, 
   QrCode, 
-  Smartphone, 
-  ShieldCheck, 
-  Clock, 
-  CreditCard, 
-  ArrowRight, 
-  RotateCw, 
-  Receipt, 
-  AlertCircle
+  Clock
 } from 'lucide-react';
 import { OtcMedicine, UserProfile } from '../types/medical';
+import { useLanguage } from '../context/LanguageContext';
+import { getAppStrings } from '../data/appTranslations';
 
 interface PaymentQrModalProps {
   isOpen: boolean;
@@ -29,13 +24,34 @@ interface PaymentQrModalProps {
   }) => void;
 }
 
-// Medicine pricing dictionary (in INR ₹)
+// Commercial OTC product pricing dictionary (in INR ₹)
 const MEDICINE_PRICES: Record<string, number> = {
+  dolo: 12,
+  crocin: 10,
+  calpol: 45,
+  brufen: 18,
+  electral: 22,
+  cetzine: 18,
+  otrivin: 55,
+  candid: 55,
+  caladryl: 65,
+  betadine: 45,
+  'band-aid': 30,
+  bandaid: 30,
+  eno: 10,
+  strepsils: 35,
+  clotrimazole: 55,
+  calamine: 65,
+  powder: 30,
   paracetamol: 10,
-  cetirizine: 15,
-  ors: 20,
+  cetirizine: 18,
+  loratadine: 15,
+  ors: 22,
   ibuprofen: 18,
-  antacid: 12,
+  antacid: 10,
+  lozenge: 35,
+  povidone: 45,
+  saline: 55,
   default: 15
 };
 
@@ -52,28 +68,44 @@ export const PaymentQrModal: React.FC<PaymentQrModalProps> = ({
   onClose,
   medicine,
   quantity,
-  patientProfile,
   onPaymentSuccess
 }) => {
+  const { language } = useLanguage();
+  const ui = getAppStrings(language);
+
   const unitPrice = getMedicinePrice(medicine.name);
   const totalAmount = unitPrice * quantity;
   const [transactionId] = useState(() => `TXN-MM-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`);
   
   const [paymentStatus, setPaymentStatus] = useState<'WAITING' | 'VERIFYING' | 'SUCCESS'>('WAITING');
-  const [timerSeconds, setTimerSeconds] = useState(300); // 5 min countdown
-  const [selectedApp, setSelectedApp] = useState<'gpay' | 'phonepe' | 'paytm' | 'upi'>('upi');
+  const [timerSeconds, setTimerSeconds] = useState(300);
 
-  // Dynamic UPI Payment Intent String
-  // Format: upi://pay?pa=medimitra.health@upi&pn=MediMitra%20Healthcare&am=XX&tr=TXNID&tn=Medicine%20Dispense
   const upiId = 'medimitra.health@okaxis';
-  const payeeName = 'MediMitra Smart Health Dispenser';
-  const transactionNote = `Medicine Dispense - ${medicine.name} (Qty ${quantity})`;
-  const upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${totalAmount}.00&cu=INR&tr=${transactionId}&tn=${encodeURIComponent(transactionNote)}`;
-
-  // User's permanent GPay / UPI Payment QR Code Asset
   const paymentQrImageSrc = './assets/aistudio/image_102b2352.png';
 
-  // Countdown timer
+  const getLocalizedUnit = () => {
+    const lowerName = medicine.name.toLowerCase();
+    const u =
+      medicine.unitLabel ||
+      (lowerName.includes('sachet')
+        ? 'sachet'
+        : lowerName.includes('powder') || lowerName.includes('lotion') || lowerName.includes('suspension') || lowerName.includes('spray')
+          ? 'bottle'
+          : lowerName.includes('ointment') || lowerName.includes('cream')
+            ? 'tube'
+            : lowerName.includes('strip') || lowerName.includes('lozenge')
+              ? 'pack'
+              : 'tablet');
+
+    switch (u) {
+      case 'sachet': return ui.unitSachet;
+      case 'bottle': return ui.unitBottle;
+      case 'tube': return ui.unitTube;
+      case 'pack': return ui.unitPack;
+      default: return ui.unitTablet;
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
     setPaymentStatus('WAITING');
@@ -100,7 +132,7 @@ export const PaymentQrModal: React.FC<PaymentQrModalProps> = ({
         onPaymentSuccess({
           transactionId,
           amount: totalAmount,
-          paymentMethod: `UPI (${selectedApp.toUpperCase()})`,
+          paymentMethod: 'UPI',
           timestamp: new Date().toISOString()
         });
       }, 1200);
@@ -112,6 +144,7 @@ export const PaymentQrModal: React.FC<PaymentQrModalProps> = ({
   const minutes = Math.floor(timerSeconds / 60);
   const seconds = timerSeconds % 60;
   const formattedTime = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  const localizedUnit = getLocalizedUnit();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/65 backdrop-blur-sm overflow-y-auto">
@@ -129,12 +162,13 @@ export const PaymentQrModal: React.FC<PaymentQrModalProps> = ({
             </div>
             <div>
               <span className="text-[10px] font-semibold tracking-wider uppercase text-teal-200">
-                Secure Dispense Checkout
+                {ui.secureCheckoutBadge}
               </span>
-              <h2 className="text-base font-semibold leading-tight">Scan QR to Pay & Dispense</h2>
+              <h2 className="text-base font-semibold leading-tight">{ui.scanQrTitle}</h2>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           >
@@ -143,33 +177,34 @@ export const PaymentQrModal: React.FC<PaymentQrModalProps> = ({
         </div>
 
         {paymentStatus === 'SUCCESS' ? (
-          /* Payment Success State */
           <div className="p-8 text-center space-y-4">
             <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto animate-bounce">
               <CheckCircle2 className="w-10 h-10" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-900">Payment Successful!</h3>
-              <p className="text-xs text-slate-500 mt-1">₹{totalAmount}.00 received via UPI</p>
+              <h3 className="text-xl font-bold text-slate-900">{ui.paymentSuccessTitle}</h3>
+              <p className="text-xs text-slate-500 mt-1">₹{totalAmount}.00 {ui.receivedViaUpi}</p>
             </div>
             <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-900 font-mono">
-              Txn: {transactionId}
+              {transactionId}
             </div>
             <p className="text-xs text-teal-700 font-semibold animate-pulse">
-              Dispatching command to ESP32 servo motor now...
+              {ui.dispatchingEsp32}
             </p>
           </div>
         ) : (
           <div className="p-6 space-y-5">
             {/* Order Summary Strip */}
-            <div className="p-3.5 rounded-2xl bg-teal-50/70 border border-teal-200/80 flex items-center justify-between">
-              <div>
-                <span className="text-xs text-slate-500 block">Prescribed Medicine</span>
-                <span className="font-bold text-slate-900 text-sm">{medicine.name}</span>
-                <span className="text-[11px] text-teal-700 block">Quantity: {quantity} unit(s) × ₹{unitPrice}</span>
+            <div className="p-3.5 rounded-2xl bg-teal-50/70 border border-teal-200/80 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <span className="text-xs text-slate-500 block">{ui.prescribedProductLabel}</span>
+                <span className="font-bold text-slate-900 text-sm block truncate">{medicine.name}</span>
+                <span className="text-[11px] text-teal-700 block">
+                  {quantity} {localizedUnit} × ₹{unitPrice}
+                </span>
               </div>
-              <div className="text-right">
-                <span className="text-[11px] text-slate-500 block uppercase font-medium">Total to Pay</span>
+              <div className="text-right shrink-0">
+                <span className="text-[11px] text-slate-500 block uppercase font-medium">{ui.totalToPayLabel}</span>
                 <span className="text-xl font-bold text-teal-900">₹{totalAmount}</span>
               </div>
             </div>
@@ -180,21 +215,19 @@ export const PaymentQrModal: React.FC<PaymentQrModalProps> = ({
                 <img
                   src={paymentQrImageSrc}
                   onError={(e) => {
-                    // Fallback to copied asset if needed
                     (e.currentTarget as HTMLImageElement).src = './assets/payment_qr.png';
                   }}
-                  alt="Google Pay / UPI Payment QR Code"
+                  alt="UPI Payment QR"
                   className="w-56 h-56 object-contain rounded-xl shadow-xs"
                 />
                 {paymentStatus === 'VERIFYING' && (
                   <div className="absolute inset-0 bg-white/90 backdrop-blur-xs rounded-xl flex flex-col items-center justify-center gap-2">
                     <div className="w-8 h-8 border-3 border-teal-600 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-xs font-semibold text-teal-900">Verifying Payment...</span>
+                    <span className="text-xs font-semibold text-teal-900">{ui.verifyingPayment}</span>
                   </div>
                 )}
               </div>
 
-              {/* UPI Apps supported */}
               <div className="mt-3 flex items-center justify-center gap-2 text-slate-400 text-xs font-medium">
                 <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-[10px] text-slate-700 font-semibold">GPay</span>
                 <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-[10px] text-slate-700 font-semibold">PhonePe</span>
@@ -204,17 +237,15 @@ export const PaymentQrModal: React.FC<PaymentQrModalProps> = ({
 
               <div className="mt-2 text-[11px] text-slate-500 flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 text-teal-600" />
-                <span>QR expires in: <strong className="text-slate-800 font-mono">{formattedTime}</strong></span>
+                <span>{ui.qrExpiresIn}: <strong className="text-slate-800 font-mono">{formattedTime}</strong></span>
               </div>
             </div>
 
-            {/* UPI ID Info & Copy */}
             <div className="text-center text-xs text-slate-500 space-y-0.5">
-              <span>UPI ID: <strong className="text-slate-800 font-mono">{upiId}</strong></span>
-              <p className="text-[10px] text-slate-400">Scan using any UPI App or click below to simulate instant payment confirmation.</p>
+              <span>{ui.upiIdLabel}: <strong className="text-slate-800 font-mono">{upiId}</strong></span>
+              <p className="text-[10px] text-slate-400">{ui.scanAnyUpiHint}</p>
             </div>
 
-            {/* Action Buttons */}
             <div className="space-y-2 pt-1">
               <button
                 type="button"
@@ -225,12 +256,12 @@ export const PaymentQrModal: React.FC<PaymentQrModalProps> = ({
                 {paymentStatus === 'VERIFYING' ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Verifying Banking Confirmation...</span>
+                    <span>{ui.verifyingBank}</span>
                   </>
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>I HAVE PAID ₹{totalAmount} (VERIFY & DISPENSE)</span>
+                    <span>{ui.iHavePaidBtn} (₹{totalAmount})</span>
                   </>
                 )}
               </button>
@@ -240,7 +271,7 @@ export const PaymentQrModal: React.FC<PaymentQrModalProps> = ({
                 onClick={onClose}
                 className="w-full py-2 px-3 text-xs text-slate-500 hover:text-slate-700 font-medium cursor-pointer"
               >
-                Cancel Transaction
+                {ui.cancelTransactionBtn}
               </button>
             </div>
           </div>

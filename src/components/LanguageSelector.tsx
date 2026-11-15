@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Globe, ChevronDown, Check } from 'lucide-react';
-import { useLanguage, LanguageCode } from '../context/LanguageContext';
+import { useLanguage } from '../context/LanguageContext';
+import { getAppStrings } from '../data/appTranslations';
 
 interface LanguageSelectorProps {
   variant?: 'light' | 'dark' | 'transparent';
@@ -13,7 +14,8 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   className = '',
   align = 'right'
 }) => {
-  const { language, setLanguage, languages } = useLanguage();
+  const { language, setLanguage, languages, t } = useLanguage();
+  const ui = getAppStrings(language);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -48,7 +50,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500/30 ${buttonStyles}`}
         aria-expanded={isOpen}
         aria-haspopup="true"
-        title="Choose Language / भाषा चुनें"
+        title={t.languageSelect}
       >
         <Globe className={`w-3.5 h-3.5 ${variant === 'dark' ? 'text-teal-300' : 'text-teal-600'}`} />
         <span className="text-xs font-semibold">{currentOption.nativeName}</span>
@@ -61,8 +63,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
           role="menu"
         >
           <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-            <span>Select Language</span>
-            <span className="text-teal-600">भाषा</span>
+            <span>{ui.selectLanguageHeader}</span>
           </div>
 
           <div className="max-h-64 overflow-y-auto py-1">

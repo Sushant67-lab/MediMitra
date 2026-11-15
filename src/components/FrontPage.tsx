@@ -3,15 +3,12 @@ import { motion } from 'motion/react';
 import { 
   ArrowRight,
   MapPin,
-  Stethoscope,
-  Pill,
-  Navigation,
-  FileCheck2,
-  CheckCircle2
+  Navigation
 } from 'lucide-react';
 import { SymptomCategory, UserProfile } from '../types/medical';
 import { MediMitraLogo } from './MediMitraLogo';
 import { useLanguage } from '../context/LanguageContext';
+import { getAppStrings } from '../data/appTranslations';
 
 interface FrontPageProps {
   currentProfile: UserProfile;
@@ -24,7 +21,8 @@ export const FrontPage: React.FC<FrontPageProps> = ({
   onStartTriage,
   onOpenDoctors
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const ui = getAppStrings(language);
   const [customComplaint, setCustomComplaint] = useState('');
 
   const primaryProblems = [
@@ -126,7 +124,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
-          {t.greeting}, {currentProfile.name ? currentProfile.name.split(' ')[0] : 'there'}?
+          {t.greeting}, {currentProfile.name ? currentProfile.name.split(' ')[0] : ui.thereWord}?
         </h1>
         <p className="text-xs sm:text-sm text-slate-600 font-normal max-w-lg mx-auto leading-relaxed">
           {t.frontSubtitle}
@@ -211,7 +209,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
       >
         <div className="text-center space-y-1">
           <span className="text-xs font-semibold uppercase tracking-wider text-teal-800">
-            MediMitra Care
+            {ui.medimitraCareBadge}
           </span>
           <h2 className="text-base font-semibold text-slate-900">{t.commonIssuesSubtitle}</h2>
         </div>
@@ -231,9 +229,9 @@ export const FrontPage: React.FC<FrontPageProps> = ({
             <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-semibold text-xs">
               2
             </div>
-            <h3 className="font-semibold text-xs text-slate-900">10-Question Chat</h3>
+            <h3 className="font-semibold text-xs text-slate-900">{ui.step2ChatTitle}</h3>
             <p className="text-xs text-slate-500 font-normal leading-relaxed">
-              MediMitra asks 10 sequential, adaptive questions tailored to your age and gender.
+              {ui.step2ChatDesc}
             </p>
           </div>
 

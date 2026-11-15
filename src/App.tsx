@@ -12,11 +12,11 @@ import { DoctorLocator } from './components/DoctorLocator';
 import { AuthScreen } from './components/AuthScreen';
 import { AuthModal } from './components/AuthModal';
 import { Esp32HardwareGuideModal } from './components/Esp32HardwareGuideModal';
+import { Esp32PasswordModal } from './components/Esp32PasswordModal';
 import { 
   UserProfile, 
   SymptomCategory, 
-  TriageAssessment, 
-  MedicalRecord 
+  TriageAssessment 
 } from './types/medical';
 import { 
   saveUserProfileToFirestore, 
@@ -72,6 +72,18 @@ function MainApp() {
   const [isAssessmentSaved, setIsAssessmentSaved] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isHardwareGuideOpen, setIsHardwareGuideOpen] = useState(false);
+  const [isEsp32Unlocked, setIsEsp32Unlocked] = useState(false);
+  const [isEsp32PasswordOpen, setIsEsp32PasswordOpen] = useState(false);
+  const [pendingEsp32Action, setPendingEsp32Action] = useState<(() => void) | null>(null);
+
+  const requestEsp32Access = (onGranted: () => void) => {
+    if (isEsp32Unlocked) {
+      onGranted();
+      return;
+    }
+    setPendingEsp32Action(() => onGranted);
+    setIsEsp32PasswordOpen(true);
+  };
 
   // Save profile to localStorage
   useEffect(() => {
@@ -79,17 +91,21 @@ function MainApp() {
       if (currentProfile.name || currentProfile.email) {
         localStorage.setItem('curahealth_patient_profile', JSON.stringify(currentProfile));
       }
-    } catch (e) {
-      console.error('Error saving profile', e);
+    } catch {
+      // Non-fatal storage error
     }
   }, [currentProfile]);
 
   const handleLogin = (profile: UserProfile) => {
     setCurrentProfile(profile);
     setIsAuthenticated(true);
-    localStorage.setItem('curahealth_auth', 'true');
-    localStorage.setItem('curahealth_user_email', profile.email);
-    localStorage.setItem('curahealth_patient_profile', JSON.stringify(profile));
+    try {
+      localStorage.setItem('curahealth_auth', 'true');
+      localStorage.setItem('curahealth_user_email', profile.email);
+      localStorage.setItem('curahealth_patient_profile', JSON.stringify(profile));
+    } catch {
+      // Non-fatal storage error
+    }
     saveUserProfileToFirestore(profile);
     setCurrentView('front');
   };
@@ -97,9 +113,16 @@ function MainApp() {
   const handleSignOut = () => {
     logOutFromFirebase();
     setIsAuthenticated(false);
-    localStorage.removeItem('curahealth_auth');
-    localStorage.removeItem('curahealth_patient_profile');
-    localStorage.removeItem('curahealth_user_email');
+    setIsEsp32Unlocked(false);
+    setPendingEsp32Action(null);
+    setIsEsp32PasswordOpen(false);
+    try {
+      localStorage.removeItem('curahealth_auth');
+      localStorage.removeItem('curahealth_patient_profile');
+      localStorage.removeItem('curahealth_user_email');
+    } catch {
+      // Non-fatal storage error
+    }
     setCurrentProfile(INITIAL_PROFILE);
     setCurrentView('front');
   };
@@ -148,7 +171,7 @@ function MainApp() {
         onOpenDoctors={() => setCurrentView('doctors')}
         onGoHome={() => setCurrentView('front')}
         onSignOut={handleSignOut}
-        onOpenHardwareGuide={() => setIsHardwareGuideOpen(true)}
+        onOpenHardwareGuide={() => requestEsp32Access(() => setIsHardwareGuideOpen(true))}
       />
 
       {/* Main Views */}
@@ -179,6 +202,7 @@ function MainApp() {
             onSaveRecord={handleSaveRecord}
             onOpenDoctors={() => setCurrentView('doctors')}
             onStartNew={() => setCurrentView('front')}
+            onRequestEsp32Access={requestEsp32Access}
             isSaved={isAssessmentSaved}
           />
         )}
@@ -211,6 +235,22 @@ function MainApp() {
       <Esp32HardwareGuideModal
         isOpen={isHardwareGuideOpen}
         onClose={() => setIsHardwareGuideOpen(false)}
+      />
+
+      {/* ESP32 Password Gate Modal */}
+      <Esp32PasswordModal
+        isOpen={isEsp32PasswordOpen}
+        onClose={() => {
+          setIsEsp32PasswordOpen(false);
+          setPendingEsp32Action(null);
+        }}
+        onVerified={() => {
+          setIsEsp32Unlocked(true);
+          setIsEsp32PasswordOpen(false);
+          const action = pendingEsp32Action;
+          setPendingEsp32Action(null);
+          if (action) action();
+        }}
       />
 
       {/* Simple Footer */}

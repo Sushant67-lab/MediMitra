@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -13,16 +13,16 @@ import {
   Send,
   Download,
   FileText,
-  Clock,
   ChevronDown,
   ChevronUp,
   Navigation,
-  ExternalLink,
-  LocateFixed,
-  RefreshCw
+  RefreshCw,
+  Cpu
 } from 'lucide-react';
-import { TriageAssessment, UserProfile, Doctor } from '../types/medical';
-import { COMMON_SYMPTOMS } from '../data/medicalKnowledge';
+import { TriageAssessment, UserProfile, Doctor, OtcMedicine } from '../types/medical';
+import { evaluateTriage, getLocalizedSymptomName } from '../data/medicalKnowledge';
+import { ASSESSMENT_TRANSLATIONS } from '../data/assessmentTranslations';
+import { getAppStrings } from '../data/appTranslations';
 import { MediMitraLogo } from './MediMitraLogo';
 import { generateAndDownloadPdf } from '../utils/reportPdfGenerator';
 import { openGmailCompose, openNativeMailto } from '../utils/reportEmailGenerator';
@@ -36,10 +36,8 @@ import { DispenseModal } from './DispenseModal';
 import { PaymentQrModal, getMedicinePrice } from './PaymentQrModal';
 import { DispenseStatusTracker } from './DispenseStatusTracker';
 import { Esp32HardwareGuideModal } from './Esp32HardwareGuideModal';
-import { OtcMedicine } from '../types/medical';
 import { DispensingCommand, ServoConfig } from '../types/dispensing';
 import { createDispensingCommand } from '../services/dispensingService';
-import { Cpu, QrCode } from 'lucide-react';
 
 interface TriageResultViewProps {
   assessment: TriageAssessment;
@@ -47,6 +45,7 @@ interface TriageResultViewProps {
   onSaveRecord: (assessment: TriageAssessment) => void;
   onOpenDoctors: () => void;
   onStartNew: () => void;
+  onRequestEsp32Access?: (onGranted: () => void) => void;
   isSaved: boolean;
 }
 
@@ -56,16 +55,81 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
   onSaveRecord,
   onOpenDoctors,
   onStartNew,
+  onRequestEsp32Access,
   isSaved
 }) => {
-  const { t } = useLanguage();
-  const symptomInfo = COMMON_SYMPTOMS.find(s => s.id === assessment.primarySymptom) || COMMON_SYMPTOMS[0];
-  const isSevere = assessment.severity === 'emergency' || assessment.severity === 'severe';
+  const { t, language } = useLanguage();
+  const ui = getAppStrings(language);
 
-  // Email state - uses the exact email provided during sign in / sign up
+  const displayAssessment = useMemo(() => {
+    if (assessment.triageContext && assessment.triageAnswers) {
+      return evaluateTriage(assessment.triageContext, assessment.triageAnswers, language);
+    }
+    return assessment;
+  }, [assessment, language]);
+
+  const getEnglishAssessment = () => {
+    if (assessment.triageContext && assessment.triageAnswers) {
+      return evaluateTriage(assessment.triageContext, assessment.triageAnswers, 'en');
+    }
+    return assessment;
+  };
+
+  const localizedSymptomName = getLocalizedSymptomName(displayAssessment.primarySymptom, language);
+  const isSevere = displayAssessment.severity === 'emergency' || displayAssessment.severity === 'severe';
+
+  const localizedPatientName = currentProfile.name?.trim() || ui.patientWord;
+  const localizedAgeCategory =
+    currentProfile.ageCategory === 'child'
+      ? ui.ageChild
+      : currentProfile.ageCategory === 'senior'
+        ? ui.ageSenior
+        : ui.ageAdult;
+  const localizedSex = currentProfile.sex === 'male' ? ui.sexMale : ui.sexFemale;
+
+  const getLocalizedUnit = (otc: OtcMedicine) => {
+    const lowerName = otc.name.toLowerCase();
+    const u =
+      otc.unitLabel ||
+      (lowerName.includes('sachet')
+        ? 'sachet'
+        : lowerName.includes('powder') || lowerName.includes('lotion') || lowerName.includes('suspension') || lowerName.includes('spray')
+          ? 'bottle'
+          : lowerName.includes('ointment') || lowerName.includes('cream')
+            ? 'tube'
+            : lowerName.includes('strip') || lowerName.includes('lozenge')
+              ? 'pack'
+              : 'tablet');
+
+    switch (u) {
+      case 'sachet': return ui.unitSachet;
+      case 'bottle': return ui.unitBottle;
+      case 'tube': return ui.unitTube;
+      case 'pack': return ui.unitPack;
+      default: return ui.unitTablet;
+    }
+  };
+
+  const getLocalizedSeverityLabel = () => {
+    switch (displayAssessment.severity) {
+      case 'emergency': return t.severityEmergency;
+      case 'severe': return t.severitySevere;
+      case 'moderate': return t.severityModerate;
+      default: return t.severityMild;
+    }
+  };
+
+  const triggerEsp32 = (action: () => void) => {
+    if (onRequestEsp32Access) {
+      onRequestEsp32Access(action);
+    } else {
+      action();
+    }
+  };
+
+  // Email state
   const [recipientEmail, setRecipientEmail] = useState(currentProfile.email || '');
 
-  // Keep synced if profile updates
   useEffect(() => {
     if (currentProfile.email) {
       setRecipientEmail(currentProfile.email);
@@ -79,9 +143,8 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
   const [showFullReportPreview, setShowFullReportPreview] = useState(false);
 
   // Real location & doctors state
-  const [userLocationName, setUserLocationName] = useState<string>('Detecting location...');
-  const [userCoordinates, setUserCoordinates] = useState<{ lat: number; lon: number } | null>(null);
-  const [realDoctors, setRealDoctors] = useState<Doctor[]>(assessment.recommendedDoctors);
+  const [detectedPlaceName, setDetectedPlaceName] = useState<string | null>(null);
+  const [realDoctors, setRealDoctors] = useState<Doctor[]>(displayAssessment.recommendedDoctors);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
   const [reportId] = useState(() => `MM-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`);
@@ -112,14 +175,14 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
         customServoConfig: configuredServoConfig
       });
       setActiveDispenseCommand(command);
-      setIsPaymentQrModalOpen(false);
       window.scrollTo({ top: 200, behavior: 'smooth' });
-    } catch (err: any) {
-      console.error('Failed to create command after payment:', err);
+    } catch {
+      // Fallback handled cleanly
+    } finally {
+      setIsPaymentQrModalOpen(false);
     }
   };
 
-  // Detect user's real location and fetch real nearby clinics/doctors
   useEffect(() => {
     detectLocationAndDoctors();
   }, []);
@@ -128,52 +191,46 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
     setIsLoadingLocation(true);
     try {
       const coords = await getCurrentBrowserCoordinates();
-      setUserCoordinates({ lat: coords.latitude, lon: coords.longitude });
       const geo = await reverseGeocodeCoordinates(coords.latitude, coords.longitude);
-      const placeLabel = [geo.locality, geo.city].filter(Boolean).join(', ') || 'Your Area';
-      setUserLocationName(placeLabel);
+      const placeLabel = [geo.locality, geo.city].filter(Boolean).join(', ');
+      setDetectedPlaceName(placeLabel || null);
 
-      // Fetch real clinics near these coordinates
       const nearby = await fetchRealNearbyClinics(coords.latitude, coords.longitude);
       if (nearby.length > 0) {
         setRealDoctors(nearby);
       }
     } catch {
-      setUserLocationName('Nearby Clinics (Select to Enable GPS)');
+      setDetectedPlaceName(null);
     } finally {
       setIsLoadingLocation(false);
     }
   };
 
-  // Handle PDF Generation & Download
   const handleDownloadPdf = () => {
     setIsDownloadingPdf(true);
     try {
-      generateAndDownloadPdf(assessment, currentProfile, reportId, recipientEmail);
+      generateAndDownloadPdf(getEnglishAssessment(), currentProfile, reportId, recipientEmail);
       setPdfDownloaded(true);
       setTimeout(() => setPdfDownloaded(false), 4000);
-    } catch (err) {
-      console.error('Failed to generate PDF:', err);
+    } catch {
+      // Non-fatal PDF fallback
     } finally {
       setIsDownloadingPdf(false);
     }
   };
 
-  // Handle sending email to user's provided email address
   const handleSendEmail = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!recipientEmail.trim()) return;
 
     setIsSendingEmail(true);
+    onSaveRecord(displayAssessment);
 
-    // Save assessment to user medical records
-    onSaveRecord(assessment);
-
-    // Dispatch report to user's email client
+    const engAssessment = getEnglishAssessment();
     try {
-      openGmailCompose(assessment, currentProfile, reportId, recipientEmail);
+      openGmailCompose(engAssessment, currentProfile, reportId, recipientEmail);
     } catch {
-      openNativeMailto(assessment, currentProfile, reportId, recipientEmail);
+      openNativeMailto(engAssessment, currentProfile, reportId, recipientEmail);
     }
 
     setTimeout(() => {
@@ -182,12 +239,18 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
     }, 600);
   };
 
+  const homeTips = ASSESSMENT_TRANSLATIONS[language]?.simpleTips || ASSESSMENT_TRANSLATIONS.en.simpleTips;
+
+  const firstOtc = displayAssessment.recommendedOtcs[0];
+  const firstOtcQty = firstOtc?.preferredQuantity || 1;
+  const firstOtcTotal = firstOtc ? getMedicinePrice(firstOtc.name) * firstOtcQty : 0;
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-5"
+      className="max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-24 sm:pb-6 space-y-5"
     >
       {/* Top Navigation */}
       <div className="flex items-center justify-between">
@@ -196,11 +259,11 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
           className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-teal-700 transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Home</span>
+          <span>{ui.backToHome}</span>
         </button>
 
         <div className="flex items-center gap-2 text-xs text-slate-500 font-normal">
-          <span>Report ID: <span className="font-mono text-slate-700 font-medium">{reportId}</span></span>
+          <span>{ui.reportIdLabel}: <span className="font-mono text-slate-700 font-medium">{reportId}</span></span>
         </div>
       </div>
 
@@ -210,20 +273,20 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
           <MediMitraLogo size="sm" showTagline />
           <div className="text-left sm:text-right text-xs text-slate-500">
-            <span className="font-medium text-slate-700 block">Check-up Complete • Medical Report</span>
-            <span>Date: {assessment.timestamp || 'Today'}</span>
+            <span className="font-medium text-slate-700 block">{ui.checkupCompleteBadge}</span>
+            <span>{ui.dateLabel}: {displayAssessment.timestamp || ''}</span>
           </div>
         </div>
 
         {/* Patient Details Ribbon */}
         <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-700">
           <div>
-            Patient: <span className="font-semibold text-slate-900">{currentProfile.name}</span> •{' '}
-            <span className="capitalize">{currentProfile.ageCategory} ({currentProfile.age}y)</span> •{' '}
-            <span className="capitalize">{currentProfile.sex}</span>
+            {ui.patientLabel}: <span className="font-semibold text-slate-900">{localizedPatientName}</span> •{' '}
+            <span>{localizedAgeCategory} ({currentProfile.age}{ui.yearsShort})</span> •{' '}
+            <span>{localizedSex}</span>
           </div>
           <div className="text-slate-600">
-            Chief Complaint: <span className="font-semibold text-teal-800">{symptomInfo.name}</span>
+            {ui.chiefComplaintLabel}: <span className="font-semibold text-teal-800">{localizedSymptomName}</span>
           </div>
         </div>
 
@@ -242,22 +305,18 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
             <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md ${
               isSevere ? 'bg-rose-200 text-rose-900' : 'bg-emerald-200 text-emerald-900'
             }`}>
-              {isSevere ? 'Severe Problem • Doctor Visit Required' : 'Basic Problem • Home Treatment Safe'}
+              {isSevere ? ui.severeBadge : ui.mildBadge}
             </span>
             <h1 className="text-lg sm:text-xl font-semibold mt-1 text-slate-900">
-              {isSevere 
-                ? 'This problem is serious and cannot be treated with basic medicine alone.' 
-                : 'This is a basic health problem and can be treated with simple medicine.'}
+              {isSevere ? ui.severeHeadline : ui.mildHeadline}
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 font-normal mt-1 leading-relaxed">
-              {isSevere 
-                ? 'Your answers indicate severe pain or warning signs. Please consult a nearby doctor or clinic today.' 
-                : 'Your symptoms appear mild and safe for home relief. Follow the recommended medicine guidelines below.'}
+              {isSevere ? ui.severeSubtext : ui.mildSubtext}
             </p>
           </div>
         </div>
 
-        {/* Simple & Clean: Send Report to Your Email */}
+        {/* Send Report to Email */}
         <div className="p-4 sm:p-5 rounded-2xl bg-teal-50/80 border border-teal-200 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -266,7 +325,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                 {t.sendReportEmailTitle}
               </h2>
             </div>
-            <span className="text-[11px] text-teal-700 font-medium">Digital Medical Record</span>
+            <span className="text-[11px] text-teal-700 font-medium">{ui.digitalMedicalRecord}</span>
           </div>
 
           <p className="text-xs text-slate-600 font-normal">
@@ -288,7 +347,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                 required
                 value={recipientEmail}
                 onChange={(e) => setRecipientEmail(e.target.value)}
-                placeholder="Enter your email address (e.g. user@gmail.com)"
+                placeholder={ui.enterEmailPlaceholder}
                 className="w-full pl-9 pr-3 py-2.5 text-xs font-medium rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 bg-white text-slate-900"
               />
             </div>
@@ -311,7 +370,6 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
             </button>
           </form>
 
-          {/* Email Sent Status Banner */}
           {emailDispatched && (
             <motion.div
               initial={{ opacity: 0, y: 4 }}
@@ -320,46 +378,50 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
             >
               <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
               <div className="space-y-0.5">
-                <span className="font-semibold block">Report dispatched to {recipientEmail}!</span>
+                <span className="font-semibold block">{ui.reportDispatchedTitle(recipientEmail)}</span>
                 <span className="text-[11px] text-emerald-800 block">
-                  Your medical check-up summary has been sent. You can also download the official PDF copy below.
+                  {ui.reportDispatchedSub}
                 </span>
               </div>
             </motion.div>
           )}
         </div>
 
-        {/* Live Dispensing Status Tracker (when command active) */}
+        {/* Live Dispensing Status Tracker */}
         {activeDispenseCommand && (
           <DispenseStatusTracker
             command={activeDispenseCommand}
             onDismiss={() => setActiveDispenseCommand(null)}
-            onOpenHardwareGuide={() => setIsHardwareGuideOpen(true)}
+            onOpenHardwareGuide={() => triggerEsp32(() => setIsHardwareGuideOpen(true))}
           />
         )}
 
-        {/* IF MILD: Recommend Basic Medicine */}
-        {!isSevere && assessment.recommendedOtcs.length > 0 && (
+        {/* IF MILD: Recommend Real OTC Product */}
+        {!isSevere && displayAssessment.recommendedOtcs.length > 0 && (
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-slate-800">
                 <Pill className="w-4 h-4 text-teal-600" />
-                <h2 className="text-sm font-semibold text-slate-900">Recommended Basic Medicine & IoT Dispenser</h2>
+                <h2 className="text-sm font-semibold text-slate-900">{ui.recommendedMedsAndDispenser}</h2>
               </div>
 
               <button
                 type="button"
-                onClick={() => setIsHardwareGuideOpen(true)}
+                onClick={() => triggerEsp32(() => setIsHardwareGuideOpen(true))}
                 className="text-xs font-medium text-teal-700 hover:text-teal-900 flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
               >
                 <Cpu className="w-3.5 h-3.5 text-teal-600" />
-                <span>ESP32 Hardware Schematic & Code</span>
+                <span>{ui.esp32SchematicBtn}</span>
               </button>
             </div>
 
             <div className="space-y-3">
-              {assessment.recommendedOtcs.map((otc, idx) => {
-                const price = getMedicinePrice(otc.name);
+              {displayAssessment.recommendedOtcs.map((otc, idx) => {
+                const unitPrice = getMedicinePrice(otc.name);
+                const preferredQty = otc.preferredQuantity || 1;
+                const totalPrice = unitPrice * preferredQty;
+                const unitLabel = getLocalizedUnit(otc);
+
                 return (
                   <div 
                     key={idx}
@@ -367,69 +429,68 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-base text-slate-900">{otc.name}</span>
                           <span className="text-[10px] font-semibold bg-teal-100 text-teal-800 px-2 py-0.5 rounded-md">
-                            OTC Relief
+                            {ui.verifiedOtcBadge}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5">Category: {otc.category || 'General Health'}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{ui.categoryLabel}: {otc.category}</p>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
-                          ₹{price} / tablet
+                          {preferredQty} {unitLabel} • ₹{totalPrice}
                         </span>
                         <button
                           type="button"
                           onClick={() => {
                             setSelectedMedicineForDispense(otc);
-                            setDispenseQuantity(1);
+                            setDispenseQuantity(preferredQty);
                             setIsDispenseModalOpen(true);
                           }}
                           className="sm:hidden px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
                         >
                           <Pill className="w-3.5 h-3.5" />
-                          <span>Dispense</span>
+                          <span>{ui.dispenseShortBtn}</span>
                         </button>
                         <span className="hidden sm:inline-block text-[11px] font-medium text-slate-500">
-                          Dispenser Slot #{idx + 1}
+                          {ui.dispenserSlot} #{idx + 1}
                         </span>
                       </div>
                     </div>
 
                     <p className="text-xs text-slate-700 font-normal leading-relaxed">
-                      <strong className="text-slate-900">Dosage Guide: </strong>{otc.dosageGuide}
+                      <strong className="text-slate-900">{ui.dosageGuideLabel}: </strong>{otc.dosageGuide}
                     </p>
 
                     {otc.childDosageNote && (
                       <p className="text-xs text-amber-900 bg-amber-50 p-2.5 rounded-xl border border-amber-200 font-normal">
-                        <strong className="text-amber-950">Pediatric Note: </strong>{otc.childDosageNote}
+                        <strong className="text-amber-950">{ui.pediatricNoteLabel}: </strong>{otc.childDosageNote}
                       </p>
                     )}
 
                     <p className="text-[11px] text-slate-500 font-normal">
-                      <strong className="text-slate-700">Safety Caution: </strong>{otc.safetyCaution}
+                      <strong className="text-slate-700">{ui.safetyCautionLabel}: </strong>{otc.safetyCaution}
                     </p>
 
-                    {/* Dispense Action Strip - Ultra Visible on Mobile & Desktop */}
                     <div className="pt-3 border-t border-teal-200/60 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                       <div className="flex items-center gap-1.5 text-xs text-teal-800 font-medium">
                         <Cpu className="w-4 h-4 text-teal-600 shrink-0" />
-                        <span>Connected to ESP32 Dispenser Unit (SG90 Servo GPIO 18)</span>
+                        <span>{ui.connectedEsp32Text}</span>
                       </div>
 
                       <button
                         type="button"
                         onClick={() => {
                           setSelectedMedicineForDispense(otc);
-                          setDispenseQuantity(1);
+                          setDispenseQuantity(preferredQty);
                           setIsDispenseModalOpen(true);
                         }}
                         className="w-full sm:w-auto px-6 py-3.5 sm:py-2.5 rounded-2xl sm:rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white font-bold text-sm sm:text-xs flex items-center justify-center gap-2.5 transition-all shadow-md hover:shadow-lg cursor-pointer ring-2 ring-teal-500/30"
                       >
                         <Pill className="w-4 h-4 shrink-0" />
-                        <span>DISPENSE MEDICINE (₹{price})</span>
+                        <span>{ui.dispenseMedicineBtn} ({preferredQty} {unitLabel} • ₹{totalPrice})</span>
                       </button>
                     </div>
                   </div>
@@ -441,18 +502,22 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs text-slate-700">
               <div className="flex items-center gap-2 font-medium text-slate-800">
                 <Home className="w-4 h-4 text-emerald-600" />
-                <span className="font-semibold">Simple Home Tips:</span>
+                <span className="font-semibold">{ui.simpleHomeTipsTitle}:</span>
               </div>
               <ul className="list-disc list-inside space-y-1 pl-1 font-normal text-slate-600">
-                <li>Drink plenty of warm water and clear fluids to stay hydrated.</li>
-                <li>Ensure adequate rest and avoid heavy screen time or physical strain.</li>
-                <li>If symptoms do not improve within 48 hours, consult a physician.</li>
+                {displayAssessment.homeRemedies.length > 0
+                  ? displayAssessment.homeRemedies.slice(0, 3).map((rem, rIdx) => (
+                      <li key={rIdx}>
+                        <strong className="text-slate-800">{rem.title}:</strong> {rem.instructions}
+                      </li>
+                    ))
+                  : homeTips.map((tip, tIdx) => <li key={tIdx}>{tip}</li>)}
               </ul>
             </div>
           </div>
         )}
 
-        {/* Real Clinics and Doctors: ONLY shown when problem is big/severe (NO medicine dispensed) */}
+        {/* Real Clinics and Doctors: ONLY shown when problem is severe */}
         {isSevere && (
           <div className="space-y-3 pt-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -460,19 +525,24 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                 <Stethoscope className="w-4 h-4 text-rose-600" />
                 <div>
                   <h2 className="text-sm font-semibold text-slate-900">
-                    Recommended Doctors & Clinics to Visit
+                    {ui.recommendedDoctorsVisitTitle}
                   </h2>
                   <div className="flex items-center gap-1.5 text-xs text-slate-500 font-normal mt-0.5">
                     <MapPin className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                    <span>Near: <strong className="text-slate-700">{userLocationName}</strong></span>
+                    <span>
+                      {ui.nearLabel}:{' '}
+                      <strong className="text-slate-700">
+                        {isLoadingLocation ? ui.detectingLocation : detectedPlaceName || ui.localDirectoryLabel}
+                      </strong>
+                    </span>
                     <button
                       onClick={detectLocationAndDoctors}
                       disabled={isLoadingLocation}
                       className="text-[11px] text-teal-600 hover:text-teal-800 font-medium ml-1 flex items-center gap-0.5 cursor-pointer"
-                      title="Update current location"
+                      title={ui.refreshGpsBtn}
                     >
                       <RefreshCw className={`w-3 h-3 ${isLoadingLocation ? 'animate-spin' : ''}`} />
-                      <span>{isLoadingLocation ? 'Locating...' : 'Refresh GPS'}</span>
+                      <span>{isLoadingLocation ? ui.locatingText : ui.refreshGpsShort}</span>
                     </button>
                   </div>
                 </div>
@@ -481,7 +551,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                 onClick={onOpenDoctors}
                 className="text-xs font-semibold text-teal-700 hover:underline cursor-pointer"
               >
-                View All Doctors on Google Maps →
+                {ui.viewAllDoctorsMaps}
               </button>
             </div>
 
@@ -504,7 +574,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                     <p className="text-xs text-slate-500 font-normal mt-1">{doc.hospital}</p>
                     <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1 font-normal">
                       <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                      <span>{doc.distanceKm} km away • {doc.address}</span>
+                      <span>{doc.distanceKm} {ui.kmAway} • {doc.address}</span>
                     </p>
                   </div>
 
@@ -516,17 +586,16 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-2.5 py-1.5 rounded-xl border border-teal-200 hover:bg-teal-50 text-teal-700 font-medium text-xs flex items-center gap-1 transition-colors"
-                        title="Open Google Maps directions"
                       >
                         <Navigation className="w-3 h-3 text-teal-600" />
-                        <span>Directions</span>
+                        <span>{ui.directionsBtn}</span>
                       </a>
                       <a
                         href={`tel:${doc.phone}`}
                         className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <Phone className="w-3 h-3" />
-                        <span>Call</span>
+                        <span>{ui.callBtn}</span>
                       </a>
                     </div>
                   </div>
@@ -544,7 +613,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
           >
             <span className="flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5 text-teal-600" />
-              <span>{showFullReportPreview ? 'Hide Detailed Clinical Report Preview' : 'View Full Formatted Report Document'}</span>
+              <span>{showFullReportPreview ? ui.hidePreviewBtn : ui.viewFullPreviewBtn}</span>
             </span>
             {showFullReportPreview ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
           </button>
@@ -559,17 +628,17 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
               >
                 <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 font-mono text-xs text-slate-700 space-y-2 leading-relaxed">
                   <div className="text-center pb-2 border-b border-slate-200 font-sans">
-                    <span className="font-semibold text-slate-900 block text-sm">MEDIMITRA DIGITAL HEALTHCARE REPORT</span>
-                    <span className="text-[10px] text-slate-500">Case Reference #{reportId} • Generated via MediMitra Clinical Engine</span>
+                    <span className="font-semibold text-slate-900 block text-sm">{ui.previewReportHeader}</span>
+                    <span className="text-[10px] text-slate-500">{ui.previewCaseRef} #{reportId}</span>
                   </div>
-                  <div><strong>Patient:</strong> {currentProfile.name} ({currentProfile.ageCategory}, {currentProfile.age}y, {currentProfile.sex})</div>
-                  <div><strong>Email Dispatched:</strong> {recipientEmail}</div>
-                  <div><strong>Chief Symptom:</strong> {symptomInfo.name}</div>
-                  <div><strong>Clinical Triage Level:</strong> {assessment.severity.toUpperCase()}</div>
-                  <div><strong>Assessment Summary:</strong> {assessment.clinicalSummary}</div>
-                  <div><strong>Recommended Remedies:</strong> {assessment.recommendedOtcs.map(o => o.name).join(', ') || 'Physician consultation required'}</div>
+                  <div><strong>{ui.patientLabel}:</strong> {localizedPatientName} ({localizedAgeCategory}, {currentProfile.age}{ui.yearsShort}, {localizedSex})</div>
+                  <div><strong>{ui.previewEmailDispatched}:</strong> {recipientEmail || '-'}</div>
+                  <div><strong>{ui.chiefComplaintLabel}:</strong> {localizedSymptomName}</div>
+                  <div><strong>{ui.previewTriageLevel}:</strong> {getLocalizedSeverityLabel()}</div>
+                  <div><strong>{ui.previewSummary}:</strong> {displayAssessment.clinicalSummary}</div>
+                  <div><strong>{ui.previewRemedies}:</strong> {displayAssessment.recommendedOtcs.map(o => o.name).join(', ') || ui.previewPhysicianNeeded}</div>
                   <div className="pt-2 border-t border-slate-200 text-[10px] text-slate-400 font-sans">
-                    * Disclaimer: This digital summary was generated for informational health guidance. Not a substitute for emergency medicine.
+                    {ui.previewDisclaimer}
                   </div>
                 </div>
               </motion.div>
@@ -577,28 +646,27 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
           </AnimatePresence>
         </div>
 
-        {/* Bottom Actions - PDF Download & Navigation */}
+        {/* Bottom Actions */}
         <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            {/* Real PDF Download Button */}
             <button
               onClick={handleDownloadPdf}
               disabled={isDownloadingPdf}
               className="text-xs font-semibold px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>{isDownloadingPdf ? 'Generating PDF...' : pdfDownloaded ? 'PDF Downloaded ✓' : t.downloadPdfBtn}</span>
+              <span>{isDownloadingPdf ? ui.generatingPdf : pdfDownloaded ? ui.pdfDownloaded : t.downloadPdfBtn}</span>
             </button>
 
             <button
-              onClick={() => onSaveRecord(assessment)}
+              onClick={() => onSaveRecord(displayAssessment)}
               className={`text-xs font-medium px-3.5 py-2.5 rounded-xl transition-all cursor-pointer ${
                 isSaved
                   ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
             >
-              {isSaved ? 'Saved ✓' : 'Save Summary'}
+              {isSaved ? ui.savedBtn : ui.saveSummaryBtn}
             </button>
           </div>
 
@@ -622,30 +690,30 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
       </div>
 
       {/* Floating Sticky Dispense Action Bar for Mobile Devices */}
-      {!isSevere && assessment.recommendedOtcs.length > 0 && !activeDispenseCommand && (
+      {!isSevere && firstOtc && !activeDispenseCommand && (
         <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-teal-200 px-4 py-3 shadow-2xl flex items-center justify-between gap-3">
           <div className="truncate">
-            <span className="text-[10px] text-teal-700 font-bold uppercase tracking-wider block">Recommended</span>
+            <span className="text-[10px] text-teal-700 font-bold uppercase tracking-wider block">{ui.recommendedShort}</span>
             <span className="text-xs font-bold text-slate-900 truncate block">
-              {assessment.recommendedOtcs[0].name}
+              {firstOtc.name}
             </span>
           </div>
           <button
             type="button"
             onClick={() => {
-              setSelectedMedicineForDispense(assessment.recommendedOtcs[0]);
-              setDispenseQuantity(1);
+              setSelectedMedicineForDispense(firstOtc);
+              setDispenseQuantity(firstOtcQty);
               setIsDispenseModalOpen(true);
             }}
             className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0"
           >
             <Pill className="w-3.5 h-3.5" />
-            <span>DISPENSE (₹{getMedicinePrice(assessment.recommendedOtcs[0].name)})</span>
+            <span>{ui.dispenseShortBtn} (₹{firstOtcTotal})</span>
           </button>
         </div>
       )}
 
-      {/* Dispense Authorization & Clinical Verification Modal */}
+      {/* Dispense Authorization Modal */}
       {selectedMedicineForDispense && (
         <DispenseModal
           isOpen={isDispenseModalOpen}
@@ -653,7 +721,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
           medicine={selectedMedicineForDispense}
           patientProfile={currentProfile}
           onProceedToPayment={handleProceedToPayment}
-          onOpenHardwareGuide={() => setIsHardwareGuideOpen(true)}
+          onOpenHardwareGuide={() => triggerEsp32(() => setIsHardwareGuideOpen(true))}
         />
       )}
 

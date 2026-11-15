@@ -46,10 +46,16 @@ export interface ChatMessage {
   text: string;
   timestamp: string;
   questionId?: string;
+  stepNumber?: number;
   options?: string[];
   selectedOption?: string;
+  selectedOptionIndex?: number;
   badge?: string;
   isRedFlagWarning?: boolean;
+  metaType?: 'welcome' | 'ack_note' | 'feeling' | 'question' | 'ack_step' | 'restart';
+  ackStep?: number;
+  ackQuestionId?: string;
+  ackOptionIndex?: number;
 }
 
 export interface TriageQuestion {
@@ -71,6 +77,8 @@ export interface OtcMedicine {
   childDosageNote?: string;
   safetyCaution: string;
   typicalUse: string;
+  preferredQuantity?: number;
+  unitLabel?: 'tablet' | 'sachet' | 'bottle' | 'tube' | 'pack';
 }
 
 export interface HomeRemedy {
@@ -115,6 +123,8 @@ export interface TriageAssessment {
   recommendedDoctors: Doctor[];
   followUpHours: number;
   whenToSeekEmergency: string[];
+  triageContext?: QuestionContext;
+  triageAnswers?: Record<string, string>;
 }
 
 export interface QuestionContext {
@@ -124,6 +134,7 @@ export interface QuestionContext {
   isPregnantOrNursing?: boolean;
   symptom: SymptomCategory;
   answers: Record<string, string>;
+  answerIndices?: Record<string, number>;
 }
 
 export interface MedicalRecord {

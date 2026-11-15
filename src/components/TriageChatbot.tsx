@@ -1,16 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  HeartPulse, 
   Send, 
   ArrowLeft, 
   RotateCcw, 
   ShieldAlert, 
-  Sparkles, 
-  CheckCircle2, 
-  AlertCircle,
-  HelpCircle,
-  User,
   Stethoscope,
   Info
 } from 'lucide-react';
@@ -21,9 +15,19 @@ import {
   TriageAssessment,
   QuestionContext 
 } from '../types/medical';
-import { getAdaptiveQuestion, evaluateTriage, COMMON_SYMPTOMS } from '../data/medicalKnowledge';
+import { 
+  getAdaptiveQuestion, 
+  evaluateTriage, 
+  getLocalizedSymptomName 
+} from '../data/medicalKnowledge';
+import { 
+  QUESTION_TRANSLATIONS, 
+  QuestionId, 
+  TRIAGE_UI_STRINGS 
+} from '../data/triageTranslations';
 import { MediMitraLogo } from './MediMitraLogo';
 import { useLanguage } from '../context/LanguageContext';
+import { getAppStrings } from '../data/appTranslations';
 
 interface TriageChatbotProps {
   currentProfile: UserProfile;
@@ -44,16 +48,27 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
   onCompleteAssessment,
   onDirectDoctorReferral
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const appUi = getAppStrings(language);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answerIndices, setAnswerIndices] = useState<Record<string, number>>({});
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [customInput, setCustomInput] = useState<string>('');
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [hasTriggeredRedFlag, setHasTriggeredRedFlag] = useState<boolean>(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  const symptomInfo = COMMON_SYMPTOMS.find(s => s.id === symptom) || COMMON_SYMPTOMS[0];
+  const ui = TRIAGE_UI_STRINGS[language] || TRIAGE_UI_STRINGS.en;
+  const localizedSymptomName = getLocalizedSymptomName(symptom, language);
+  const displayPatientName = currentProfile.name?.trim() || appUi.patientWord;
+  const localizedAgeCat =
+    currentProfile.ageCategory === 'child'
+      ? appUi.ageChild
+      : currentProfile.ageCategory === 'senior'
+        ? appUi.ageSenior
+        : appUi.ageAdult;
+  const localizedSex = currentProfile.sex === 'female' ? appUi.sexFemale : appUi.sexMale;
 
   const questionContext: QuestionContext = {
     ageCategory: currentProfile.ageCategory,
@@ -61,20 +76,23 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
     sex: currentProfile.sex,
     isPregnantOrNursing: currentProfile.isPregnantOrNursing,
     symptom,
-    answers
+    answers,
+    answerIndices
   };
 
-  const currentQuestionData = getAdaptiveQuestion(currentStep, questionContext);
+  const currentQuestionData = getAdaptiveQuestion(currentStep, questionContext, language);
 
-  // Initialize intake session on mount
+  // Initialize intake session on mount or symptom change
   useEffect(() => {
+    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const welcomeMessages: ChatMessage[] = [
       {
         id: 'msg-welcome-1',
         sender: 'bot',
-        text: `${t.chatWelcome} (${symptomInfo.name})`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        badge: `${t.brandName} Check-up`
+        metaType: 'welcome',
+        text: `${t.chatWelcome} (${localizedSymptomName})`,
+        timestamp: nowTime,
+        badge: ui.checkupBadge
       }
     ];
 
@@ -83,34 +101,38 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
         id: 'msg-user-note',
         sender: 'user',
         text: userCustomNote,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        timestamp: nowTime
       });
       welcomeMessages.push({
         id: 'msg-ack-note',
         sender: 'bot',
-        text: `Thank you for sharing that. Let's ask a few simple questions tailored for you.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        metaType: 'ack_note',
+        text: ui.noteAck,
+        timestamp: nowTime
       });
     } else if (initialFeeling) {
       welcomeMessages.push({
         id: 'msg-user-feeling',
         sender: 'user',
-        text: `I'm feeling: ${initialFeeling}`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        metaType: 'feeling',
+        text: `${ui.feelingPrefix} ${initialFeeling}`,
+        timestamp: nowTime
       });
     }
 
     // Add first question
-    const q1 = getAdaptiveQuestion(1, questionContext);
+    const q1 = getAdaptiveQuestion(1, questionContext, language);
     if (q1) {
       welcomeMessages.push({
         id: `msg-q-1`,
         sender: 'bot',
+        metaType: 'question',
+        stepNumber: 1,
         text: q1.question,
         questionId: q1.id,
         options: q1.options,
         badge: q1.badge,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        timestamp: nowTime
       });
     }
 
@@ -120,19 +142,30 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory, isTyping]);
+  }, [chatHistory, isTyping, language]);
 
-  const handleSelectOption = (option: string) => {
+  const handleSelectOption = (option: string, optionIndex?: number) => {
     if (!currentQuestionData) return;
 
-    // Check if this option is a red flag
-    const isRedFlag = 
-      option.includes('breathing') || 
-      option.includes('Stiff neck') || 
+    const qId = currentQuestionData.id;
+
+    // Language-independent red flag detection (index-based + text fallback)
+    const isRedFlagByIndex =
+      typeof optionIndex === 'number' &&
+      ((qId === 'q6_red_flags' && optionIndex > 0) ||
+        (qId === 'q5_headache_type' && optionIndex === 3) ||
+        (qId === 'q5_rash_appearance' && optionIndex === 4) ||
+        (qId === 'q5_cut_characteristics' && optionIndex === 4));
+
+    const isRedFlagByText =
+      option.includes('breathing') ||
+      option.includes('Stiff neck') ||
       option.includes('thunderclap') ||
       option.includes('fluids down') ||
       option.includes('Purple spots') ||
       option.includes('Active bleeding');
+
+    const isRedFlag = isRedFlagByIndex || isRedFlagByText;
 
     if (isRedFlag) {
       setHasTriggeredRedFlag(true);
@@ -140,16 +173,28 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
 
     const updatedAnswers = {
       ...answers,
-      [currentQuestionData.id]: option
+      [qId]: option
     };
     setAnswers(updatedAnswers);
+
+    const updatedIndices =
+      typeof optionIndex === 'number'
+        ? { ...answerIndices, [qId]: optionIndex }
+        : answerIndices;
+    if (typeof optionIndex === 'number') {
+      setAnswerIndices(updatedIndices);
+    }
+
+    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     // Add user message
     const userMsg: ChatMessage = {
       id: `usr-${Date.now()}`,
       sender: 'user',
       text: option,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      questionId: qId,
+      selectedOptionIndex: optionIndex,
+      timestamp: nowTime
     };
 
     setChatHistory(prev => [...prev, userMsg]);
@@ -160,26 +205,26 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
       const nextStep = currentStep + 1;
       const updatedCtx: QuestionContext = {
         ...questionContext,
-        answers: updatedAnswers
+        answers: updatedAnswers,
+        answerIndices: updatedIndices
       };
 
-      const nextQuestion = getAdaptiveQuestion(nextStep, updatedCtx);
+      const nextQuestion = getAdaptiveQuestion(nextStep, updatedCtx, language);
 
       if (nextQuestion) {
-        // Empathetic acknowledgment
         let botAck = '';
         if (currentStep === 1) {
-          botAck = `Understood. Age group set to ${option}. Calibrating pediatric & adult dosage algorithms...`;
+          botAck = ui.ackStep1(option);
         } else if (currentStep === 2) {
-          botAck = `Noted your health context (${option}). Ensuring all medication checks reflect this.`;
+          botAck = ui.ackStep2(option);
         } else if (currentStep === 5) {
-          botAck = `Clinical specifics recorded. Now screening for potential warning signs...`;
+          botAck = ui.ackStep5;
         } else if (currentStep === 6 && isRedFlag) {
-          botAck = `⚠️ Caution: You selected a high-priority red flag symptom. Emergency medical attention may be needed.`;
+          botAck = ui.ackStep6RedFlag;
         } else if (currentStep === 6) {
-          botAck = `No acute red flags indicated. Checking allergy and medication history...`;
+          botAck = ui.ackStep6Safe;
         } else if (currentStep === 8) {
-          botAck = `Checked prior medication timing to prevent compound dosage risks.`;
+          botAck = ui.ackStep8;
         }
 
         const newMessages: ChatMessage[] = [];
@@ -187,8 +232,12 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
           newMessages.push({
             id: `ack-${Date.now()}`,
             sender: 'bot',
+            metaType: 'ack_step',
+            ackStep: currentStep,
+            ackQuestionId: qId,
+            ackOptionIndex: optionIndex,
             text: botAck,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestamp: nowTime,
             isRedFlagWarning: isRedFlag
           });
         }
@@ -196,23 +245,25 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
         newMessages.push({
           id: `q-${nextStep}-${Date.now()}`,
           sender: 'bot',
+          metaType: 'question',
+          stepNumber: nextStep,
           text: nextQuestion.question,
           questionId: nextQuestion.id,
           options: nextQuestion.options,
           badge: nextQuestion.badge,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          timestamp: nowTime
         });
 
         setChatHistory(prev => [...prev, ...newMessages]);
         setCurrentStep(nextStep);
         setIsTyping(false);
       } else {
-        // All 13 questions finished -> finalize clinical assessment!
+        // All 10 questions finished -> MediMitra automatically decides severity & recommendation in current language!
         setIsTyping(false);
-        const finalAssessment = evaluateTriage(updatedCtx, updatedAnswers);
+        const finalAssessment = evaluateTriage(updatedCtx, updatedAnswers, language);
         onCompleteAssessment(finalAssessment);
       }
-    }, 600);
+    }, 550);
   };
 
   const handleCustomSubmit = (e: React.FormEvent) => {
@@ -226,25 +277,80 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
   const handleRestart = () => {
     setCurrentStep(1);
     setAnswers({});
+    setAnswerIndices({});
     setHasTriggeredRedFlag(false);
-    const q1 = getAdaptiveQuestion(1, questionContext);
+    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const resetCtx: QuestionContext = { ...questionContext, answers: {}, answerIndices: {} };
+    const q1 = getAdaptiveQuestion(1, resetCtx, language);
     setChatHistory([
       {
         id: 'msg-restart',
         sender: 'bot',
-        text: `Consultation restarted. Let's begin the 10-step health check for ${symptomInfo.name}.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        metaType: 'restart',
+        text: `${ui.restartedText} ${localizedSymptomName}.`,
+        timestamp: nowTime
       },
       ...(q1 ? [{
         id: 'q-1-re',
         sender: 'bot' as const,
+        metaType: 'question' as const,
+        stepNumber: 1,
         text: q1.question,
         questionId: q1.id,
         options: q1.options,
         badge: q1.badge,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        timestamp: nowTime
       }] : [])
     ]);
+  };
+
+  // Resolve message text & badge dynamically in the active language so switching languages mid-chat updates everything immediately
+  const resolveLocalizedMessage = (msg: ChatMessage): { text: string; badge?: string } => {
+    if (msg.metaType === 'welcome') {
+      return {
+        text: `${t.chatWelcome} (${localizedSymptomName})`,
+        badge: ui.checkupBadge
+      };
+    }
+    if (msg.metaType === 'ack_note') {
+      return { text: ui.noteAck };
+    }
+    if (msg.metaType === 'feeling' && initialFeeling) {
+      return { text: `${ui.feelingPrefix} ${initialFeeling}` };
+    }
+    if (msg.metaType === 'restart') {
+      return { text: `${ui.restartedText} ${localizedSymptomName}.` };
+    }
+    if (msg.metaType === 'question' && msg.stepNumber) {
+      const q = getAdaptiveQuestion(msg.stepNumber, questionContext, language);
+      if (q) {
+        return { text: q.question, badge: q.badge };
+      }
+    }
+    if (msg.sender === 'user' && msg.questionId && typeof msg.selectedOptionIndex === 'number') {
+      const qBundle = QUESTION_TRANSLATIONS[language]?.[msg.questionId as QuestionId];
+      const translatedOption = qBundle?.options?.[msg.selectedOptionIndex];
+      if (translatedOption) {
+        return { text: translatedOption };
+      }
+    }
+    if (msg.metaType === 'ack_step' && msg.ackStep) {
+      let optText = msg.questionId ? answers[msg.questionId] : '';
+      if (msg.ackQuestionId && typeof msg.ackOptionIndex === 'number') {
+        optText =
+          QUESTION_TRANSLATIONS[language]?.[msg.ackQuestionId as QuestionId]?.options?.[msg.ackOptionIndex] ||
+          answers[msg.ackQuestionId] ||
+          '';
+      }
+      if (msg.ackStep === 1) return { text: ui.ackStep1(optText) };
+      if (msg.ackStep === 2) return { text: ui.ackStep2(optText) };
+      if (msg.ackStep === 5) return { text: ui.ackStep5 };
+      if (msg.ackStep === 6) {
+        return { text: msg.isRedFlagWarning ? ui.ackStep6RedFlag : ui.ackStep6Safe };
+      }
+      if (msg.ackStep === 8) return { text: ui.ackStep8 };
+    }
+    return { text: msg.text, badge: msg.badge };
   };
 
   const progressPercentage = Math.min(100, Math.round(((currentStep - 1) / 10) * 100));
@@ -257,7 +363,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
           <button
             onClick={onBack}
             className="p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
-            title="Go back to home"
+            title={t.backHomeBtn}
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -267,11 +373,11 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
           <div className="border-l border-slate-200 pl-3">
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-teal-100 text-teal-800">
-                {symptomInfo.name}
+                {localizedSymptomName}
               </span>
             </div>
             <p className="text-xs text-slate-500 font-normal mt-0.5">
-              Patient: <span className="font-medium text-slate-800">{currentProfile.name}</span> ({currentProfile.ageCategory}, {currentProfile.age}y, {currentProfile.sex})
+              {ui.patientLabel}: <span className="font-medium text-slate-800">{displayPatientName}</span> ({localizedAgeCat}, {currentProfile.age}{appUi.yearsShort}, {localizedSex})
             </p>
           </div>
         </div>
@@ -279,7 +385,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
         <div className="flex items-center gap-4">
           <div className="text-right">
             <span className="text-xs font-bold text-teal-700">
-              Question {Math.min(currentStep, 10)} of 10
+              {t.question} {Math.min(currentStep, 10)} {t.of} 10
             </span>
             <div className="w-32 bg-slate-100 rounded-full h-2 mt-1 overflow-hidden border border-slate-200">
               <motion.div 
@@ -294,7 +400,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
           <button
             onClick={handleRestart}
             className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-            title="Restart interview"
+            title={t.restartBtn}
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -311,14 +417,14 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
           <div className="flex items-center gap-2.5">
             <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
             <div className="text-xs">
-              <span className="font-bold">High Priority Indicator Flagged:</span> One or more answers suggest emergency medical evaluation may be required.
+              <span className="font-bold">{ui.redFlagBannerTitle}</span> {ui.redFlagBannerDesc}
             </div>
           </div>
           <button
             onClick={onDirectDoctorReferral}
             className="text-xs font-bold px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white shrink-0 cursor-pointer shadow-xs"
           >
-            Find Emergency Doctors Now
+            {ui.redFlagBannerBtn}
           </button>
         </motion.div>
       )}
@@ -328,6 +434,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
         <AnimatePresence initial={false}>
           {chatHistory.map((msg) => {
             const isBot = msg.sender === 'bot';
+            const resolved = resolveLocalizedMessage(msg);
             return (
               <motion.div
                 key={msg.id}
@@ -343,9 +450,9 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
                 )}
 
                 <div className={`max-w-[88%] sm:max-w-[80%] space-y-1.5 ${isBot ? 'text-left' : 'text-right'}`}>
-                  {msg.badge && (
+                  {resolved.badge && (
                     <span className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-md bg-teal-100 text-teal-900 uppercase tracking-wider mb-0.5">
-                      {msg.badge}
+                      {resolved.badge}
                     </span>
                   )}
 
@@ -360,7 +467,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
                         : 'bg-teal-600 text-white rounded-tr-none font-medium text-xs sm:text-sm'
                     }`}
                   >
-                    {msg.text}
+                    {resolved.text}
                   </div>
 
                   <span className="text-[10px] text-slate-400 block px-1 font-normal">
@@ -370,7 +477,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
 
                 {!isBot && (
                   <div className="w-8 h-8 rounded-full bg-slate-700 text-white flex items-center justify-center shrink-0 shadow-xs font-medium text-xs mt-1">
-                    {currentProfile.name.charAt(0)}
+                    {displayPatientName.charAt(0).toUpperCase()}
                   </div>
                 )}
               </motion.div>
@@ -389,7 +496,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
               <Stethoscope className="w-3.5 h-3.5 animate-spin" />
             </div>
             <span className="flex items-center gap-1 font-medium text-slate-600">
-              MediMitra is analyzing symptoms
+              {ui.analyzingText}
               <span className="animate-pulse">...</span>
             </span>
           </motion.div>
@@ -436,7 +543,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
             {currentQuestionData.options.map((opt, idx) => (
               <button
                 key={idx}
-                onClick={() => handleSelectOption(opt)}
+                onClick={() => handleSelectOption(opt, idx)}
                 className="p-3 rounded-xl border border-slate-200 bg-slate-50/40 hover:border-teal-500 hover:bg-teal-50/70 text-slate-800 text-xs sm:text-sm font-medium text-left transition-all cursor-pointer flex items-center justify-between group active:scale-[0.99]"
               >
                 <span className="group-hover:text-teal-900 text-slate-800 leading-snug">{opt}</span>
