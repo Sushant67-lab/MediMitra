@@ -397,15 +397,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           <div className="absolute -top-10 -right-10 w-44 h-44 bg-teal-400/15 rounded-full blur-2xl pointer-events-none" />
           <div className="absolute -bottom-8 -left-8 w-36 h-36 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
           
-          {/* Top Video Guide & Language Selector on Mobile */}
+          {/* Top Video Guide Icon & Language Selector on Mobile */}
           <div className="absolute top-3 left-3 z-30">
             <button
               type="button"
               onClick={() => setIsDemoVideoOpen(true)}
-              className="px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white text-[11px] font-semibold flex items-center gap-1.5 backdrop-blur-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              aria-label={demoVideoCopy.buttonLabel}
+              title={demoVideoCopy.buttonLabel}
+              className="p-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white backdrop-blur-xs transition-colors cursor-pointer flex items-center justify-center shrink-0"
             >
-              <PlayCircle className="w-3.5 h-3.5 text-teal-200 shrink-0" />
-              <span>{demoVideoCopy.buttonLabel}</span>
+              <PlayCircle className="w-5 h-5 text-teal-100 shrink-0" />
             </button>
           </div>
           <div className="absolute top-3 right-3 z-30">

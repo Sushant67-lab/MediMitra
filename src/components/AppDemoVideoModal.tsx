@@ -55,6 +55,51 @@ function formatClock(totalSeconds: number): string {
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
+function scoreVoiceQuality(v: SpeechSynthesisVoice): number {
+  const name = `${v.name} ${v.voiceURI}`.toLowerCase();
+  let score = 0;
+
+  // Strongly prefer modern neural / natural human-sounding voices
+  if (name.includes('natural')) score += 120;
+  if (name.includes('neural')) score += 110;
+  if (name.includes('online')) score += 95;
+  if (name.includes('wavenet') || name.includes('studio')) score += 90;
+  if (name.includes('enhanced') || name.includes('premium')) score += 80;
+  if (name.includes('google')) score += 70;
+
+  // Known warm guide voices across Chrome, Edge, macOS, iOS, Android
+  const pleasantNames = [
+    'neerja',
+    'swara',
+    'ananya',
+    'kavya',
+    'aria',
+    'jenny',
+    'sonia',
+    'libby',
+    'samantha',
+    'lekha',
+    'rishi',
+    'heera',
+    'prabhat',
+    'madhur',
+    'karen',
+    'daniel'
+  ];
+  if (pleasantNames.some((n) => name.includes(n))) {
+    score += 65;
+  }
+
+  // Penalize robotic legacy TTS engines
+  if (name.includes('espeak') || name.includes('festival') || name.includes('mbrola') || name.includes('compact')) {
+    score -= 150;
+  }
+  if (!v.localService) {
+    score += 20;
+  }
+  return score;
+}
+
 function resolveBestVoice(
   voices: SpeechSynthesisVoice[],
   lang: LanguageCode
@@ -62,11 +107,21 @@ function resolveBestVoice(
   const priorities = LANGUAGE_VOICE_PRIORITY[lang] || ['en-IN', 'en-US'];
   for (const tag of priorities) {
     const lowerTag = tag.toLowerCase();
-    const exactMatch = voices.find((v) => v.lang.toLowerCase() === lowerTag);
-    if (exactMatch) return { voice: exactMatch, bcp47: exactMatch.lang };
     const prefix = lowerTag.split('-')[0];
-    const prefixMatch = voices.find((v) => v.lang.toLowerCase().startsWith(`${prefix}-`) || v.lang.toLowerCase() === prefix);
-    if (prefixMatch) return { voice: prefixMatch, bcp47: prefixMatch.lang };
+    const matches = voices.filter(
+      (v) =>
+        v.lang.toLowerCase() === lowerTag ||
+        v.lang.toLowerCase().startsWith(`${prefix}-`) ||
+        v.lang.toLowerCase() === prefix
+    );
+    if (matches.length > 0) {
+      const ranked = [...matches].sort((a, b) => {
+        const aExact = a.lang.toLowerCase() === lowerTag ? 25 : 0;
+        const bExact = b.lang.toLowerCase() === lowerTag ? 25 : 0;
+        return scoreVoiceQuality(b) + bExact - (scoreVoiceQuality(a) + aExact);
+      });
+      return { voice: ranked[0], bcp47: ranked[0].lang };
+    }
   }
   return { voice: null, bcp47: priorities[0] };
 }
@@ -85,17 +140,16 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
   const [elapsedSec, setElapsedSec] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState<1 | 1.25>(1);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   const lastFrameTimeRef = useRef<number | null>(null);
   const lastSpokenKeyRef = useRef<string | null>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
   const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const sentencePauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const speechSessionIdRef = useRef(0);
   const isVoiceSpeakingRef = useRef(false);
   const voiceHoldStartedAtRef = useRef<number | null>(null);
-  const scrubSvgRef = useRef<SVGSVGElement | null>(null);
 
   const localeBundle = DEMO_VIDEO_TRANSLATIONS[language] || DEMO_VIDEO_TRANSLATIONS.en;
   const scenes = localeBundle.scenes;
@@ -115,6 +169,10 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
 
   const stopSpeech = useCallback(() => {
     speechSessionIdRef.current += 1;
+    if (sentencePauseTimerRef.current) {
+      clearTimeout(sentencePauseTimerRef.current);
+      sentencePauseTimerRef.current = null;
+    }
     isVoiceSpeakingRef.current = false;
     voiceHoldStartedAtRef.current = null;
     activeUtteranceRef.current = null;
@@ -125,7 +183,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
   }, []);
 
   const speakScene = useCallback(
-    (sceneIdx: number, targetLang: LanguageCode, rate: 1 | 1.25, muted: boolean) => {
+    (sceneIdx: number, targetLang: LanguageCode, muted: boolean) => {
       if (muted || typeof window === 'undefined' || !('speechSynthesis' in window)) {
         isVoiceSpeakingRef.current = false;
         return;
@@ -140,6 +198,10 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
       const synth = window.speechSynthesis;
       speechSessionIdRef.current += 1;
       const sessionId = speechSessionIdRef.current;
+      if (sentencePauseTimerRef.current) {
+        clearTimeout(sentencePauseTimerRef.current);
+        sentencePauseTimerRef.current = null;
+      }
       synth.cancel();
 
       const sentences = splitIntoSentences(targetScene.voiceover);
@@ -171,20 +233,27 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
         if (voice) {
           utterance.voice = voice;
         }
-        utterance.rate = rate === 1.25 ? 1.18 : 1.02;
-        utterance.pitch = 1.0;
+        // Calm, warm, unhurried human tour-guide cadence
+        utterance.rate = 0.94;
+        utterance.pitch = 1.03;
+        utterance.volume = 1;
 
-        utterance.onend = () => {
+        const scheduleNext = () => {
           if (speechSessionIdRef.current !== sessionId) return;
           sentenceIndex += 1;
-          speakNextSentence();
+          if (sentenceIndex >= sentences.length) {
+            speakNextSentence();
+            return;
+          }
+          // Brief natural breath pause between guided sentences
+          sentencePauseTimerRef.current = setTimeout(() => {
+            sentencePauseTimerRef.current = null;
+            speakNextSentence();
+          }, 220);
         };
 
-        utterance.onerror = () => {
-          if (speechSessionIdRef.current !== sessionId) return;
-          sentenceIndex += 1;
-          speakNextSentence();
-        };
+        utterance.onend = scheduleNext;
+        utterance.onerror = scheduleNext;
 
         // Hold reference to prevent Chromium garbage-collecting utterance mid-sentence
         activeUtteranceRef.current = utterance;
@@ -219,7 +288,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
       setIsPlaying(true);
       lastFrameTimeRef.current = null;
       lastSpokenKeyRef.current = null;
-      speakScene(0, language, playbackRate, isMuted);
+      speakScene(0, language, isMuted);
     } else {
       setIsPlaying(false);
       stopSpeech();
@@ -248,7 +317,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
             stopSpeech();
           } else {
             lastSpokenKeyRef.current = null;
-            speakScene(activeSceneIndex, language, playbackRate, isMuted);
+            speakScene(activeSceneIndex, language, isMuted);
           }
           return next;
         });
@@ -256,7 +325,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, onClose, stopSpeech, speakScene, activeSceneIndex, language, playbackRate, isMuted]);
+  }, [isOpen, onClose, stopSpeech, speakScene, activeSceneIndex, language, isMuted]);
 
   // Smooth requestAnimationFrame timeline loop (0 -> 120s), waiting cleanly for active sentence completion at chapter edges
   useEffect(() => {
@@ -276,14 +345,14 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
             Math.max(0, Math.floor(prev / SCENE_DURATION_SEC))
           );
           const sceneEndSec = (currentSceneIdx + 1) * SCENE_DURATION_SEC;
-          const next = prev + dtSec * playbackRate;
+          const next = prev + dtSec;
 
           if (!isMuted && isVoiceSpeakingRef.current && next >= sceneEndSec - 0.05) {
             if (voiceHoldStartedAtRef.current === null) {
               voiceHoldStartedAtRef.current = now;
             }
-            // Allow up to 12s grace if browser TTS is still completing the last sentence cleanly
-            if (now - voiceHoldStartedAtRef.current < 12000) {
+            // Allow up to 14s grace if browser TTS is still completing the last sentence cleanly
+            if (now - voiceHoldStartedAtRef.current < 14000) {
               return Math.min(prev, sceneEndSec - 0.05);
             }
             isVoiceSpeakingRef.current = false;
@@ -305,23 +374,23 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [isOpen, isPlaying, isMuted, playbackRate, scenes.length]);
+  }, [isOpen, isPlaying, isMuted, scenes.length]);
 
   // Speak automatically whenever chapter index advances during playback
   useEffect(() => {
     if (!isOpen || !isPlaying || isMuted) return;
     const key = `${activeSceneIndex}:${language}`;
     if (lastSpokenKeyRef.current !== key) {
-      speakScene(activeSceneIndex, language, playbackRate, isMuted);
+      speakScene(activeSceneIndex, language, isMuted);
     }
-  }, [isOpen, isPlaying, isMuted, activeSceneIndex, language, playbackRate, speakScene]);
+  }, [isOpen, isPlaying, isMuted, activeSceneIndex, language, speakScene]);
 
   const handleTogglePlay = () => {
     if (elapsedSec >= TOTAL_DURATION_SEC) {
       stopSpeech();
       setElapsedSec(0);
       setIsPlaying(true);
-      speakScene(0, language, playbackRate, isMuted);
+      speakScene(0, language, isMuted);
       return;
     }
     if (isPlaying) {
@@ -330,7 +399,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
     } else {
       setIsPlaying(true);
       lastSpokenKeyRef.current = null;
-      speakScene(activeSceneIndex, language, playbackRate, isMuted);
+      speakScene(activeSceneIndex, language, isMuted);
     }
   };
 
@@ -338,7 +407,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
     stopSpeech();
     setElapsedSec(0);
     setIsPlaying(true);
-    speakScene(0, language, playbackRate, isMuted);
+    speakScene(0, language, isMuted);
   };
 
   const handleJumpToScene = (index: number) => {
@@ -347,20 +416,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
     stopSpeech();
     setElapsedSec(targetTime);
     setIsPlaying(true);
-    speakScene(clampedIndex, language, playbackRate, isMuted);
-  };
-
-  const handleScrubBarClick = (e: React.MouseEvent<SVGSVGElement>) => {
-    const rect = scrubSvgRef.current?.getBoundingClientRect();
-    if (!rect || rect.width <= 0) return;
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const targetSec = ratio * TOTAL_DURATION_SEC;
-    const targetScene = Math.min(scenes.length - 1, Math.floor(targetSec / SCENE_DURATION_SEC));
-    stopSpeech();
-    setElapsedSec(targetSec);
-    if (isPlaying) {
-      speakScene(targetScene, language, playbackRate, isMuted);
-    }
+    speakScene(clampedIndex, language, isMuted);
   };
 
   const handleToggleMute = () => {
@@ -370,7 +426,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
       stopSpeech();
     } else if (isPlaying) {
       lastSpokenKeyRef.current = null;
-      speakScene(activeSceneIndex, language, playbackRate, false);
+      speakScene(activeSceneIndex, language, false);
     }
   };
 
@@ -378,16 +434,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
     setLanguage(newLang);
     stopSpeech();
     if (isPlaying && !isMuted) {
-      speakScene(activeSceneIndex, newLang, playbackRate, false);
-    }
-  };
-
-  const handleToggleSpeed = () => {
-    const nextRate: 1 | 1.25 = playbackRate === 1 ? 1.25 : 1;
-    setPlaybackRate(nextRate);
-    if (isPlaying && !isMuted) {
-      lastSpokenKeyRef.current = null;
-      speakScene(activeSceneIndex, language, nextRate, false);
+      speakScene(activeSceneIndex, newLang, false);
     }
   };
 
@@ -985,141 +1032,86 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
           </div>
         </div>
 
-        {/* Control Deck + 6-Chapter Timeline */}
+        {/* Control Deck (No timing selection controls) */}
         <div className="bg-slate-950 px-4 py-3.5 sm:px-5 border-t border-slate-800 space-y-3">
-          {/* Interactive SVG Scrub Bar (00:00 -> 02:00) */}
-          <div className="space-y-1.5">
-            <svg
-              ref={scrubSvgRef}
-              viewBox="0 0 1000 14"
-              preserveAspectRatio="none"
-              onClick={handleScrubBarClick}
-              role="slider"
-              aria-label="Video timeline"
-              aria-valuemin={0}
-              aria-valuemax={TOTAL_DURATION_SEC}
-              aria-valuenow={Math.round(elapsedSec)}
-              className="w-full h-3.5 cursor-pointer rounded-full overflow-hidden"
-            >
-              <rect x="0" y="3" width="1000" height="8" rx="4" fill="#1e293b" />
-              <rect
-                x="0"
-                y="3"
-                width={Math.max(8, totalProgressPct * 10)}
-                height="8"
-                rx="4"
-                fill="#14b8a6"
-              />
-              {/* 6 Chapter Markers */}
-              {[1, 2, 3, 4, 5].map((mark) => (
-                <line
-                  key={mark}
-                  x1={(mark * 1000) / 6}
-                  y1="2"
-                  x2={(mark * 1000) / 6}
-                  y2="12"
-                  stroke="#020617"
-                  strokeWidth="3"
-                />
-              ))}
-            </svg>
+          {/* Passive Playback Progress Strip */}
+          <svg
+            viewBox="0 0 1000 8"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+            className="w-full h-2 rounded-full overflow-hidden pointer-events-none"
+          >
+            <rect x="0" y="0" width="1000" height="8" rx="4" fill="#1e293b" />
+            <rect
+              x="0"
+              y="0"
+              width={Math.max(8, totalProgressPct * 10)}
+              height="8"
+              rx="4"
+              fill="#14b8a6"
+            />
+          </svg>
 
-            {/* Transport Controls */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleTogglePlay}
-                  className="px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
-                >
-                  {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                  <span>
-                    {elapsedSec >= TOTAL_DURATION_SEC
-                      ? localeBundle.replayBtn
-                      : isPlaying
-                      ? localeBundle.pauseBtn
-                      : localeBundle.playBtn}
-                  </span>
-                </button>
+          {/* Transport Controls */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleTogglePlay}
+                className="px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              >
+                {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                <span>
+                  {elapsedSec >= TOTAL_DURATION_SEC
+                    ? localeBundle.replayBtn
+                    : isPlaying
+                    ? localeBundle.pauseBtn
+                    : localeBundle.playBtn}
+                </span>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleJumpToScene(activeSceneIndex - 1)}
-                  disabled={activeSceneIndex === 0}
-                  aria-label="Previous chapter"
-                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
+              <button
+                type="button"
+                onClick={() => handleJumpToScene(activeSceneIndex - 1)}
+                disabled={activeSceneIndex === 0}
+                aria-label="Previous chapter"
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleJumpToScene(activeSceneIndex + 1)}
-                  disabled={activeSceneIndex === scenes.length - 1}
-                  aria-label="Next chapter"
-                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+              <button
+                type="button"
+                onClick={() => handleJumpToScene(activeSceneIndex + 1)}
+                disabled={activeSceneIndex === scenes.length - 1}
+                aria-label="Next chapter"
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
 
-                <button
-                  type="button"
-                  onClick={handleReplay}
-                  aria-label={localeBundle.replayBtn}
-                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleToggleMute}
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
-                    isMuted
-                      ? 'bg-rose-950/60 border-rose-500/40 text-rose-200'
-                      : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-teal-200'
-                  }`}
-                >
-                  {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                  <span>{isMuted ? localeBundle.enableVoiceBtn : localeBundle.muteVoiceBtn}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleToggleSpeed}
-                  className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-mono font-bold text-white transition-colors cursor-pointer whitespace-nowrap shrink-0"
-                >
-                  {playbackRate}x
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleReplay}
+                aria-label={localeBundle.replayBtn}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
             </div>
-          </div>
 
-          {/* 6 Interactive Chapter Buttons */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
-            {scenes.map((scene, idx) => {
-              const isActive = idx === activeSceneIndex;
-              return (
-                <button
-                  key={scene.id}
-                  type="button"
-                  onClick={() => handleJumpToScene(idx)}
-                  className={`px-2.5 py-2 rounded-xl border text-left transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-teal-500/20 border-teal-400 text-white'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-[10px] font-mono text-teal-300 tabular-nums">
-                    <span>0{idx + 1}</span>
-                    <span>{formatClock(idx * SCENE_DURATION_SEC)}</span>
-                  </div>
-                  <div className="text-[11px] font-semibold truncate mt-0.5">{scene.shortLabel}</div>
-                </button>
-              );
-            })}
+            <button
+              type="button"
+              onClick={handleToggleMute}
+              className={`px-3 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                isMuted
+                  ? 'bg-rose-950/60 border-rose-500/40 text-rose-200'
+                  : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-teal-200'
+              }`}
+            >
+              {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+              <span>{isMuted ? localeBundle.enableVoiceBtn : localeBundle.muteVoiceBtn}</span>
+            </button>
           </div>
         </div>
       </div>
