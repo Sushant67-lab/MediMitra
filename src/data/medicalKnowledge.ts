@@ -174,26 +174,44 @@ export const NEARBY_DOCTORS: Doctor[] = [
   }
 ];
 
-// Determines the question ID for each step (1 to 10) based on demographics & symptom
+// Determines the question ID for each step (1 to 10) based on demographic group (Male, Female, Male-Child, Female-Child) & symptom
 export function getQuestionIdForStep(step: number, ctx: QuestionContext): QuestionId | null {
   const isPediatric = ctx.ageCategory === 'child';
   const isSenior = ctx.ageCategory === 'senior';
   const isFemale = ctx.sex === 'female';
+  const isMale = ctx.sex === 'male';
+  const isReproductiveFemale = isFemale && (ctx.ageCategory === 'adult' || ctx.ageCategory === 'teen');
   const symptom = ctx.symptom;
 
   switch (step) {
     case 1:
+      if (isPediatric && isMale) return 'q1_boy_stage';
+      if (isPediatric && isFemale) return 'q1_girl_stage';
+      if (isMale) return 'q1_male_stage';
+      if (isFemale) return 'q1_female_stage';
       return 'q1_demographics';
     case 2:
-      if (isFemale && (ctx.ageCategory === 'adult' || ctx.ageCategory === 'teen')) {
-        return 'q2_pregnancy_check';
-      } else if (isPediatric) {
-        return 'q2_pediatric_weight';
-      } else if (isSenior) {
-        return 'q2_senior_conditions';
-      } else {
-        return 'q2_general_profile';
+      if (isPediatric && isMale) return 'q2_boy_pediatric_weight';
+      if (isPediatric && isFemale) return 'q2_girl_pediatric_weight';
+      if (isPediatric) return 'q2_pediatric_weight';
+
+      if (isSenior && isMale) return 'q2_senior_male_health';
+      if (isSenior && isFemale) return 'q2_senior_female_health';
+      if (isSenior) return 'q2_senior_conditions';
+
+      // Ask female pregnancy / period questions ONLY when clinically required by the problem
+      if (isReproductiveFemale) {
+        if (symptom === 'fever' || symptom === 'headache') {
+          return 'q2_pregnancy_check';
+        }
+        if (symptom === 'stomach_upset' || symptom === 'body_ache') {
+          return 'q2_female_cycle_check';
+        }
+        return 'q2_female_wellness';
       }
+
+      if (isMale) return 'q2_male_profile';
+      return 'q2_general_profile';
     case 3:
       return 'q3_onset_duration';
     case 4:
@@ -213,13 +231,17 @@ export function getQuestionIdForStep(step: number, ctx: QuestionContext): Questi
     case 8:
       return 'q8_meds_taken_today';
     case 9:
+      if (symptom === 'small_cuts') {
+        return 'q9_tetanus_history';
+      }
+      if (isPediatric && isMale) return 'q9_boy_problem_context';
+      if (isPediatric && isFemale) return 'q9_girl_problem_context';
+      if (isMale) return 'q9_male_problem_context';
+      if (isFemale) return 'q9_female_problem_context';
       if (symptom === 'fever' || symptom === 'stomach_upset' || symptom === 'cold_sneezing') {
         return 'q9_hydration';
-      } else if (symptom === 'small_cuts') {
-        return 'q9_tetanus_history';
-      } else {
-        return 'q9_daily_activities';
       }
+      return 'q9_daily_activities';
     case 10:
       return 'q10_progression';
     default:
@@ -286,13 +308,16 @@ export function evaluateTriage(
   const specialties: string[] = ['General Physician'];
   const whenToSeekEmergency: string[] = [];
 
-  // Check pregnancy context (q2_pregnancy_check idx 1, 2, or 3)
+  // Check pregnancy / nursing / delayed-period safety context
   const q2PregIdx = idxMap['q2_pregnancy_check'];
+  const q2CycleIdx = idxMap['q2_female_cycle_check'];
   const isPregnantOrNursing =
     Boolean(ctx.isPregnantOrNursing) ||
     q2PregIdx === 1 ||
     q2PregIdx === 2 ||
-    q2PregIdx === 3;
+    q2PregIdx === 3 ||
+    q2CycleIdx === 2 ||
+    q2CycleIdx === 3;
 
   // Check allergies (q7_drug_allergies)
   const q7AllergyIdx = idxMap['q7_drug_allergies'];
@@ -343,12 +368,20 @@ export function evaluateTriage(
     keyObservations.push(bundle.observations.rapidProgress);
   }
 
-  // Check severe hydration or bedridden status (q9)
+  // Check severe hydration, urinary discomfort, or bedridden status across demographic Step 9 questions
   const q9HydrIdx = idxMap['q9_hydration'];
-  if (q9HydrIdx === 3) {
+  const q9BoyIdx = idxMap['q9_boy_problem_context'];
+  const q9GirlIdx = idxMap['q9_girl_problem_context'];
+  const q9MaleIdx = idxMap['q9_male_problem_context'];
+  const q9FemaleIdx = idxMap['q9_female_problem_context'];
+
+  if (q9HydrIdx === 3 || q9BoyIdx === 3 || q9GirlIdx === 3 || q9MaleIdx === 3 || q9FemaleIdx === 3) {
     if (severity !== 'emergency') severity = 'severe';
     redFlags.push(bundle.redFlags.noFluids);
+  } else if (q9GirlIdx === 2 && severity === 'mild') {
+    severity = 'moderate';
   }
+
   const q9DailyIdx = idxMap['q9_daily_activities'];
   if (q9DailyIdx === 3 && severity === 'moderate') {
     severity = 'severe';

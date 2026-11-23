@@ -67,7 +67,8 @@ export async function reverseGeocodeCoordinates(lat: number, lon: number): Promi
       {
         headers: {
           'Accept-Language': 'en'
-        }
+        },
+        signal: AbortSignal.timeout(3500)
       }
     );
 
@@ -81,8 +82,8 @@ export async function reverseGeocodeCoordinates(lat: number, lon: number): Promi
 
       return { city, locality, state, country };
     }
-  } catch (err) {
-    console.warn('Reverse geocode fetch failed, using generic label:', err);
+  } catch {
+    // Graceful local area fallback
   }
 
   return {
@@ -112,7 +113,8 @@ export async function fetchRealNearbyClinics(lat: number, lon: number, radiusMet
       body: overpassQuery,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
-      }
+      },
+      signal: AbortSignal.timeout(4500)
     });
 
     if (response.ok) {
@@ -170,8 +172,8 @@ export async function fetchRealNearbyClinics(lat: number, lon: number, radiusMet
         }
       }
     }
-  } catch (err) {
-    console.warn('Overpass API query failed or timed out:', err);
+  } catch {
+    // Graceful local clinic fallback
   }
 
   // Graceful fallback anchored to user's real coordinates and city

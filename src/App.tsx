@@ -72,15 +72,10 @@ function MainApp() {
   const [isAssessmentSaved, setIsAssessmentSaved] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isHardwareGuideOpen, setIsHardwareGuideOpen] = useState(false);
-  const [isEsp32Unlocked, setIsEsp32Unlocked] = useState(false);
   const [isEsp32PasswordOpen, setIsEsp32PasswordOpen] = useState(false);
   const [pendingEsp32Action, setPendingEsp32Action] = useState<(() => void) | null>(null);
 
   const requestEsp32Access = (onGranted: () => void) => {
-    if (isEsp32Unlocked) {
-      onGranted();
-      return;
-    }
     setPendingEsp32Action(() => onGranted);
     setIsEsp32PasswordOpen(true);
   };
@@ -113,7 +108,7 @@ function MainApp() {
   const handleSignOut = () => {
     logOutFromFirebase();
     setIsAuthenticated(false);
-    setIsEsp32Unlocked(false);
+    setIsHardwareGuideOpen(false);
     setPendingEsp32Action(null);
     setIsEsp32PasswordOpen(false);
     try {
@@ -245,7 +240,6 @@ function MainApp() {
           setPendingEsp32Action(null);
         }}
         onVerified={() => {
-          setIsEsp32Unlocked(true);
           setIsEsp32PasswordOpen(false);
           const action = pendingEsp32Action;
           setPendingEsp32Action(null);

@@ -255,6 +255,20 @@ export interface AppUiStrings {
   whySmallArcTitle: string;
   whySmallArcDesc: string;
   closeGuideBtn: string;
+  esp32OnlineStatus: string;
+  esp32OfflineStatus: string;
+  diagramMode3d: string;
+  diagramMode2d: string;
+  testDispense3dBtn: string;
+  explodedView3dLabel: string;
+  resetView3dBtn: string;
+  hotspotSetupTitle: string;
+  hotspotSetupDesc: string;
+  ssidInputLabel: string;
+  passwordInputLabel: string;
+  band24GhzTip: string;
+  esp32ConnectedShort: string;
+  esp32OfflineShort: string;
 
   // MedicalRecordsModal
   recordsTitle: string;
@@ -515,6 +529,20 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     whySmallArcTitle: 'Why Small Arc (25°)?',
     whySmallArcDesc: 'A small 25° displacement operates the divider gate smoothly without crushing medicine packs. You can fine-tune this to 20° or 30° in settings.',
     closeGuideBtn: 'Close Guide',
+    esp32OnlineStatus: 'ESP32 Wi-Fi Online',
+    esp32OfflineStatus: 'ESP32 Wi-Fi Offline (Waiting for heartbeat)',
+    diagramMode3d: '3D Model',
+    diagramMode2d: '2D Schematic',
+    testDispense3dBtn: 'Test 25° Dispense',
+    explodedView3dLabel: 'Exploded View',
+    resetView3dBtn: 'Reset Camera',
+    hotspotSetupTitle: 'Mobile Hotspot / Wi-Fi Quick Fill',
+    hotspotSetupDesc: 'Type your hotspot name and password below to auto-fill the sketch before copying:',
+    ssidInputLabel: 'Hotspot / Wi-Fi Name (SSID)',
+    passwordInputLabel: 'Hotspot Password',
+    band24GhzTip: 'Android: Set AP Band to 2.4 GHz (not 5 GHz). iPhone: Enable Maximize Compatibility & keep Mobile Data ON. If Wi-Fi fails, ESP32 opens "MediMitra-ESP32" at 192.168.4.1.',
+    esp32ConnectedShort: 'Online',
+    esp32OfflineShort: 'Offline',
 
     recordsTitle: 'Patient Consultation History',
     consultationSingular: 'consultation',
@@ -773,6 +801,20 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     whySmallArcTitle: 'छोटा कोण (25°) क्यों?',
     whySmallArcDesc: '25° का छोटा घुमाव दवा पैक को बिना नुकसान पहुंचाए गेट को सुचारू रूप से खोलता है।',
     closeGuideBtn: 'गाइड बंद करें',
+    esp32OnlineStatus: 'ESP32 वाई-फाई ऑनलाइन',
+    esp32OfflineStatus: 'ESP32 वाई-फाई ऑफलाइन (हार्टबीट की प्रतीक्षा)',
+    diagramMode3d: '3D मॉडल',
+    diagramMode2d: '2D डायग्राम',
+    testDispense3dBtn: '25° डिस्पेंस टेस्ट',
+    explodedView3dLabel: 'एक्सप्लोडेड व्यू',
+    resetView3dBtn: 'रीसेट कैमरा',
+    hotspotSetupTitle: 'मोबाइल हॉटस्पॉट / वाई-फाई त्वरित सेटअप',
+    hotspotSetupDesc: 'कॉपी करने से पहले कोड में अपने आप भरने के लिए नीचे हॉटस्पॉट नाम और पासवर्ड लिखें:',
+    ssidInputLabel: 'हॉटस्पॉट / वाई-फाई नाम (SSID)',
+    passwordInputLabel: 'हॉटस्पॉट पासवर्ड',
+    band24GhzTip: 'Android: AP Band को 2.4 GHz पर सेट करें (5 GHz नहीं)। iPhone: Maximize Compatibility चालू करें और मोबाइल डेटा चालू रखें। विफल होने पर ESP32 192.168.4.1 पर "MediMitra-ESP32" पोर्टल खोलता है।',
+    esp32ConnectedShort: 'ऑनलाइन',
+    esp32OfflineShort: 'ऑफलाइन',
 
     recordsTitle: 'मरीज परामर्श इतिहास',
     consultationSingular: 'परामर्श',
@@ -1031,6 +1073,20 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     whySmallArcTitle: '25° ka Chhota Arc Kyun?',
     whySmallArcDesc: '25° ka halka rotation medicine pack ko bina crush kiye gate se nikalta hai.',
     closeGuideBtn: 'Guide Band Karein',
+    esp32OnlineStatus: 'ESP32 Wi-Fi Online',
+    esp32OfflineStatus: 'ESP32 Wi-Fi Offline (Heartbeat ka intezaar)',
+    diagramMode3d: '3D Model',
+    diagramMode2d: '2D Schematic',
+    testDispense3dBtn: 'Test 25° Dispense',
+    explodedView3dLabel: 'Exploded View',
+    resetView3dBtn: 'Reset Camera',
+    hotspotSetupTitle: 'Mobile Hotspot / Wi-Fi Quick Fill',
+    hotspotSetupDesc: 'Copy karne se pehle code mein auto-fill karne ke liye neeche apna Hotspot Name aur Password daalein:',
+    ssidInputLabel: 'Hotspot / Wi-Fi Name (SSID)',
+    passwordInputLabel: 'Hotspot Password',
+    band24GhzTip: 'Android: Hotspot AP Band ko 2.4 GHz rakhein (5 GHz nahi). iPhone: Maximize Compatibility ON karein aur Mobile Data ON rakhein. Fail hone par ESP32 192.168.4.1 par "MediMitra-ESP32" kholta hai.',
+    esp32ConnectedShort: 'Online',
+    esp32OfflineShort: 'Offline',
 
     recordsTitle: 'Patient Consultation History',
     consultationSingular: 'check-up',
@@ -1289,6 +1345,20 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     whySmallArcTitle: 'लहान कोन (25°) का?',
     whySmallArcDesc: '25° चा लहान कोन औषधांचे पॅकेट न चिरडता गेट सहज उघडतो.',
     closeGuideBtn: 'मार्गदर्शक बंद करा',
+    esp32OnlineStatus: 'ESP32 वाय-फाय ऑनलाइन',
+    esp32OfflineStatus: 'ESP32 वाय-फाय ऑफलाइन (हार्टबीटची प्रतीक्षा)',
+    diagramMode3d: '3D मॉडेल',
+    diagramMode2d: '2D आराखडा',
+    testDispense3dBtn: '25° डिस्पेन्स चाचणी',
+    explodedView3dLabel: 'विस्तारित दृश्य',
+    resetView3dBtn: 'कॅमेरा रीसेट',
+    hotspotSetupTitle: 'मोबाईल हॉटस्पॉट / वाय-फाय झटपट सेटअप',
+    hotspotSetupDesc: 'कॉपी करण्यापूर्वी कोडमध्ये आपोआप भरण्यासाठी खाली हॉटस्पॉटचे नाव आणि पासवर्ड टाका:',
+    ssidInputLabel: 'हॉटस्पॉट / वाय-फाय नाव (SSID)',
+    passwordInputLabel: 'हॉटस्पॉट पासवर्ड',
+    band24GhzTip: 'Android: AP Band 2.4 GHz ठेवा (5 GHz नाही). iPhone: Maximize Compatibility चालू करा आणि Mobile Data सुरू ठेवा. अयशस्वी झाल्यास ESP32 192.168.4.1 वर "MediMitra-ESP32" सुरू करते.',
+    esp32ConnectedShort: 'ऑनलाइन',
+    esp32OfflineShort: 'ऑफलाइन',
 
     recordsTitle: 'रुग्ण तपासणी इतिहास',
     consultationSingular: 'तपासणी',
@@ -1547,6 +1617,20 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     whySmallArcTitle: 'কেন ছোট কোণ (২৫°)?',
     whySmallArcDesc: '২৫° ঘূর্ণন ওষুধের প্যাক নষ্ট না করে সহজেই গেট খোলে।',
     closeGuideBtn: 'গাইড বন্ধ করুন',
+    esp32OnlineStatus: 'ESP32 ওয়াই-ফাই অনলাইন',
+    esp32OfflineStatus: 'ESP32 ওয়াই-ফাই অফলাইন (সিগন্যালের অপেক্ষায়)',
+    diagramMode3d: '3D মডেল',
+    diagramMode2d: '2D স্কিম্যাটিক',
+    testDispense3dBtn: '২৫° ডিসপেন্স টেস্ট',
+    explodedView3dLabel: 'এক্সপ্লোডেড ভিউ',
+    resetView3dBtn: 'রিসেট ক্যামেরা',
+    hotspotSetupTitle: 'মোবাইল হটস্পট / ওয়াই-ফাই কুইক সেটআপ',
+    hotspotSetupDesc: 'কপি করার আগে কোডে অটো-ফিল করতে নিচে হটস্পটের নাম ও পাসওয়ার্ড লিখুন:',
+    ssidInputLabel: 'হটস্পট / ওয়াই-ফাই নাম (SSID)',
+    passwordInputLabel: 'হটস্পট পাসওয়ার্ড',
+    band24GhzTip: 'Android: AP Band 2.4 GHz সেট করুন (5 GHz নয়)। iPhone: Maximize Compatibility চালু করুন এবং মোবাইল ডেটা চালু রাখুন। ব্যর্থ হলে ESP32 192.168.4.1-এ "MediMitra-ESP32" পোর্টাল খোলে।',
+    esp32ConnectedShort: 'অনলাইন',
+    esp32OfflineShort: 'অফলাইন',
 
     recordsTitle: 'রোগীর পরামর্শের ইতিহাস',
     consultationSingular: 'পরামর্শ',
@@ -1805,6 +1889,20 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     whySmallArcTitle: 'ஏன் 25° கோணம்?',
     whySmallArcDesc: 'மருந்து பாக்கெட் நசுங்காமல் பாதுகாப்பாக வெளிவர 25° உதவுகிறது.',
     closeGuideBtn: 'வழிகாட்டியை மூடு',
+    esp32OnlineStatus: 'ESP32 Wi-Fi ஆன்லைன்',
+    esp32OfflineStatus: 'ESP32 Wi-Fi ஆஃப்லைன் (சிக்னலுக்காக காத்திருக்கிறது)',
+    diagramMode3d: '3D மாதிரி',
+    diagramMode2d: '2D வரைபடம்',
+    testDispense3dBtn: '25° சோதனை',
+    explodedView3dLabel: 'விரிவான காட்சி',
+    resetView3dBtn: 'கேமரா மீட்டமை',
+    hotspotSetupTitle: 'மொபைல் ஹாட்ஸ்பாட் / Wi-Fi விரைவு அமைப்பு',
+    hotspotSetupDesc: 'நகலெடுக்கும் முன் குறியீட்டில் தானாக நிரப்ப கீழே ஹாட்ஸ்பாட் பெயர் மற்றும் கடவுச்சொல்லை உள்ளிடவும்:',
+    ssidInputLabel: 'ஹாட்ஸ்பாட் / Wi-Fi பெயர் (SSID)',
+    passwordInputLabel: 'ஹாட்ஸ்பாட் கடவுச்சொல்',
+    band24GhzTip: 'Android: AP Band-ஐ 2.4 GHz ஆக அமைக்கவும் (5 GHz அல்ல). iPhone: Maximize Compatibility மற்றும் Mobile Data-ஐ இயக்கவும். தோல்வியுற்றால் ESP32 192.168.4.1 இல் "MediMitra-ESP32" திறக்கும்.',
+    esp32ConnectedShort: 'ஆன்லைன்',
+    esp32OfflineShort: 'ஆஃப்லைன்',
 
     recordsTitle: 'நோயாளி ஆலோசனை வரலாறு',
     consultationSingular: 'பதிவு',
@@ -2063,6 +2161,20 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     whySmallArcTitle: '25° ఎందుకు?',
     whySmallArcDesc: 'మందు ప్యాకెట్లు నలగకుండా సురక్షితంగా రావడానికి 25° సహాయపడుతుంది.',
     closeGuideBtn: 'గైడ్ మూసివేయి',
+    esp32OnlineStatus: 'ESP32 Wi-Fi ఆన్‌లైన్',
+    esp32OfflineStatus: 'ESP32 Wi-Fi ఆఫ్‌లైన్ (హార్ట్‌బీట్ కోసం వేచి ఉంది)',
+    diagramMode3d: '3D మోడల్',
+    diagramMode2d: '2D స్కీమాటిక్',
+    testDispense3dBtn: '25° టెస్ట్',
+    explodedView3dLabel: 'విడిభాగాల వీక్షణ',
+    resetView3dBtn: 'కెమెరా రీసెట్',
+    hotspotSetupTitle: 'మొబైల్ హాట్‌స్పాట్ / Wi-Fi త్వరిత సెటప్',
+    hotspotSetupDesc: 'కాపీ చేసే ముందు కోడ్‌లో ఆటోమేటిక్‌గా పూరించడానికి క్రింద హాట్‌స్పాట్ పేరు & పాస్‌వర్డ్ నమోదు చేయండి:',
+    ssidInputLabel: 'హాట్‌స్పాట్ / Wi-Fi పేరు (SSID)',
+    passwordInputLabel: 'హాట్‌స్పాట్ పాస్‌వర్డ్',
+    band24GhzTip: 'Android: AP Band ను 2.4 GHz కు సెట్ చేయండి (5 GHz కాదు). iPhone: Maximize Compatibility మరియు Mobile Data ఆన్ చేయండి. కనెక్ట్ కాకపోతే ESP32 192.168.4.1 లో "MediMitra-ESP32" పోర్టల్ తెరుస్తుంది.',
+    esp32ConnectedShort: 'ఆన్‌లైన్',
+    esp32OfflineShort: 'ఆఫ్‌లైన్',
 
     recordsTitle: 'రోగి పరీక్షల చరిత్ర',
     consultationSingular: 'పరీక్ష',
@@ -2321,6 +2433,20 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     whySmallArcTitle: '25° શા માટે?',
     whySmallArcDesc: '25° નું હળવું રોટેશન દવાના પેકેટને નુકસાન વગર બહાર કાઢે છે.',
     closeGuideBtn: 'ગાઈડ બંધ કરો',
+    esp32OnlineStatus: 'ESP32 Wi-Fi ઓનલાઈન',
+    esp32OfflineStatus: 'ESP32 Wi-Fi ઓફલાઈન (હાર્ટબીટની રાહ જોઈ રહ્યું છે)',
+    diagramMode3d: '3D મોડેલ',
+    diagramMode2d: '2D આકૃતિ',
+    testDispense3dBtn: '25° ટેસ્ટ',
+    explodedView3dLabel: 'વિસ્તૃત દૃશ્ય',
+    resetView3dBtn: 'કેમેરા રીસેટ',
+    hotspotSetupTitle: 'મોબાઈલ હોટસ્પોટ / Wi-Fi ક્વિક સેટઅપ',
+    hotspotSetupDesc: 'કોપી કરતા પહેલા કોડમાં ઓટો-ફિલ કરવા માટે નીચે હોટસ્પોટ નામ અને પાસવર્ડ લખો:',
+    ssidInputLabel: 'હોટસ્પોટ / Wi-Fi નામ (SSID)',
+    passwordInputLabel: 'હોટસ્પોટ પાસવર્ડ',
+    band24GhzTip: 'Android: AP Band 2.4 GHz રાખો (5 GHz નહીં). iPhone: Maximize Compatibility અને Mobile Data ચાલુ રાખો. નિષ્ફળ થાય તો ESP32 192.168.4.1 પર "MediMitra-ESP32" ખોલે છે.',
+    esp32ConnectedShort: 'ઓનલાઇન',
+    esp32OfflineShort: 'ઓફલાઇન',
 
     recordsTitle: 'દર્દી તપાસ ઇતિહાસ',
     consultationSingular: 'તપાસ',

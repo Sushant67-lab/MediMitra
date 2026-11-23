@@ -49,10 +49,12 @@ export interface MedicineInventory {
 export interface DispenserDevice {
   deviceId: string;
   deviceName: string;
-  deviceToken: string;
+  deviceToken?: string;
   status: 'ONLINE' | 'OFFLINE';
-  lastHeartbeat: string;
+  lastHeartbeat: unknown;
   ipAddress?: string;
+  wifiSsid?: string;
+  wifiRssi?: number;
   servoPin: number;
   servoInitialAngle: number;
   servoDispenseAngle: number;

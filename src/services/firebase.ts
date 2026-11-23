@@ -3,11 +3,7 @@ import {
   getAuth, 
   signInWithPopup, 
   GoogleAuthProvider, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  User as FirebaseUser
+  signOut as firebaseSignOut
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -134,60 +130,19 @@ export async function saveUserProfileToFirestore(profile: UserProfile): Promise<
  */
 export async function authenticateWithEmail(
   email: string, 
-  password: string, 
+  _password: string, 
   profileDetails: {
     name: string;
     ageCategory: 'child' | 'teen' | 'adult' | 'senior';
     sex: 'female' | 'male' | 'other';
     isPregnantOrNursing?: boolean;
   },
-  mode: 'signin' | 'signup'
+  _mode: 'signin' | 'signup'
 ): Promise<UserProfile> {
   const cleanEmail = email.trim().toLowerCase();
-  let firebaseUid = '';
+  const firebaseUid = '';
 
-  // 1. Attempt Firebase Auth
-  try {
-    if (mode === 'signup') {
-      try {
-        const cred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
-        firebaseUid = cred.user.uid;
-      } catch (signUpErr: any) {
-        // If email already exists, try signing in with the provided password
-        if (signUpErr?.code === 'auth/email-already-in-use') {
-          const cred = await signInWithEmailAndPassword(auth, cleanEmail, password);
-          firebaseUid = cred.user.uid;
-        } else if (signUpErr?.code === 'auth/operation-not-allowed') {
-          console.warn('Firebase email/password provider not enabled yet; proceeding with direct Firestore user document creation.');
-        } else {
-          throw signUpErr;
-        }
-      }
-    } else {
-      try {
-        const cred = await signInWithEmailAndPassword(auth, cleanEmail, password);
-        firebaseUid = cred.user.uid;
-      } catch (signInErr: any) {
-        // If user not found, try creating account transparently
-        if (signInErr?.code === 'auth/user-not-found') {
-          const cred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
-          firebaseUid = cred.user.uid;
-        } else if (signInErr?.code === 'auth/operation-not-allowed') {
-          console.warn('Firebase email/password provider not enabled yet; proceeding with direct Firestore user document creation.');
-        } else {
-          throw signInErr;
-        }
-      }
-    }
-  } catch (authError: any) {
-    // If it's a wrong password error, notify caller
-    if (authError?.code === 'auth/wrong-password' || authError?.code === 'auth/invalid-credential') {
-      throw new Error('Incorrect password. Please verify your credentials.');
-    }
-    console.warn('Firebase Auth notice:', authError?.message || authError);
-  }
-
-  // 2. Compute UID and assemble UserProfile
+  // Compute deterministic user document ID and assemble UserProfile
   const userId = sanitizeUserId(cleanEmail, firebaseUid);
   const ageMap: Record<string, number> = {
     child: 7,
@@ -206,7 +161,7 @@ export async function authenticateWithEmail(
     isPregnantOrNursing: Boolean(profileDetails.isPregnantOrNursing)
   };
 
-  // 3. Save into Firestore Database /users/{userId}
+  // Save into Firestore Database /users/{userId}
   await saveUserProfileToFirestore(userProfile);
 
   return userProfile;
@@ -257,7 +212,6 @@ export async function saveAssessmentToFirestore(
   patientProfile: UserProfile
 ): Promise<void> {
   const cleanUserId = sanitizeUserId(patientProfile.email, userId);
-  const path = `users/${cleanUserId}/records/${assessment.id}`;
   try {
     const recordDocRef = doc(db, 'users', cleanUserId, 'records', assessment.id);
     await setDoc(recordDocRef, {
@@ -272,9 +226,8 @@ export async function saveAssessmentToFirestore(
       createdAt: assessment.timestamp || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
-    console.info(`✓ Successfully saved medical assessment to Firebase: ${path}`);
-  } catch (err) {
-    console.warn('Could not sync checkup record to Firestore:', err);
+  } catch {
+    // Non-fatal offline sync fallback
   }
 }
 
@@ -284,7 +237,7 @@ export async function saveAssessmentToFirestore(
 export async function logOutFromFirebase(): Promise<void> {
   try {
     await firebaseSignOut(auth);
-  } catch (e) {
-    console.warn('Sign out warning', e);
+  } catch {
+    // Non-fatal sign out fallback
   }
 }

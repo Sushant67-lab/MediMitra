@@ -10,10 +10,21 @@ export interface LocalizedQuestionCopy {
 
 export type QuestionId =
   | 'q1_demographics'
+  | 'q1_boy_stage'
+  | 'q1_girl_stage'
+  | 'q1_male_stage'
+  | 'q1_female_stage'
   | 'q2_pregnancy_check'
+  | 'q2_female_cycle_check'
+  | 'q2_female_wellness'
   | 'q2_pediatric_weight'
+  | 'q2_boy_pediatric_weight'
+  | 'q2_girl_pediatric_weight'
   | 'q2_senior_conditions'
+  | 'q2_senior_male_health'
+  | 'q2_senior_female_health'
   | 'q2_general_profile'
+  | 'q2_male_profile'
   | 'q3_onset_duration'
   | 'q4_severity_intensity'
   | 'q5_fever_temp'
@@ -29,6 +40,10 @@ export type QuestionId =
   | 'q9_hydration'
   | 'q9_tetanus_history'
   | 'q9_daily_activities'
+  | 'q9_boy_problem_context'
+  | 'q9_girl_problem_context'
+  | 'q9_male_problem_context'
+  | 'q9_female_problem_context'
   | 'q10_progression';
 
 export interface TriageUiStrings {
@@ -529,6 +544,178 @@ export const QUESTION_TRANSLATIONS: Record<
         'Slowly getting more uncomfortable',
         'Rapidly worsening over the last few hours'
       ]
+    },
+    q1_boy_stage: {
+      question: "Confirm the boy's childhood age stage & growth group.",
+      subtext: 'Male pediatric dosing and play-related fever/injury hydration risks change by age.',
+      badge: 'Male Child Profile',
+      options: [
+        'Toddler boy (1 - 3 years)',
+        'Young boy (4 - 7 years)',
+        'School-age boy (8 - 11 years)',
+        'Early teen boy (12 - 14 years)'
+      ]
+    },
+    q1_girl_stage: {
+      question: "Confirm the girl's childhood age stage & growth group.",
+      subtext: 'Female pediatric dosing, skin sensitivity, and hydration needs are tailored by age.',
+      badge: 'Female Child Profile',
+      options: [
+        'Toddler girl (1 - 3 years)',
+        'Young girl (4 - 7 years)',
+        'School-age girl (8 - 11 years)',
+        'Pre-teen girl (12 - 14 years)'
+      ]
+    },
+    q1_male_stage: {
+      question: 'Confirm the male age bracket & daily physical activity level.',
+      subtext: 'Calibrates adult male dosing limits and workload/cardiac considerations.',
+      badge: 'Male Patient Profile',
+      options: [
+        'Teenage male (12 - 17 years)',
+        'Young adult male (18 - 39 years)',
+        'Middle-aged male (40 - 59 years)',
+        'Senior male (60+ years)'
+      ]
+    },
+    q1_female_stage: {
+      question: 'Confirm the female age bracket & life phase.',
+      subtext: 'Ensures safe dosage and asks reproductive questions only when medically needed.',
+      badge: 'Female Patient Profile',
+      options: [
+        'Teenage female (12 - 17 years)',
+        'Adult woman (18 - 39 years)',
+        'Midlife woman (40 - 59 years)',
+        'Senior woman (60+ years)'
+      ]
+    },
+    q2_boy_pediatric_weight: {
+      question: "What is the boy's approximate weight & outdoor activity status?",
+      subtext: 'Boy pediatric syrups (like Calpol) are calculated strictly by body weight (mg/kg).',
+      badge: 'Boy Weight & Play Check',
+      options: [
+        'Under 12 kg (Toddler boy)',
+        '12 - 20 kg (Active young boy)',
+        '21 - 32 kg (School-age boy)',
+        'Above 32 kg (Growing boy)',
+        'Not sure of exact weight'
+      ]
+    },
+    q2_girl_pediatric_weight: {
+      question: "What is the girl's approximate weight & pediatric sensitivity status?",
+      subtext: 'Girl pediatric syrup doses are weight-based; also notes skin/nutrition sensitivity.',
+      badge: 'Girl Weight & Care Check',
+      options: [
+        'Under 12 kg (Toddler girl)',
+        '12 - 20 kg (Young girl)',
+        '21 - 32 kg (School-age girl)',
+        'Above 32 kg (Pre-teen girl)',
+        'Not sure of exact weight'
+      ]
+    },
+    q2_male_profile: {
+      question: 'Any male lifestyle factors, acidity, or blood pressure history?',
+      subtext: 'Prevents NSAID stomach irritation and checks blood pressure/smoking interactions.',
+      badge: 'Male Health Baseline',
+      options: [
+        'None / Generally healthy',
+        'Heavy physical work, gym, or outdoor heat exposure',
+        'Acidity / stomach ulcer or regular smoking',
+        'High blood pressure or cholesterol',
+        'Asthma or other regular daily medication'
+      ]
+    },
+    q2_female_wellness: {
+      question: 'Do any of these common female health factors apply to this problem?',
+      subtext: 'Tailored check without unnecessary pregnancy questions for local/respiratory issues.',
+      badge: 'Female Wellness Check',
+      options: [
+        'None / Generally healthy',
+        'Low iron / anemia or thyroid history',
+        'Sensitive skin to cosmetics, detergents, or jewelry',
+        'Migraine tendency or sinus allergy',
+        'Taking other daily medicines'
+      ]
+    },
+    q2_female_cycle_check: {
+      question: 'Could menstrual periods or pregnancy be linked to these symptoms?',
+      subtext: 'Asked only for symptoms like abdominal upset, cramps, or body ache where cycle timing matters.',
+      badge: 'Periods & Cycle Check',
+      options: [
+        'Not related to periods; regular cycle & not pregnant',
+        'Currently having menstrual periods / period cramps',
+        'Delayed/missed period or possibly pregnant',
+        'Currently pregnant or breastfeeding',
+        'Prefer not to disclose'
+      ]
+    },
+    q2_senior_male_health: {
+      question: 'Any chronic conditions like BP, Heart, Diabetes, or Prostate/Urinary issues?',
+      subtext: 'Decongestants and painkillers can affect blood pressure, kidneys, and prostate flow.',
+      badge: 'Senior Male Safety',
+      options: [
+        'No major chronic conditions',
+        'High Blood Pressure or Heart history',
+        'Type 2 Diabetes',
+        'Prostate enlargement or urinary difficulty',
+        'Kidney or stomach ulcer history'
+      ]
+    },
+    q2_senior_female_health: {
+      question: 'Any chronic conditions like BP, Thyroid, Bone/Calcium, or Diabetes?',
+      subtext: 'Tailored for senior women (60+) to protect blood pressure, bones, and kidney health.',
+      badge: 'Senior Female Safety',
+      options: [
+        'No major chronic conditions',
+        'High Blood Pressure or Heart history',
+        'Thyroid or Osteoporosis / joint bone weakness',
+        'Type 2 Diabetes',
+        'Kidney or stomach acidity history'
+      ]
+    },
+    q9_boy_problem_context: {
+      question: 'How is the boy coping with drinking fluids, outdoor play, and toilet visits?',
+      subtext: 'Boys playing outdoors can dehydrate quickly during fever, tummy upset, or fatigue.',
+      badge: 'Boy Hydration & Activity',
+      options: [
+        'Drinking water well & still active/playful',
+        'Tired after outdoor play, sports, or sun exposure',
+        'Low fluid intake (<3 wet diapers or toilet visits today)',
+        'Refusing water, very drowsy, or vomiting fluids'
+      ]
+    },
+    q9_girl_problem_context: {
+      question: 'How is the girl handling fluids, urinary comfort, and skin/sleep comfort?',
+      subtext: 'Checks pediatric hydration as well as urinary burning or mild soap sensitivity common in girls.',
+      badge: 'Girl Hydration & Comfort',
+      options: [
+        'Drinking water well, normal urination & cheerful',
+        'Mild skin irritation or poor appetite, still drinking sips',
+        'Discomfort/crying while passing urine or low water intake',
+        'Refusing all fluids, extreme drowsiness, or repeated vomiting'
+      ]
+    },
+    q9_male_problem_context: {
+      question: 'Are any male work, heat, or urinary factors affecting this condition?',
+      subtext: 'Identifies dehydration from physical exertion, gastric triggers, or urinary signs.',
+      badge: 'Male Symptom Context',
+      options: [
+        'Well hydrated; normal sleep and urine output',
+        'Triggered by outdoor heat, heavy physical labor, or skipped water',
+        'Poor sleep, screen/driving strain, spicy food, or smoking',
+        'Severe exhaustion, urinary burning, or unable to keep water down'
+      ]
+    },
+    q9_female_problem_context: {
+      question: 'How is this issue affecting your hydration, energy levels, and daily routine?',
+      subtext: 'Assesses dizziness, hydration deficit, and daily functional impact.',
+      badge: 'Female Symptom Context',
+      options: [
+        'Hydrated well & managing daily work normally',
+        'Dizzy on standing, tired, or drinking less water today',
+        'Household/work fatigue, skipped meals, or disrupted sleep',
+        'Severe weakness, painful urination, or unable to hold liquids down'
+      ]
     }
   },
   hi: {
@@ -776,6 +963,178 @@ export const QUESTION_TRANSLATIONS: Record<
         'पहले जैसा ही स्थिर है, बढ़ नहीं रहा',
         'धीरे-धीरे असुविधा बढ़ रही है',
         'पिछले कुछ घंटों में तेजी से बिगड़ रहा है'
+      ]
+    },
+    q1_boy_stage: {
+      question: 'लड़के की आयु और विकास का स्तर चुनें।',
+      subtext: 'लड़कों के लिए सुरक्षित दवा की मात्रा और खेल-कूद से पानी की कमी का स्तर उम्र के अनुसार तय होता है।',
+      badge: 'बालक (लड़का) प्रोफ़ाइल',
+      options: [
+        'छोटा बच्चा (लड़का: 1 - 3 वर्ष)',
+        'बालक (4 - 7 वर्ष)',
+        'स्कूल आयु का लड़का (8 - 11 वर्ष)',
+        'किशोर बालक (12 - 14 वर्ष)'
+      ]
+    },
+    q1_girl_stage: {
+      question: 'लड़की की आयु और विकास का स्तर चुनें।',
+      subtext: 'लड़कियों के लिए सुरक्षित दवा की मात्रा, त्वचा संवेदनशीलता और देखभाल उम्र के अनुसार तय होती है।',
+      badge: 'बालिका (लड़की) प्रोफ़ाइल',
+      options: [
+        'छोटी बच्ची (लड़की: 1 - 3 वर्ष)',
+        'बालिका (4 - 7 वर्ष)',
+        'स्कूल आयु की लड़की (8 - 11 वर्ष)',
+        'किशोर बालिका (12 - 14 वर्ष)'
+      ]
+    },
+    q1_male_stage: {
+      question: 'पुरुष की आयु वर्ग और दैनिक कार्यशैली चुनें।',
+      subtext: 'इससे वयस्क पुरुषों की दवा खुराक और शारीरिक थकान का सही आकलन होता है।',
+      badge: 'पुरुष स्वास्थ्य प्रोफ़ाइल',
+      options: [
+        'किशोर पुरुष (12 - 17 वर्ष)',
+        'युवा पुरुष (18 - 39 वर्ष)',
+        'मध्यम आयु के पुरुष (40 - 59 वर्ष)',
+        'वरिष्ठ पुरुष (60+ वर्ष)'
+      ]
+    },
+    q1_female_stage: {
+      question: 'महिला की आयु वर्ग और जीवन चरण चुनें।',
+      subtext: 'गर्भावस्था या पीरियड्स से जुड़े प्रश्न केवल जरूरत होने पर ही पूछे जाते हैं।',
+      badge: 'महिला स्वास्थ्य प्रोफ़ाइल',
+      options: [
+        'किशोरी (12 - 17 वर्ष)',
+        'वयस्क महिला (18 - 39 वर्ष)',
+        'मध्यम आयु की महिला (40 - 59 वर्ष)',
+        'वरिष्ठ महिला (60+ वर्ष)'
+      ]
+    },
+    q2_boy_pediatric_weight: {
+      question: 'लड़के का अनुमानित वजन कितना है?',
+      subtext: 'लड़कों के लिए सिरप/ड्रॉप की मात्रा शरीर के वजन (mg/kg) के हिसाब से तय होती है।',
+      badge: 'लड़के का वजन सुरक्षा',
+      options: [
+        '12 किलो से कम (छोटा लड़का)',
+        '12 - 20 किलो (चंचल बालक)',
+        '21 - 32 किलो (स्कूल आयु का लड़का)',
+        '32 किलो से अधिक',
+        'सटीक वजन नहीं पता'
+      ]
+    },
+    q2_girl_pediatric_weight: {
+      question: 'लड़की का अनुमानित वजन कितना है?',
+      subtext: 'लड़कियों के लिए सिरप/ड्रॉप की मात्रा वजन और संवेदनशीलता के आधार पर तय होती है।',
+      badge: 'लड़की का वजन सुरक्षा',
+      options: [
+        '12 किलो से कम (छोटी लड़की)',
+        '12 - 20 किलो (बालिका)',
+        '21 - 32 किलो (स्कूल आयु की लड़की)',
+        '32 किलो से अधिक',
+        'सटीक वजन नहीं पता'
+      ]
+    },
+    q2_male_profile: {
+      question: 'क्या पुरुष मरीज को इनमें से कोई जीवनशैली या स्वास्थ्य स्थिति है?',
+      subtext: 'धूप/मेहनत, एसिडिटी, धूम्रपान या बीपी के अनुसार सुरक्षित दवा तय की जाती है।',
+      badge: 'पुरुष स्वास्थ्य आधार',
+      options: [
+        'कोई नहीं / सामान्य रूप से स्वस्थ',
+        'अधिक शारीरिक मेहनत, जिम या धूप में काम',
+        'एसिडिटी / पेट का अल्सर या धूम्रपान',
+        'उच्च रक्तचाप (हाई बीपी) या कोलेस्ट्रॉल',
+        'दमा या अन्य नियमित दवा चल रही है'
+      ]
+    },
+    q2_female_wellness: {
+      question: 'क्या महिला मरीज में इनमें से कोई सामान्य स्वास्थ्य स्थिति है?',
+      subtext: 'चोट, सर्दी या स्किन समस्या में बिना जरूरत गर्भावस्था के सवाल नहीं पूछे जाते।',
+      badge: 'महिला सामान्य स्वास्थ्य',
+      options: [
+        'कोई नहीं / सामान्य रूप से स्वस्थ',
+        'खून की कमी (एनीमिया) या थायराइड',
+        'कॉस्मेटिक, साबुन या गहनों से त्वचा की एलर्जी',
+        'माइग्रेन या साइनस की प्रवृत्ति',
+        'कोई नियमित दैनिक दवा चल रही है'
+      ]
+    },
+    q2_female_cycle_check: {
+      question: 'क्या यह समस्या पीरियड्स (मासिक धर्म) या गर्भावस्था से जुड़ी हो सकती है?',
+      subtext: 'यह केवल पेट दर्द, ऐंठन या शरीर दर्द जैसी समस्याओं में सुरक्षित दवा चुनने के लिए पूछा जाता है।',
+      badge: 'पीरियड्स व सुरक्षा जांच',
+      options: [
+        'पीरियड्स से संबंध नहीं; सामान्य चक्र व गर्भावस्था नहीं',
+        'अभी पीरियड्स चल रहे हैं / पीरियड क्रैम्प्स हैं',
+        'पीरियड देरी से हैं या गर्भावस्था की संभावना है',
+        'वर्तमान में गर्भवती हैं या स्तनपान करा रही हैं',
+        'जानकारी साझा नहीं करना चाहती'
+      ]
+    },
+    q2_senior_male_health: {
+      question: 'क्या बीपी, हृदय, मधुमेह या प्रोस्टेट/पेशाब से जुड़ी कोई पुरानी समस्या है?',
+      subtext: 'बुजुर्ग पुरुषों में कुछ दवाएं बीपी या प्रोस्टेट/पेशाब में रुकावट पर असर डाल सकती हैं।',
+      badge: 'वरिष्ठ पुरुष सुरक्षा',
+      options: [
+        'कोई बड़ा पुराना रोग नहीं',
+        'उच्च रक्तचाप (बीपी) या हृदय रोग',
+        'मधुमेह (डायबिटीज)',
+        'प्रोस्टेट या पेशाब करने में कठिनाई',
+        'किडनी या पेट में अल्सर की समस्या'
+      ]
+    },
+    q2_senior_female_health: {
+      question: 'क्या बीपी, थायराइड, हड्डियों की कमजोरी या मधुमेह की समस्या है?',
+      subtext: 'वरिष्ठ महिलाओं (60+) में बीपी, हड्डियों और किडनी की सुरक्षा के अनुसार दवा चुनी जाती है।',
+      badge: 'वरिष्ठ महिला सुरक्षा',
+      options: [
+        'कोई बड़ा पुराना रोग नहीं',
+        'उच्च रक्तचाप (बीपी) या हृदय रोग',
+        'थायराइड या हड्डियों/जोड़ों की कमजोरी',
+        'मधुमेह (डायबिटीज)',
+        'किडनी या एसिडिटी की समस्या'
+      ]
+    },
+    q9_boy_problem_context: {
+      question: 'लड़का अभी पानी पीने, खेलने और पेशाब/डायपर के मामले में कैसा है?',
+      subtext: 'खेलने-कूदने वाले लड़कों में बुखार या पेट खराब होने पर पानी की कमी तेजी से हो सकती है।',
+      badge: 'बालक हाइड्रेशन व गतिविधि',
+      options: [
+        'अच्छे से पानी पी रहा है और खेल-कूद रहा है',
+        'धूप या बाहर खेलने के बाद सुस्त/थका हुआ है',
+        'कम पानी पी रहा है (पेशाब कम आ रहा है)',
+        'पानी बिल्कुल नहीं पी रहा, बहुत सुस्त या उल्टी कर रहा है'
+      ]
+    },
+    q9_girl_problem_context: {
+      question: 'लड़की अभी पानी पीने, पेशाब में आराम और त्वचा/नींद में कैसी है?',
+      subtext: 'छोटी लड़कियों में पानी की कमी के साथ पेशाब में जलन या साबुन से त्वचा की संवेदनशीलता जांची जाती है।',
+      badge: 'बालिका हाइड्रेशन व देखभाल',
+      options: [
+        'ठीक से पानी पी रही है, पेशाब सामान्य है व खुश है',
+        'हल्की त्वचा एलर्जी या भूख कम है, पर थोड़ा पानी पी रही है',
+        'पेशाब करते समय दर्द/रोती है या पानी बहुत कम पिया है',
+        'पानी बिल्कुल नहीं पी रही, बहुत सुस्त या लगातार उल्टी हो रही है'
+      ]
+    },
+    q9_male_problem_context: {
+      question: 'क्या काम की थकान, धूप या पेशाब से जुड़ा कोई कारण इसमें शामिल है?',
+      subtext: 'धूप में काम, मसालेदार भोजन, धूम्रपान या पेशाब में जलन जैसी स्थितियों की जांच।',
+      badge: 'पुरुष लक्षण संदर्भ',
+      options: [
+        'पानी सही पी रहे हैं; नींद व पेशाब सामान्य है',
+        'धूप, भारी मेहनत या कम पानी पीने के बाद बढ़ा है',
+        'कम नींद, स्क्रीन थकान, मसालेदार खाना या धूम्रपान',
+        'बहुत अधिक कमजोरी, पेशाब में जलन या पानी न टिकना'
+      ]
+    },
+    q9_female_problem_context: {
+      question: 'यह समस्या आपके पानी पीने, ऊर्जा और रोज़मर्रा के काम पर कैसा असर डाल रही है?',
+      subtext: 'चक्कर आना, पानी की कमी और काम की थकान का आकलन करता है।',
+      badge: 'महिला लक्षण संदर्भ',
+      options: [
+        'पर्याप्त पानी पी रही हैं और काम सामान्य है',
+        'खड़े होने पर चक्कर या थकान महसूस हो रही है',
+        'घर/ऑफिस की थकान, खाना छूटने या कम नींद से बढ़ा है',
+        'अत्यधिक कमजोरी, पेशाब में जलन या पानी तुरंत उल्टी होना'
       ]
     }
   },
@@ -1025,6 +1384,178 @@ export const QUESTION_TRANSLATIONS: Record<
         'Dheere-dheere takleef badh rahi hai',
         'Pichle kuch ghanton me tezi se badh raha hai'
       ]
+    },
+    q1_boy_stage: {
+      question: 'Ladke (boy) ki age group aur growth stage confirm karein.',
+      subtext: 'Boys ke liye syrup dose aur outdoor play se hone wali paani ki kami age par depend karti hai.',
+      badge: 'Male Child Profile',
+      options: [
+        'Chhota bachcha / Toddler boy (1 - 3 years)',
+        'Chhota ladka / Young boy (4 - 7 years)',
+        'School-age ladka (8 - 11 years)',
+        'Teen ladka (12 - 14 years)'
+      ]
+    },
+    q1_girl_stage: {
+      question: 'Ladki (girl) ki age group aur growth stage confirm karein.',
+      subtext: 'Girls ke liye safe dose, skin sensitivity aur hydration age ke hisaab se set hota hai.',
+      badge: 'Female Child Profile',
+      options: [
+        'Chhoti bachchi / Toddler girl (1 - 3 years)',
+        'Chhoti ladki / Young girl (4 - 7 years)',
+        'School-age ladki (8 - 11 years)',
+        'Pre-teen ladki (12 - 14 years)'
+      ]
+    },
+    q1_male_stage: {
+      question: 'Male patient ki age stage aur daily routine confirm karein.',
+      subtext: 'Isse adult male medicine dosage aur physical exertion ka sahi andaza milta hai.',
+      badge: 'Male Profile',
+      options: [
+        'Teenage ladka (12 - 17 years)',
+        'Young adult male (18 - 39 years)',
+        'Middle-aged male (40 - 59 years)',
+        'Senior male (60+ years)'
+      ]
+    },
+    q1_female_stage: {
+      question: 'Female patient ki age stage aur life phase confirm karein.',
+      subtext: 'Pregnancy ya periods wale sawal sirf zaroorat padne par hi pooche jaate hain.',
+      badge: 'Female Profile',
+      options: [
+        'Teenage girl (12 - 17 years)',
+        'Adult woman (18 - 39 years)',
+        'Midlife woman (40 - 59 years)',
+        'Senior woman (60+ years)'
+      ]
+    },
+    q2_boy_pediatric_weight: {
+      question: 'Ladke ka approximate weight kitna hai?',
+      subtext: 'Boys ke liye syrup ki dose hamesha weight (mg/kg) ke hisaab se di jaati hai.',
+      badge: 'Boy Weight Safety',
+      options: [
+        '12 kg se kam (Toddler boy)',
+        '12 - 20 kg (Active young boy)',
+        '21 - 32 kg (School-age boy)',
+        '32 kg se zyada',
+        'Exact weight nahi pata'
+      ]
+    },
+    q2_girl_pediatric_weight: {
+      question: 'Ladki ka approximate weight kitna hai?',
+      subtext: 'Girls ke liye syrup ki dose weight aur sensitivity ke hisaab se decide hoti hai.',
+      badge: 'Girl Weight Safety',
+      options: [
+        '12 kg se kam (Toddler girl)',
+        '12 - 20 kg (Young girl)',
+        '21 - 32 kg (School-age girl)',
+        '32 kg se zyada',
+        'Exact weight nahi pata'
+      ]
+    },
+    q2_male_profile: {
+      question: 'Kya male patient ko inme se koi health ya lifestyle factor hai?',
+      subtext: 'Dhoop/mehnat, acidity, smoking ya BP ke hisaab se safe dawa chuni jaati hai.',
+      badge: 'Male Health Check',
+      options: [
+        'Kuch nahi / Bilkul healthy',
+        'Heavy physical kaam, gym ya dhoop me rehna',
+        'Acidity / stomach ulcer ya regular smoking',
+        'High BP ya cholesterol',
+        'Asthma ya koi daily medicine chal rahi hai'
+      ]
+    },
+    q2_female_wellness: {
+      question: 'Kya female patient me inme se koi normal health factor hai?',
+      subtext: 'Chot, zukam ya skin rash me bina zaroorat pregnancy ke sawal nahi pooche jaate.',
+      badge: 'Female Wellness Check',
+      options: [
+        'Kuch nahi / Bilkul healthy',
+        'Khoon ki kami (Anemia) ya Thyroid',
+        'Cosmetics, soap ya jewellery se skin sensitivity',
+        'Migraine ya sinus allergy tendency',
+        'Koi aur regular daily dawa chal rahi hai'
+      ]
+    },
+    q2_female_cycle_check: {
+      question: 'Kya yeh takleef periods (mahavari) ya pregnancy se judi ho sakti hai?',
+      subtext: 'Yeh sirf pet dard, cramps ya badan dard jaisi problems me safe dawa ke liye poocha jaata hai.',
+      badge: 'Periods & Cycle Safety',
+      options: [
+        'Periods se related nahi; cycle normal hai aur pregnant nahi',
+        'Abhi periods chal rahe hain / period cramps hain',
+        'Period late/miss hue hain ya pregnancy ho sakti hai',
+        'Abhi pregnant ya breastfeeding hain',
+        'Batana nahi chahte'
+      ]
+    },
+    q2_senior_male_health: {
+      question: 'Kya High BP, Heart, Diabetes ya Prostate/urine ki koi purani problem hai?',
+      subtext: 'Senior men me kuch dawaiyan BP ya prostate urine flow par asar daal sakti hain.',
+      badge: 'Senior Male Safety',
+      options: [
+        'Koi badi purani bimari nahi',
+        'High BP ya Heart problem',
+        'Diabetes (Sugar)',
+        'Prostate ya peshab karne me dikkat',
+        'Kidney ya pet me ulcer ki problem'
+      ]
+    },
+    q2_senior_female_health: {
+      question: 'Kya High BP, Thyroid, Haddiyon ki kamzori ya Diabetes ki problem hai?',
+      subtext: 'Senior women (60+) me BP, haddiyon aur kidney safety ke hisaab se dawa chuni jaati hai.',
+      badge: 'Senior Female Safety',
+      options: [
+        'Koi badi purani bimari nahi',
+        'High BP ya Heart problem',
+        'Thyroid ya Osteoporosis / jodon ki kamzori',
+        'Diabetes (Sugar)',
+        'Kidney ya acidity ki problem'
+      ]
+    },
+    q9_boy_problem_context: {
+      question: 'Ladka abhi paani peene, khelne aur toilet/diaper ke maamle me kaisa hai?',
+      subtext: 'Khelne wale boys me bukhar ya pet kharab hone par dehydration jaldi hota hai.',
+      badge: 'Boy Hydration & Play',
+      options: [
+        'Achhe se paani pee raha hai aur active/khel raha hai',
+        'Bahar khelne ya dhoop ke baad thaka hua lag raha hai',
+        'Kam paani pee raha hai (<3 baar toilet/diaper geela hua)',
+        'Paani bilkul nahi pee raha, bahut sust ya ulti kar raha hai'
+      ]
+    },
+    q9_girl_problem_context: {
+      question: 'Ladki abhi paani peene, urine comfort aur skin/neend me kaisi hai?',
+      subtext: 'Chhoti girls me hydration ke saath urine jalan (UTI) ya soap allergy check karna zaroori hota hai.',
+      badge: 'Girl Hydration & Comfort',
+      options: [
+        'Theek se paani pee rahi hai, urine normal hai aur khush hai',
+        'Halki skin jalan ya bhookh kam hai, par ghunt-ghunt paani pee rahi hai',
+        'Urine karte waqt dard/ro rahi hai ya paani bahut kam piya hai',
+        'Paani bilkul nahi pee rahi, bahut sust ya baar-baar ulti ho rahi hai'
+      ]
+    },
+    q9_male_problem_context: {
+      question: 'Kya kaam ki thakan, dhoop ya urine se juda koi trigger isme shamil hai?',
+      subtext: 'Outdoor garmi, teekha khana, smoking ya peshab me jalan check karta hai.',
+      badge: 'Male Symptom Context',
+      options: [
+        'Paani sahi pee rahe hain; neend aur urine normal hai',
+        'Dhoop, bhaari mehnat ya kam paani peene se badha hai',
+        'Kam neend, screen thakan, teekha khana ya smoking',
+        'Bahut kamzori, urine me jalan ya paani na tikna'
+      ]
+    },
+    q9_female_problem_context: {
+      question: 'Is problem se aapke paani peene, energy aur daily routine par kya asar pad raha hai?',
+      subtext: 'Chakkar aana, paani ki kami aur daily thakan ka hisaab lagata hai.',
+      badge: 'Female Symptom Context',
+      options: [
+        'Achhe se paani pee rahi hain aur routine normal hai',
+        'Khade hone par chakkar, kamzori ya kam paani peeya hai',
+        'Ghar/office ki thakan, khana chhootne ya kam neend se badha hai',
+        'Bahut zyada kamzori, urine jalan ya paani peete hi ulti hona'
+      ]
     }
   },
   mr: {
@@ -1153,6 +1684,96 @@ export const QUESTION_TRANSLATIONS: Record<
       subtext: 'यावरून मेडिमित्रा स्वतः ठरवेल की साधे औषध/पावडर पुरेसे आहे की डॉक्टर आवश्यक आहेत.',
       badge: 'लक्षणांची दिशा',
       options: ['हळूहळू बरे वाटत आहे किंवा सौम्य आहे', 'जसे होते तसेच स्थिर आहे', 'हळूहळू अस्वस्थता वाढत आहे', 'मागील काही तासांत वेगाने वाढत आहे']
+    },
+    q1_boy_stage: {
+      question: 'मुलाचा (लहान मुलगा) वयोगट निश्चित करा.',
+      subtext: 'मुलांच्या औषधाचे प्रमाण आणि खेळामुळे होणारी पाण्याची कमतरता वयानुसार बदलते.',
+      badge: 'मुलगा (बालक) माहिती',
+      options: ['लहान बाळ / मुलगा (1 - 3 वर्षे)', 'मुलगा (4 - 7 वर्षे)', 'शाळकरी मुलगा (8 - 11 वर्षे)', 'किशोरवयीन मुलगा (12 - 14 वर्षे)']
+    },
+    q1_girl_stage: {
+      question: 'मुलीचा (लहान मुलगी) वयोगट निश्चित करा.',
+      subtext: 'मुलींसाठी औषधाचे सुरक्षित प्रमाण व संवेदनशीलता वयानुसार ठरवली जाते.',
+      badge: 'मुलगी (बालिका) माहिती',
+      options: ['लहान बाळ / मुलगी (1 - 3 वर्षे)', 'मुलगी (4 - 7 वर्षे)', 'शाळकरी मुलगी (8 - 11 वर्षे)', 'किशोरवयीन मुलगी (12 - 14 वर्षे)']
+    },
+    q1_male_stage: {
+      question: 'पुरुष रुग्णाचा वयोगट आणि दैनंदिन कामाचे स्वरूप निवडा.',
+      subtext: 'प्रौढ पुरुषांसाठी योग्य डोस व शारीरिक श्रमाचा अंदाज घेण्यासाठी.',
+      badge: 'पुरुष आरोग्य माहिती',
+      options: ['किशोर मुलगा (12 - 17 वर्षे)', 'तरुण पुरुष (18 - 39 वर्षे)', 'मध्यमवयीन पुरुष (40 - 59 वर्षे)', 'ज्येष्ठ पुरुष (60+ वर्षे)']
+    },
+    q1_female_stage: {
+      question: 'महिला रुग्णाचा वयोगट निश्चित करा.',
+      subtext: 'गर्भधारणा किंवा मासिक पाळीचे प्रश्न केवळ आवश्यकता असल्यासच विचारले जातात.',
+      badge: 'महिला आरोग्य माहिती',
+      options: ['किशोरवयीन मुलगी (12 - 17 वर्षे)', 'प्रौढ महिला (18 - 39 वर्षे)', 'मध्यमवयीन महिला (40 - 59 वर्षे)', 'ज्येष्ठ महिला (60+ वर्षे)']
+    },
+    q2_boy_pediatric_weight: {
+      question: 'मुलाचे अंदाजे वजन किती आहे?',
+      subtext: 'मुलांच्या औषधांचा डोस शरीराच्या वजनानुसार (mg/kg) दिला जातो.',
+      badge: 'मुलाचे वजन सुरक्षा',
+      options: ['12 किलोपेक्षा कमी (लहान मुलगा)', '12 - 20 किलो', '21 - 32 किलो', '32 किलोपेक्षा जास्त', 'नेमके वजन माहित नाही']
+    },
+    q2_girl_pediatric_weight: {
+      question: 'मुलीचे अंदाजे वजन किती आहे?',
+      subtext: 'मुलींच्या औषधांचा डोस वजनानुसार आणि प्रकृतीनुसार ठरवला जातो.',
+      badge: 'मुलीचे वजन सुरक्षा',
+      options: ['12 किलोपेक्षा कमी (लहान मुलगी)', '12 - 20 किलो', '21 - 32 किलो', '32 किलोपेक्षा जास्त', 'नेमके वजन माहित नाही']
+    },
+    q2_male_profile: {
+      question: 'पुरुष रुग्णाला यापैकी कोणती जीवनशैली किंवा आरोग्य स्थिती लागू होते का?',
+      subtext: 'कष्ट, उन्हातील काम, ॲसिडिटी किंवा धूम्रपानानुसार सुरक्षित औषध सुचवले जाते.',
+      badge: 'पुरुष आरोग्य तपासणी',
+      options: ['काही नाही / निरोगी', 'कष्टाचे काम, जिम किंवा उन्हात काम', 'ॲसिडिटी / पोटाचा अल्सर किंवा धूम्रपान', 'उच्च रक्तदाब किंवा कोलेस्टेरॉल', 'दमा किंवा इतर नियमित औषधे सुरू आहेत']
+    },
+    q2_female_wellness: {
+      question: 'महिला रुग्णाला यापैकी कोणती सामान्य आरोग्य स्थिती आहे का?',
+      subtext: 'जखम, सर्दी किंवा त्वचेच्या त्रासात विनाकारण गर्भधारणेचे प्रश्न विचारले जात नाहीत.',
+      badge: 'महिला आरोग्य तपासणी',
+      options: ['काही नाही / निरोगी', 'रक्ताची कमतरता (ॲनिमिया) किंवा थायरॉईड', 'साबण, सौंदर्यप्रसाधने किंवा दागिन्यांची त्वचेला ॲलर्जी', 'मायग्रेन किंवा सायनसचा त्रास', 'इतर नियमित औषधे सुरू आहेत']
+    },
+    q2_female_cycle_check: {
+      question: 'ही लक्षणे मासिक पाळी (Periods) किंवा गर्भधारणेशी संबंधित असू शकतात का?',
+      subtext: 'पोटदुखी, गोळे येणे किंवा अंगदुखीसारख्या त्रासांत सुरक्षित औषधासाठी हा प्रश्न विचारला जातो.',
+      badge: 'मासिक पाळी व सुरक्षा',
+      options: ['पाळीशी संबंध नाही; नियमित चक्र व गर्भवती नाही', 'सध्या मासिक पाळी सुरू आहे / पाळीतील वेदना आहेत', 'पाळी उशिराने आहे किंवा गर्भधारणेची शक्यता आहे', 'सध्या गर्भवती किंवा स्तनपान देत आहे', 'सांगायचे नाही']
+    },
+    q2_senior_male_health: {
+      question: 'उच्च रक्तदाब, हृदयरोग, मधुमेह किंवा प्रोस्टेट/लघवीचा जुना त्रास आहे का?',
+      subtext: 'ज्येष्ठ पुरुषांमध्ये काही औषधांमुळे बीपी किंवा लघवीवर परिणाम होऊ शकतो.',
+      badge: 'ज्येष्ठ पुरुष सुरक्षा',
+      options: ['कोणताही मोठा जुना आजार नाही', 'उच्च रक्तदाब (BP) किंवा हृदयरोग', 'मधुमेह (डायबिटीज)', 'प्रोस्टेट किंवा लघवीला अडचण', 'किडनी किंवा पोटाचा अल्सर']
+    },
+    q2_senior_female_health: {
+      question: 'उच्च रक्तदाब, थायरॉईड, हाडांची कमजोरी किंवा मधुमेह आहे का?',
+      subtext: 'ज्येष्ठ महिलांमध्ये (60+) बीपी, हाडे आणि किडनीच्या सुरक्षिततेसाठी.',
+      badge: 'ज्येष्ठ महिला सुरक्षा',
+      options: ['कोणताही मोठा जुना आजार नाही', 'उच्च रक्तदाब (BP) किंवा हृदयरोग', 'थायरॉईड किंवा हाडांचा/सांध्यांचा ठिसूळपणा', 'मधुमेह (डायबिटीज)', 'किडनी किंवा ॲसिडिटीचा त्रास']
+    },
+    q9_boy_problem_context: {
+      question: 'मुलगा पाणी पिणे, खेळणे आणि लघवीच्या बाबतीत कसा आहे?',
+      subtext: 'खेळणाऱ्या मुलांमध्ये ताप किंवा जुलाबात पाणी कमी पडण्याचा धोका लवकर वाढतो.',
+      badge: 'मुलगा हायड्रेशन व खेळ',
+      options: ['व्यवस्थित पाणी पितो आणि खेळत आहे', 'बाहेर खेळल्यानंतर किंवा उन्हामुळे थकला आहे', 'पाणी कमी पितो (लघवी कमी होत आहे)', 'पाणी अजिबात पित नाही, खूप सुस्त किंवा उलटी करतो']
+    },
+    q9_girl_problem_context: {
+      question: 'मुलगी पाणी पिणे, लघवीचा त्रास आणि त्वचेच्या आरामदायीपणात कशी आहे?',
+      subtext: 'लहान मुलींमध्ये पाण्यासोबत लघवीला जळजळ किंवा साबणाची ॲलर्जी तपासणे महत्त्वाचे असते.',
+      badge: 'मुलगी हायड्रेशन व काळजी',
+      options: ['व्यवस्थित पाणी पिते, लघवी सामान्य आहे व आनंदी आहे', 'सौम्य त्वचेची खाज किंवा भूक कमी, पण थोडे पाणी पिते', 'लघवी करताना रडते/दुखते किंवा पाणी खूप कमी पिते', 'पाणी अजिबात पित नाही, खूप सुस्त किंवा सतत उलट्या']
+    },
+    q9_male_problem_context: {
+      question: 'कामाचा ताण, ऊन किंवा लघवीशी संबंधित कोणता घटक यात कारणीभूत आहे का?',
+      subtext: 'उन्हातील काम, तिखट खाणे, धूम्रपान किंवा लघवीला जळजळ तपासण्यासाठी.',
+      badge: 'पुरुष लक्षण संदर्भ',
+      options: ['पुरेसे पाणी पित आहे; झोप व लघवी सामान्य आहे', 'ऊन, जड काम किंवा कमी पाणी प्यायल्याने त्रास वाढला', 'झोप अपुरी, स्क्रीन ताण, तिखट अन्न किंवा धूम्रपान', 'तीव्र थकवा, लघवीला जळजळ किंवा पाणीही न टिकणे']
+    },
+    q9_female_problem_context: {
+      question: 'या त्रासाचा पाणी पिणे, ऊर्जा आणि दैनंदिन कामावर कसा परिणाम होत आहे?',
+      subtext: 'चक्कर येणे, पाण्याची कमतरता आणि दैनंदिन थकवा तपासण्यासाठी.',
+      badge: 'महिला लक्षण संदर्भ',
+      options: ['पुरेसे पाणी पित आहे आणि कामे सुरळीत आहेत', 'उभे राहिल्यावर चक्कर, थकवा किंवा कमी पाणी', 'घर/कामाचा थकवा, जेवण चुकणे किंवा अपुरी झोप', 'तीव्र अशक्तपणा, लघवीला जळजळ किंवा पाणी उलटी होणे']
     }
   },
   bn: {
@@ -1281,6 +1902,96 @@ export const QUESTION_TRANSLATIONS: Record<
       subtext: 'এর ভিত্তিতে মেডিমিত্র নিজেই সিদ্ধান্ত নেবে সাধারণ ওষুধ/পাউডার যথেষ্ট নাকি ডাক্তার দরকার।',
       badge: 'উপসর্গের অগ্রগতি',
       options: ['ধীরে ধীরে ভালো হচ্ছে বা হালকা আছে', 'একই রকম আছে, বাড়ছে না', 'ধীরে ধীরে অস্বস্তি বাড়ছে', 'গত কয়েক ঘণ্টায় দ্রুত খারাপ হচ্ছে']
+    },
+    q1_boy_stage: {
+      question: 'ছেলে শিশুর বয়স এবং বৃদ্ধির পর্যায় নিশ্চিত করুন।',
+      subtext: 'ছেলে শিশুদের ওষুধের ডোজ এবং খেলাধুলার কারণে পানিশূন্যতার ঝুঁকি বয়স অনুযায়ী বদলায়।',
+      badge: 'ছেলে শিশু প্রোফাইল',
+      options: ['ছোট ছেলে শিশু (1 - 3 বছর)', 'বালক (4 - 7 বছর)', 'স্কুল বয়সী ছেলে (8 - 11 বছর)', 'কিশোর (12 - 14 বছর)']
+    },
+    q1_girl_stage: {
+      question: 'মেয়ে শিশুর বয়স এবং বৃদ্ধির পর্যায় নিশ্চিত করুন।',
+      subtext: 'মেয়ে শিশুদের নিরাপদ ওষুধের মাত্রা এবং ত্বকের সংবেদনশীলতা বয়স অনুযায়ী ঠিক হয়।',
+      badge: 'মেয়ে শিশু প্রোফাইল',
+      options: ['ছোট মেয়ে শিশু (1 - 3 বছর)', 'বালিকা (4 - 7 বছর)', 'স্কুল বয়সী মেয়ে (8 - 11 বছর)', 'কিশোরী (12 - 14 বছর)']
+    },
+    q1_male_stage: {
+      question: 'পুরুষ রোগীর বয়সের ধাপ এবং দৈনন্দিন কাজের ধরন নিশ্চিত করুন।',
+      subtext: 'প্রাপ্তবয়স্ক পুরুষের ওষুধের মাত্রা এবং শারীরিক পরিশ্রম যাচাইয়ের জন্য।',
+      badge: 'পুরুষ স্বাস্থ্য প্রোফাইল',
+      options: ['কিশোর (12 - 17 বছর)', 'তরুণ পুরুষ (18 - 39 বছর)', 'মধ্যবয়সী পুরুষ (40 - 59 বছর)', 'বয়োজ্যেষ্ঠ পুরুষ (60+ বছর)']
+    },
+    q1_female_stage: {
+      question: 'মহিলা রোগীর বয়সের ধাপ নিশ্চিত করুন।',
+      subtext: 'গর্ভাবস্থা বা মাসিক সংক্রান্ত প্রশ্ন শুধুমাত্র প্রয়োজন হলেই করা হয়।',
+      badge: 'মহিলা স্বাস্থ্য প্রোফাইল',
+      options: ['কিশোরী (12 - 17 বছর)', 'প্রাপ্তবয়স্ক মহিলা (18 - 39 বছর)', 'মধ্যবয়সী মহিলা (40 - 59 বছর)', 'বয়োজ্যেষ্ঠ মহিলা (60+ বছর)']
+    },
+    q2_boy_pediatric_weight: {
+      question: 'ছেলেটির আনুমানিক ওজন কত?',
+      subtext: 'ছেলে শিশুদের সিরাপ বা ড্রপের মাত্রা শরীরের ওজন (mg/kg) অনুযায়ী ঠিক করা হয়।',
+      badge: 'ছেলে শিশুর ওজন',
+      options: ['12 কেজির কম (ছোট ছেলে)', '12 - 20 কেজি', '21 - 32 কেজি', '32 কেজির বেশি', 'সঠিক ওজন জানা নেই']
+    },
+    q2_girl_pediatric_weight: {
+      question: 'মেয়েটির আনুমানিক ওজন কত?',
+      subtext: 'মেয়ে শিশুদের সিরাপ বা ড্রপের মাত্রা ওজন ও সংবেদনশীলতা অনুযায়ী ঠিক হয়।',
+      badge: 'মেয়ে শিশুর ওজন',
+      options: ['12 কেজির কম (ছোট মেয়ে)', '12 - 20 কেজি', '21 - 32 কেজি', '32 কেজির বেশি', 'সঠিক ওজন জানা নেই']
+    },
+    q2_male_profile: {
+      question: 'পুরুষ রোগীর কি এই ধরনের কোনো জীবনযাপন বা স্বাস্থ্য সমস্যা আছে?',
+      subtext: 'রোদ/পরিশ্রম, অ্যাসিডিটি বা ধূমপান অনুযায়ী নিরাপদ ওষুধ নির্ধারণ করা হয়।',
+      badge: 'পুরুষ স্বাস্থ্য যাচাই',
+      options: ['কিছু নেই / সুস্থ', 'ভারী শারীরিক কাজ, জিম বা রোদে থাকা', 'অ্যাসিডিটি / আলসার বা নিয়মিত ধূমপান', 'উচ্চ রক্তচাপ বা কোলেস্টেরল', 'হাঁপানি বা অন্য নিয়মিত ওষুধ চলছে']
+    },
+    q2_female_wellness: {
+      question: 'মহিলা রোগীর কি এই ধরনের কোনো সাধারণ স্বাস্থ্য বিষয় আছে?',
+      subtext: 'কাটা-ছেঁড়া, সর্দি বা ত্বকের সমস্যায় অপ্রয়োজনে গর্ভাবস্থার প্রশ্ন করা হয় না।',
+      badge: 'নারী সাধারণ স্বাস্থ্য',
+      options: ['কিছু নেই / সুস্থ', 'রক্তাল্পতা (অ্যানিমিয়া) বা থাইরয়েড', 'সাবান, কসমেটিক্স বা গয়নায় ত্বকের অ্যালার্জি', 'মাইগ্রেন বা সাইনাসের প্রবণতা', 'অন্য কোনো নিয়মিত ওষুধ চলছে']
+    },
+    q2_female_cycle_check: {
+      question: 'এই উপসর্গগুলো কি মাসিক (Periods) বা গর্ভাবস্থার সাথে যুক্ত হতে পারে?',
+      subtext: 'শুধুমাত্র পেট ব্যথা, খিঁচুনি বা শরীর ব্যথার মতো সমস্যায় নিরাপদ ওষুধ বাছাইয়ের জন্য জিজ্ঞাসা করা হয়।',
+      badge: 'মাসিক ও নিরাপত্তা যাচাই',
+      options: ['মাসিকের সাথে যুক্ত নয়; গর্ভবতীও নন', 'বর্তমানে মাসিক চলছে / মাসিকের ব্যথা হচ্ছে', 'মাসিক দেরি হয়েছে বা গর্ভধারণের সম্ভাবনা আছে', 'বর্তমানে গর্ভবতী বা স্তন্যদানকারী', 'বলতে চাই না']
+    },
+    q2_senior_male_health: {
+      question: 'উচ্চ রক্তচাপ, হৃদরোগ, ডায়াবেটিস বা প্রোস্টেট/প্রস্রাবের পুরোনো সমস্যা আছে কি?',
+      subtext: 'বয়োজ্যেষ্ঠ পুরুষদের ক্ষেত্রে কিছু ওষুধ বিপি বা প্রোস্টেট প্রস্রাবের প্রবাহে প্রভাব ফেলতে পারে।',
+      badge: 'বয়োজ্যেষ্ঠ পুরুষ সুরক্ষা',
+      options: ['কোনো বড় পুরোনো রোগ নেই', 'উচ্চ রক্তচাপ বা হৃদরোগ', 'ডায়াবেটিস', 'প্রোস্টেট বা প্রস্রাবে অসুবিধা', 'কিডনি বা পাকস্থলীর আলসার']
+    },
+    q2_senior_female_health: {
+      question: 'উচ্চ রক্তচাপ, থাইরয়েড, হাড়ের দুর্বলতা বা ডায়াবেটিস আছে কি?',
+      subtext: 'বয়োজ্যেষ্ঠ মহিলাদের (60+) বিপি, হাড় এবং কিডনির সুরক্ষার জন্য।',
+      badge: 'বয়োজ্যেষ্ঠ নারী সুরক্ষা',
+      options: ['কোনো বড় পুরোনো রোগ নেই', 'উচ্চ রক্তচাপ বা হৃদরোগ', 'থাইরয়েড বা অস্টিওপোরোসিস / হাড়ের দুর্বলতা', 'ডায়াবেটিস', 'কিডনি বা অ্যাসিডিটির সমস্যা']
+    },
+    q9_boy_problem_context: {
+      question: 'ছেলেটি এখন পানি খাওয়া, খেলাধুলা এবং প্রস্রাবের ক্ষেত্রে কেমন আছে?',
+      subtext: 'খেলাধুলা করা ছেলেদের জ্বর বা পেটের সমস্যায় দ্রুত পানিশূন্যতা হতে পারে।',
+      badge: 'ছেলে শিশুর হাইড্রেশন',
+      options: ['ঠিকমতো পানি খাচ্ছে ও খেলাধুলা করছে', 'বাইরে খেলা বা রোদের পর ক্লান্ত হয়ে পড়েছে', 'কম পানি খাচ্ছে (প্রস্রাব কমে গেছে)', 'একদম পানি খাচ্ছে না, খুব নিস্তেজ বা বমি করছে']
+    },
+    q9_girl_problem_context: {
+      question: 'মেয়েটি এখন পানি খাওয়া, প্রস্রাবের আরাম এবং ত্বক/ঘুমে কেমন আছে?',
+      subtext: 'মেয়ে শিশুদের ক্ষেত্রে পানিশূন্যতার পাশাপাশি প্রস্রাবে জ্বালা বা সাবানের অ্যালার্জি দেখা হয়।',
+      badge: 'মেয়ে শিশুর যত্ন ও হাইড্রেশন',
+      options: ['ঠিকমতো পানি খাচ্ছে, প্রস্রাব স্বাভাবিক ও হাসিখুশি', 'সামান্য ত্বকের অস্বস্তি বা অরুচি, তবে অল্প পানি খাচ্ছে', 'প্রস্রাবের সময় ব্যথা/কাঁদছে বা খুব কম পানি খাচ্ছে', 'পানি একদমই খাচ্ছে না, খুব ঝিমিয়ে পড়েছে বা বারবার বমি হচ্ছে']
+    },
+    q9_male_problem_context: {
+      question: 'কাজের চাপ, রোদ বা প্রস্রাব সংক্রান্ত কোনো কারণ কি এতে জড়িত?',
+      subtext: 'অতিরিক্ত রোদ ও পরিশ্রম, ঝাল খাবার, ধূমপান বা প্রস্রাবের জ্বালা যাচাই করে।',
+      badge: 'পুরুষ উপসর্গ প্রেক্ষাপট',
+      options: ['পর্যাপ্ত পানি পান ও স্বাভাবিক ঘুম/প্রস্রাব', 'রোদ, ভারী পরিশ্রম বা কম পানি পানের পর বেড়েছে', 'কম ঘুম, স্ক্রিনের চাপ, ঝাল খাবার বা ধূমপান', 'অতিরিক্ত দুর্বলতা, প্রস্রাবে জ্বালা বা পানি ধরে রাখতে না পারা']
+    },
+    q9_female_problem_context: {
+      question: 'এই সমস্যায় আপনার পানি পান, শক্তি ও দৈনন্দিন কাজে কেমন প্রভাব পড়ছে?',
+      subtext: 'মাথা ঘোরা, পানির ঘাটতি ও দৈনন্দিন ক্লান্তি মূল্যায়ন করে।',
+      badge: 'মহিলা উপসর্গ প্রেক্ষাপট',
+      options: ['পর্যাপ্ত পানি খাচ্ছি এবং স্বাভাবিক কাজ চলছে', 'উঠে দাঁড়ালে মাথা ঘোরা বা দুর্বলতা লাগছে', 'কাজের চাপ, ঠিকমতো না খাওয়া বা ঘুম কম হওয়ায় বেড়েছে', 'তীব্র দুর্বলতা, প্রস্রাবে জ্বালা বা পানি খেলেই বমি হওয়া']
     }
   },
   ta: {
@@ -1409,6 +2120,96 @@ export const QUESTION_TRANSLATIONS: Record<
       subtext: 'இதைக் கொண்டு சாதாரண மருந்து/பவுடர் போதுமா அல்லது மருத்துவர் தேவையா என்பதை மெடிமித்ரா தானாக முடிவு செய்யும்.',
       badge: 'அறிகுறி மாற்றம்',
       options: ['மெதுவாகக் குறைகிறது அல்லது லேசானது', 'மாறாமல் அப்படியே உள்ளது', 'மெதுவாக அதிகரிக்கிறது', 'கடந்த சில மணி நேரங்களில் வேகமாக மோசமாகிறது']
+    },
+    q1_boy_stage: {
+      question: 'ஆண் குழந்தையின் வயதுப் பிரிவை உறுதிப்படுத்தவும்.',
+      subtext: 'சிறுவர்களின் மருந்து அளவும் விளையாட்டால் ஏற்படும் நீர்ச்சத்துக் குறைவும் வயதிற்கு ஏற்ப மாறும்.',
+      badge: 'ஆண் குழந்தை சுயவிவரம்',
+      options: ['குழந்தை சிறுவன் (1 - 3 வயது)', 'சிறுவன் (4 - 7 வயது)', 'பள்ளிச் சிறுவன் (8 - 11 வயது)', 'பதின்பருவச் சிறுவன் (12 - 14 வயது)']
+    },
+    q1_girl_stage: {
+      question: 'பெண் குழந்தையின் வயதுப் பிரிவை உறுதிப்படுத்தவும்.',
+      subtext: 'சிறுமிகளின் பாதுகாப்பான மருந்து அளவும் தோல் உணர்திறனும் வயதிற்கு ஏற்ப அமையும்.',
+      badge: 'பெண் குழந்தை சுயவிவரம்',
+      options: ['குழந்தை சிறுமி (1 - 3 வயது)', 'சிறுமி (4 - 7 வயது)', 'பள்ளிச் சிறுமி (8 - 11 வயது)', 'பதின்பருவச் சிறுமி (12 - 14 வயது)']
+    },
+    q1_male_stage: {
+      question: 'ஆண் நோயாளியின் வயதுப் பிரிவை உறுதிப்படுத்தவும்.',
+      subtext: 'பெரியவர்களுக்கான மருந்து அளவு மற்றும் உடல் உழைப்பைக் கணக்கிட உதவுகிறது.',
+      badge: 'ஆண் சுயவிவரம்',
+      options: ['பதின்பருவ ஆண் (12 - 17 வயது)', 'இளைய ஆண் (18 - 39 வயது)', 'நடுத்தர வயது ஆண் (40 - 59 வயது)', 'மூத்த ஆண் (60+ வயது)']
+    },
+    q1_female_stage: {
+      question: 'பெண் நோயாளியின் வயதுப் பிரிவை உறுதிப்படுத்தவும்.',
+      subtext: 'கர்ப்பம் அல்லது மாதவிடாய் கேள்விகள் மருத்துவத் தேவை உள்ளபோது மட்டுமே கேட்கப்படும்.',
+      badge: 'பெண் சுயவிவரம்',
+      options: ['பதின்பருவப் பெண் (12 - 17 வயது)', 'வயதுவந்த பெண் (18 - 39 வயது)', 'நடுத்தர வயது பெண் (40 - 59 வயது)', 'மூத்த பெண் (60+ வயது)']
+    },
+    q2_boy_pediatric_weight: {
+      question: 'சிறுவனின் தோராயமான எடை என்ன?',
+      subtext: 'ஆண் குழந்தைகளுக்கான சிரப் அளவு எடையின் (mg/kg) அடிப்படையில் கணக்கிடப்படுகிறது.',
+      badge: 'சிறுவன் எடை பாதுகாப்பு',
+      options: ['12 கிலோவுக்குக் குறைவு', '12 - 20 கிலோ', '21 - 32 கிலோ', '32 கிலோவுக்கு மேல்', 'சரியான எடை தெரியாது']
+    },
+    q2_girl_pediatric_weight: {
+      question: 'சிறுமியின் தோராயமான எடை என்ன?',
+      subtext: 'பெண் குழந்தைகளுக்கான மருந்து அளவு எடை மற்றும் உணர்திறன் அடிப்படையில் கணக்கிடப்படுகிறது.',
+      badge: 'சிறுமி எடை பாதுகாப்பு',
+      options: ['12 கிலோவுக்குக் குறைவு', '12 - 20 கிலோ', '21 - 32 கிலோ', '32 கிலோவுக்கு மேல்', 'சரியான எடை தெரியாது']
+    },
+    q2_male_profile: {
+      question: 'ஆண் நோயாளிக்கு இந்த வாழ்க்கை முறை அல்லது உடல்நலக் காரணிகள் உள்ளதா?',
+      subtext: 'வெயில்/உழைப்பு, அசிடிட்டி, புகைபிடித்தல் மற்றும் ரத்த அழுத்தத்திற்கு ஏற்ப மருந்து வழங்க.',
+      badge: 'ஆண் உடல்நல நிலை',
+      options: ['ஏதுமில்லை / நலமாக உள்ளேன்', 'கடுமையான உடல் உழைப்பு, உடற்பயிற்சி அல்லது வெயில்', 'அசிடிட்டி / வயிற்றுப் புண் அல்லது புகைபிடித்தல்', 'உயர் ரத்த அழுத்தம் அல்லது கொழுப்பு', 'ஆஸ்துமா அல்லது பிற தினசரி மருந்துகள்']
+    },
+    q2_female_wellness: {
+      question: 'பெண் நோயாளிக்கு இந்தப் பொதுவான உடல்நல நிலைகள் ஏதேனும் உள்ளதா?',
+      subtext: 'காயம், சளி அல்லது தோல் பிரச்சனைகளில் தேவையின்றி கர்ப்பக் கேள்விகள் கேட்கப்படாது.',
+      badge: 'பெண் பொது நலம்',
+      options: ['ஏதுமில்லை / நலமாக உள்ளேன்', 'இரும்புச்சத்து குறைபாடு (ரத்த சோகை) அல்லது தைராய்டு', 'சோப்பு, அழகுசாதனங்கள் அல்லது நகைகளால் தோல் ஒவ்வாமை', 'ஒற்றைத் தலைவலி அல்லது சைனஸ்', 'மற்ற தினசரி மருந்துகள் உட்கொள்கிறேன்']
+    },
+    q2_female_cycle_check: {
+      question: 'இந்த அறிகுறிகள் மாதவிடாய் (Periods) அல்லது கர்ப்பத்துடன் தொடர்புடையதாக இருக்கலாமா?',
+      subtext: 'வயிற்று வலி, பிடிப்புகள் அல்லது உடல் வலி போன்ற பிரச்சனைகளுக்கு மட்டுமே இது கேட்கப்படுகிறது.',
+      badge: 'மாதவிடாய் & பாதுகாப்பு',
+      options: ['மாதவிடாயுடன் தொடர்பில்லை; கர்ப்பமாக இல்லை', 'தற்போது மாதவிடாய் / மாதவிடாய் வலி உள்ளது', 'மாதவிடாய் தாமதம் அல்லது கர்ப்ப சந்தேகம்', 'தற்போது கர்ப்பிணி அல்லது தாய்ப்பால் கொடுப்பவர்', 'தெரிவிக்க விரும்பவில்லை']
+    },
+    q2_senior_male_health: {
+      question: 'ரத்த அழுத்தம், இதயம், சர்க்கரை அல்லது புரோஸ்டேட்/சிறுநீர் பிரச்சனை உள்ளதா?',
+      subtext: 'மூத்த ஆண்களில் சில மருந்துகள் பிபி மற்றும் சிறுநீர் ஓட்டத்தை பாதிக்கலாம்.',
+      badge: 'மூத்த ஆண் பாதுகாப்பு',
+      options: ['பெரிய நோய்கள் இல்லை', 'உயர் ரத்த அழுத்தம் / இதய நோய்', 'சர்க்கரை நோய்', 'புரோஸ்டேட் அல்லது சிறுநீர் கழிப்பதில் சிரமம்', 'சிறுநீரகம் அல்லது வயிற்றுப் புண்']
+    },
+    q2_senior_female_health: {
+      question: 'ரத்த அழுத்தம், தைராய்டு, எலும்பு பலவீனம் அல்லது சர்க்கரை நோய் உள்ளதா?',
+      subtext: 'மூத்த பெண்களின் (60+) பிபி, எலும்பு மற்றும் சிறுநீரகப் பாதுகாப்பிற்காக.',
+      badge: 'மூத்த பெண் பாதுகாப்பு',
+      options: ['பெரிய நோய்கள் இல்லை', 'உயர் ரத்த அழுத்தம் / இதய நோய்', 'தைராய்டு அல்லது எலும்பு/மூட்டு பலவீனம்', 'சர்க்கரை நோய்', 'சிறுநீரகம் அல்லது அசிடிட்டி']
+    },
+    q9_boy_problem_context: {
+      question: 'சிறுவனின் தண்ணீர் குடிப்பது, விளையாட்டு மற்றும் சிறுநீர் நிலை எப்படி உள்ளது?',
+      subtext: 'விளையாடும் சிறுவர்களுக்குக் காய்ச்சல் அல்லது வயிற்று உபாதையில் நீர்ச்சத்து விரைவாகக் குறையும்.',
+      badge: 'சிறுவன் நீர்ச்சத்து & செயல்பாடு',
+      options: ['நன்றாகத் தண்ணீர் குடித்து சுறுசுறுப்பாக விளையாடுகிறான்', 'வெளியில் விளையாடிய பிறகு அல்லது வெயிலால் சோர்வாக உள்ளான்', 'தண்ணீர் குறைவாகக் குடிக்கிறான் (சிறுநீர் குறைவு)', 'தண்ணீரே குடிக்கவில்லை, மிகவும் மந்தம் அல்லது வாந்தி']
+    },
+    q9_girl_problem_context: {
+      question: 'சிறுமியின் தண்ணீர் குடிப்பது, சிறுநீர் வசதி மற்றும் சரும நிலை எப்படி உள்ளது?',
+      subtext: 'சிறுமிகளுக்கு நீர்ச்சத்துடன் சிறுநீர் எரிச்சல் அல்லது சோப்பு உணர்திறன் சரிபார்க்கப்படுகிறது.',
+      badge: 'சிறுமி நீர்ச்சத்து & கவனிப்பு',
+      options: ['நன்றாகத் தண்ணீர் குடிக்கிறாள், சிறுநீர் இயல்பாக உள்ளது', 'லேசான தோல் எரிச்சல் அல்லது பசியின்மை, ஆனாலும் தண்ணீர் குடிக்கிறாள்', 'சிறுநீர் கழிக்கும்போது வலி/அழுகை அல்லது தண்ணீர் மிகக் குறைவு', 'தண்ணீரே குடிக்கவில்லை, அதிக மயக்கம் அல்லது தொடர் வாந்தி']
+    },
+    q9_male_problem_context: {
+      question: 'வேலைச் சோர்வு, வெயில் அல்லது சிறுநீர் எரிச்சல் இதில் உள்ளதா?',
+      subtext: 'உடல் உழைப்பு, வெப்பம், கார உணவு, புகைபிடித்தல் அல்லது சிறுநீர் அறிகுறிகளைச் சோதிக்கிறது.',
+      badge: 'ஆண் அறிகுறிச் சூழல்',
+      options: ['நன்றாகத் தண்ணீர் குடிக்கிறேன்; தூக்கம் மற்றும் சிறுநீர் இயல்பு', 'வெயில், கடின உழைப்பு அல்லது தண்ணீர் குறைவால் ஏற்பட்டது', 'தூக்கமின்மை, திரைச் சோர்வு, கார உணவு அல்லது புகைபிடித்தல்', 'அதிக சோர்வு, சிறுநீர் எரிச்சல் அல்லது தண்ணீர் குடிக்க முடியாமை']
+    },
+    q9_female_problem_context: {
+      question: 'இந்தப் பிரச்சனை உங்கள் நீர்ச்சத்து, ஆற்றல் மற்றும் அன்றாடப் பணிகளை எவ்வாறு பாதிக்கிறது?',
+      subtext: 'தலைசுற்றல், நீர்ச்சத்துக் குறைவு மற்றும் உடல் சோர்வை மதிப்பிடுகிறது.',
+      badge: 'பெண் அறிகுறிச் சூழல்',
+      options: ['நன்றாகத் தண்ணீர் குடித்து வழக்கமான வேலை செய்கிறேன்', 'எழுந்து நிற்கும்போது தலைசுற்றல் அல்லது குறைந்த நீர்ச்சத்து', 'வேலைச் சோர்வு, உணவு தவிர்த்தல் அல்லது தூக்கக் குறைவு', 'அதிக பலவீனம், சிறுநீர் எரிச்சல் அல்லது தண்ணீர் குடித்தால் வாந்தி']
     }
   },
   te: {
@@ -1537,6 +2338,96 @@ export const QUESTION_TRANSLATIONS: Record<
       subtext: 'దీని ఆధారంగా సాధారణ మందు/పౌడర్ సరిపోతుందా లేదా డాక్టర్ అవసరమా అని మెడిమిత్ర స్వయంగా నిర్ణయిస్తుంది.',
       badge: 'లక్షణాల పురోగతి',
       options: ['నెమ్మదిగా తగ్గుతున్నాయి లేదా తేలికగా ఉన్నాయి', 'అదే స్థితిలో ఉన్నాయి, పెరగడం లేదు', 'నెమ్మదిగా అసౌకర్యం పెరుగుతోంది', 'గత కొన్ని గంటల్లో వేగంగా తీవ్రమవుతున్నాయి']
+    },
+    q1_boy_stage: {
+      question: 'అబ్బాయి (మగ శిశువు) వయస్సు దశను నిర్ధారించండి.',
+      subtext: 'బాలురకు మందు మోతాదు మరియు ఆటల వల్ల కలిగే డీహైడ్రేషన్ వయస్సుపై ఆధారపడతాయి.',
+      badge: 'బాలుడు ప్రొఫైల్',
+      options: ['చిన్న బాబు (1 - 3 ఏళ్లు)', 'బాలుడు (4 - 7 ఏళ్లు)', 'స్కూల్ వయసు అబ్బాయి (8 - 11 ఏళ్లు)', 'కిశోర బాలుడు (12 - 14 ఏళ్లు)']
+    },
+    q1_girl_stage: {
+      question: 'అమ్మాయి (ఆడ శిశువు) వయస్సు దశను నిర్ధారించండి.',
+      subtext: 'బాలికలకు సురక్షిత మందు మోతాదు మరియు చర్మ సున్నితత్వం వయస్సు ప్రకారం మారుతాయి.',
+      badge: 'బాలిక ప్రొఫైల్',
+      options: ['చిన్న పాప (1 - 3 ఏళ్లు)', 'బాలిక (4 - 7 ఏళ్లు)', 'స్కూల్ వయసు అమ్మాయి (8 - 11 ఏళ్లు)', 'కిశోర బాలిక (12 - 14 ఏళ్లు)']
+    },
+    q1_male_stage: {
+      question: 'పురుషుని వయస్సు దశ మరియు దినచర్యను నిర్ధారించండి.',
+      subtext: 'పురుషులకు సరైన మందు మోతాదు మరియు శ్రమ స్థాయిని అంచనా వేయడానికి.',
+      badge: 'పురుష ప్రొఫైల్',
+      options: ['యువ బాలుడు (12 - 17 ఏళ్లు)', 'యువ పురుషుడు (18 - 39 ఏళ్లు)', 'మధ్య వయస్కుడు (40 - 59 ఏళ్లు)', 'సీనియర్ పురుషుడు (60+ ఏళ్లు)']
+    },
+    q1_female_stage: {
+      question: 'మహిళ వయస్సు దశను నిర్ధారించండి.',
+      subtext: 'గర్భం లేదా పీరియడ్స్ ప్రశ్నలు అవసరమైనప్పుడు మాత్రమే అడగబడతాయి.',
+      badge: 'మహిళా ప్రొఫైల్',
+      options: ['కిశోర బాలిక (12 - 17 ఏళ్లు)', 'వయోజన మహిళ (18 - 39 ఏళ్లు)', 'మధ్య వయస్కురాలు (40 - 59 ఏళ్లు)', 'సీనియర్ మహిళ (60+ ఏళ్లు)']
+    },
+    q2_boy_pediatric_weight: {
+      question: 'అబ్బాయి సుమారు బరువు ఎంత?',
+      subtext: 'బాలురకు సిరప్ మోతాదు శరీర బరువు (mg/kg) ఆధారంగా ఇస్తారు.',
+      badge: 'బాలుడి బరువు భద్రత',
+      options: ['12 కిలోల కంటే తక్కువ', '12 - 20 కిలోలు', '21 - 32 కిలోలు', '32 కిలోల కంటే ఎక్కువ', 'ఖచ్చితమైన బరువు తెలియదు']
+    },
+    q2_girl_pediatric_weight: {
+      question: 'అమ్మాయి సుమారు బరువు ఎంత?',
+      subtext: 'బాలికలకు సిరప్ మోతాదు బరువు మరియు సున్నితత్వం ప్రకారం నిర్ణయించబడుతుంది.',
+      badge: 'బాలిక బరువు భద్రత',
+      options: ['12 కిలోల కంటే తక్కువ', '12 - 20 కిలోలు', '21 - 32 కిలోలు', '32 కిలోల కంటే ఎక్కువ', 'ఖచ్చితమైన బరువు తెలియదు']
+    },
+    q2_male_profile: {
+      question: 'పురుషునికి ఈ జీవనశైలి లేదా ఆరోగ్య పరిస్థితులు ఏవైనా ఉన్నాయా?',
+      subtext: 'ఎండ/శ్రమ, అసిడిటీ, ధూమపానం మరియు బీపీ ఆధారంగా సురక్షిత మందు సూచించబడుతుంది.',
+      badge: 'పురుష ఆరోగ్య స్థితి',
+      options: ['ఏమీ లేవు / ఆరోగ్యంగా ఉన్నారు', 'ఎండలో లేదా భారీ శారీరక శ్రమ / జిమ్', 'అసిడిటీ / కడుపు అల్సర్ లేదా ధూమపానం', 'అధిక రక్తపోటు లేదా కొలెస్ట్రాల్', 'ఆస్తమా లేదా ఇతర రోజువారీ మందులు']
+    },
+    q2_female_wellness: {
+      question: 'మహిళకు ఈ సాధారణ ఆరోగ్య అంశాలు ఏవైనా ఉన్నాయా?',
+      subtext: 'చిన్న గాయం, జలుబు లేదా చర్మ సమస్యలకు అనవసరంగా గర్భధారణ ప్రశ్నలు అడగము.',
+      badge: 'మహిళా సాధారణ ఆరోగ్యం',
+      options: ['ఏమీ లేవు / ఆరోగ్యంగా ఉన్నారు', 'రక్తహీనత (ఐరన్ లోపం) లేదా థైరాయిడ్', 'సబ్బు, కాస్మెటిక్స్ లేదా నగలతో చర్మ అలర్జీ', 'మైగ్రేన్ లేదా సైనస్ సమస్య', 'ఇతర రోజువారీ మందులు వాడుతున్నారు']
+    },
+    q2_female_cycle_check: {
+      question: 'ఈ లక్షణాలు పీరియడ్స్ (నెలసరి) లేదా గర్భధారణకు సంబంధించి ఉండవచ్చా?',
+      subtext: 'కడుపు నొప్పి, తిమ్మిరి లేదా ఒళ్ళు నొప్పులు ఉన్నప్పుడు మాత్రమే సురక్షిత మందు కోసం అడుగుతాము.',
+      badge: 'పీరియడ్స్ & భద్రత',
+      options: ['పీరియడ్స్‌తో సంబంధం లేదు; గర్భవతి కాదు', 'ప్రస్తుతం పీరియడ్స్ నడుస్తున్నాయి / పీరియడ్ నొప్పి ఉంది', 'పీరియడ్ ఆలస్యమైంది లేదా గర్భధారణ అనుమానం', 'ప్రస్తుతం గర్భవతి లేదా పాలిస్తున్నారు', 'చెప్పదలుచుకోలేదు']
+    },
+    q2_senior_male_health: {
+      question: 'అధిక బీపీ, గుండె, షుగర్ లేదా ప్రోస్టేట్/మూత్ర సమస్య ఉందా?',
+      subtext: 'సీనియర్ పురుషులలో కొన్ని మందులు బీపీ మరియు మూత్ర విసర్జనపై ప్రభావం చూపవచ్చు.',
+      badge: 'సీనియర్ పురుష భద్రత',
+      options: ['పెద్ద దీర్ఘకాలిక వ్యాధులు లేవు', 'అధిక బీపీ లేదా గుండె సమస్య', 'డయాబెటిస్ (షుగర్)', 'ప్రోస్టేట్ లేదా మూత్ర విసర్జనలో ఇబ్బంది', 'కిడ్నీ లేదా కడుపు అల్సర్']
+    },
+    q2_senior_female_health: {
+      question: 'అధిక బీపీ, థైరాయిడ్, ఎముకల బలహీనత లేదా షుగర్ ఉందా?',
+      subtext: 'సీనియర్ మహిళల (60+) బీపీ, ఎముకలు మరియు కిడ్నీ రక్షణ కోసం.',
+      badge: 'సీనియర్ మహిళా భద్రత',
+      options: ['పెద్ద దీర్ఘకాలిక వ్యాధులు లేవు', 'అధిక బీపీ లేదా గుండె సమస్య', 'థైరాయిడ్ లేదా ఎముకలు/కీళ్ల బలహీనత', 'డయాబెటిస్ (షుగర్)', 'కిడ్నీ లేదా అసిడిటీ సమస్య']
+    },
+    q9_boy_problem_context: {
+      question: 'అబ్బాయి నీళ్లు తాగడం, ఆటలు మరియు మూత్ర విసర్జన విషయంలో ఎలా ఉన్నాడు?',
+      subtext: 'ఆడుకునే అబ్బాయిలలో జ్వరం లేదా కడుపు నొప్పి వల్ల నీటి లోపం త్వరగా వస్తుంది.',
+      badge: 'బాలుడి నీటి స్థాయి & ఆట',
+      options: ['బాగా నీళ్లు తాగుతూ చురుకుగా ఆడుకుంటున్నాడు', 'బయట ఆడి లేదా ఎండ వల్ల అలసిపోయాడు', 'తక్కువ నీళ్లు తాగుతున్నాడు (మూత్రం తగ్గింది)', 'నీళ్లు అస్సలు తాగడం లేదు, మత్తుగా లేదా వాంతులు']
+    },
+    q9_girl_problem_context: {
+      question: 'అమ్మాయి నీళ్లు తాగడం, మూత్ర సౌకర్యం మరియు చర్మ/నిద్ర విషయంలో ఎలా ఉంది?',
+      subtext: 'బాలికలలో నీటి శాతంతో పాటు మూత్ర మంట లేదా సబ్బు అలర్జీని పరిశీలిస్తాము.',
+      badge: 'బాలిక నీటి స్థాయి & శ్రద్ధ',
+      options: ['బాగా నీళ్లు తాగుతోంది, మూత్రం సాధారణంగా ఉంది', 'తేలికపాటి చర్మం దురద లేదా ఆకలి తగ్గింది, కానీ నీరు తాగుతోంది', 'మూత్ర విసర్జనలో నొప్పి/ఏడుపు లేదా చాలా తక్కువ నీరు', 'నీళ్లు అస్సలు తాగట్లేదు, ఎక్కువ మత్తు లేదా తరచూ వాంతులు']
+    },
+    q9_male_problem_context: {
+      question: 'పని ఒత్తిడి, ఎండ లేదా మూత్ర సంబంధిత కారణం ఏదైనా ఉందా?',
+      subtext: 'ఎండలో శ్రమ, కారపు ఆహారం, ధూమపానం లేదా మూత్ర మంటను తనిఖీ చేస్తుంది.',
+      badge: 'పురుష లక్షణ సందర్భం',
+      options: ['సరిపడా నీళ్లు తాగుతున్నాను; నిద్ర, మూత్రం సాధారణం', 'ఎండ, బరువైన పని లేదా తక్కువ నీళ్ల వల్ల పెరిగింది', 'నిద్ర తగ్గడం, స్క్రీన్ అలసట, కారం లేదా ధూమపానం', 'తీవ్ర నీరసం, మూత్రంలో మంట లేదా నీరు నిలవకపోవడం']
+    },
+    q9_female_problem_context: {
+      question: 'ఈ సమస్య మీ నీరు తాగడం, శక్తి మరియు రోజువారీ పనులపై ఎలా ప్రభావం చూపుతోంది?',
+      subtext: 'తలతిరగడం, నీటి కొరత మరియు అలసటను అంచనా వేస్తుంది.',
+      badge: 'మహిళా లక్షణ సందర్భం',
+      options: ['బాగా నీళ్లు తాగుతూ రోజువారీ పనులు చేస్తున్నాను', 'లేచి నిలబడితే తలతిరగడం లేదా తక్కువ నీరు తాగడం', 'ఇంటి/ఆఫీసు అలసట, భోజనం మానేయడం లేదా నిద్ర లేమి', 'తీవ్ర బలహీనత, మూత్ర మంట లేదా నీరు తాగితే వాంతి']
     }
   },
   gu: {
@@ -1665,6 +2556,96 @@ export const QUESTION_TRANSLATIONS: Record<
       subtext: 'આના આધારે મેડિમિત્રા જાતે નક્કી કરશે કે સામાન્ય દવા/પાવડર પૂરતું છે કે ડૉક્ટરની જરૂર છે.',
       badge: 'લક્ષણોની પ્રગતિ',
       options: ['ધીમે ધીમે સુધારો થઈ રહ્યો છે અથવા હળવું છે', 'પહેલા જેવું જ સ્થિર છે, વધતું નથી', 'ધીમે ધીમે તકલીફ વધી રહી છે', 'છેલ્લા કેટલાક કલાકોમાં ઝડપથી વધી રહ્યું છે']
+    },
+    q1_boy_stage: {
+      question: 'છોકરાની (બાળક) ઉંમર અને વિકાસનો તબક્કો પસંદ કરો.',
+      subtext: 'છોકરાઓ માટે દવાનો ડોઝ અને રમતગમતથી થતી પાણીની ઉણપ ઉંમર મુજબ બદલાય છે.',
+      badge: 'છોકરાની પ્રોફાઇલ',
+      options: ['નાનું બાળક / છોકરો (1 - 3 વર્ષ)', 'છોકરો (4 - 7 વર્ષ)', 'શાળાએ જતો છોકરો (8 - 11 વર્ષ)', 'કિશોર છોકરો (12 - 14 વર્ષ)']
+    },
+    q1_girl_stage: {
+      question: 'છોકરીની (બાળકી) ઉંમર અને વિકાસનો તબક્કો પસંદ કરો.',
+      subtext: 'છોકરીઓ માટે સુરક્ષિત દવાનો ડોઝ અને ત્વચાની સંવેદનશીલતા ઉંમર મુજબ નક્કી થાય છે.',
+      badge: 'છોકરીની પ્રોફાઇલ',
+      options: ['નાની બાળકી / છોકરી (1 - 3 વર્ષ)', 'છોકરી (4 - 7 વર્ષ)', 'શાળાએ જતી છોકરી (8 - 11 વર્ષ)', 'કિશોરી છોકરી (12 - 14 વર્ષ)']
+    },
+    q1_male_stage: {
+      question: 'પુરુષ દર્દીનો ઉંમર વર્ગ અને દૈનિક પ્રવૃત્તિ પસંદ કરો.',
+      subtext: 'પુરુષો માટે યોગ્ય દવાની માત્રા અને શારીરિક શ્રમ સમજવા માટે.',
+      badge: 'પુરુષ પ્રોફાઇલ',
+      options: ['કિશોર છોકરો (12 - 17 વર્ષ)', 'યુવાન પુરુષ (18 - 39 વર્ષ)', 'મધ્યમ વયના પુરુષ (40 - 59 વર્ષ)', 'વરિષ્ઠ પુરુષ (60+ વર્ષ)']
+    },
+    q1_female_stage: {
+      question: 'મહિલા દર્દીનો ઉંમર વર્ગ પસંદ કરો.',
+      subtext: 'ગર્ભાવસ્થા કે માસિક અંગેના પ્રશ્નો માત્ર જરૂર હોય ત્યારે જ પૂછવામાં આવે છે.',
+      badge: 'મહિલા પ્રોફાઇલ',
+      options: ['કિશોરી (12 - 17 વર્ષ)', 'પુખ્ત મહિલા (18 - 39 વર્ષ)', 'મધ્યમ વયની મહિલા (40 - 59 વર્ષ)', 'વરિષ્ઠ મહિલા (60+ વર્ષ)']
+    },
+    q2_boy_pediatric_weight: {
+      question: 'છોકરાનું અંદાજિત વજન કેટલું છે?',
+      subtext: 'છોકરાઓ માટે સિરપનો ડોઝ શરીરના વજન (mg/kg) મુજબ નક્કી થાય છે.',
+      badge: 'છોકરાનું વજન સુરક્ષા',
+      options: ['12 કિલોથી ઓછું', '12 - 20 કિલો', '21 - 32 કિલો', '32 કિલોથી વધુ', 'ચોક્કસ વજન ખબર નથી']
+    },
+    q2_girl_pediatric_weight: {
+      question: 'છોકરીનું અંદાજિત વજન કેટલું છે?',
+      subtext: 'છોકરીઓ માટે સિરપનો ડોઝ વજન અને સંવેદનશીલતા મુજબ નક્કી થાય છે.',
+      badge: 'છોકરીનું વજન સુરક્ષા',
+      options: ['12 કિલોથી ઓછું', '12 - 20 કિલો', '21 - 32 કિલો', '32 કિલોથી વધુ', 'ચોક્કસ વજન ખબર નથી']
+    },
+    q2_male_profile: {
+      question: 'શું પુરુષ દર્દીને આમાંથી કોઈ જીવનશૈલી કે આરોગ્ય સ્થિતિ છે?',
+      subtext: 'તડકો/મહેનત, એસિડિટી, ધૂમ્રપાન અને બીપી મુજબ સુરક્ષિત દવા નક્કી થાય છે.',
+      badge: 'પુરુષ આરોગ્ય તપાસ',
+      options: ['કંઈ નહીં / સ્વસ્થ', 'ભારે શારીરિક કામ, જીમ કે તડકામાં કામ', 'એસિડિટી / પેટનું અલ્સર કે ધૂમ્રપાન', 'હાઈ બીપી કે કોલેસ્ટ્રોલ', 'અસ્થમા કે અન્ય નિયમિત દવા ચાલુ છે']
+    },
+    q2_female_wellness: {
+      question: 'શું મહિલા દર્દીને આમાંથી કોઈ સામાન્ય આરોગ્ય બાબત લાગુ પડે છે?',
+      subtext: 'નાના ઘા, શરદી કે ચામડીના પ્રશ્નમાં બિનજરૂરી ગર્ભાવસ્થાના સવાલ પૂછાતા નથી.',
+      badge: 'મહિલા સામાન્ય આરોગ્ય',
+      options: ['કંઈ નહીં / સ્વસ્થ', 'લોહીની ઉણપ (એનિમિયા) કે થાઇરોઇડ', 'સાબુ, કોસ્મેટિક્સ કે ઘરેણાંથી ચામડીની એલર્જી', 'માઇગ્રેન કે સાઇનસની તકલીફ', 'અન્ય નિયમિત દવા ચાલુ છે']
+    },
+    q2_female_cycle_check: {
+      question: 'શું આ લક્ષણો માસિક ધર્મ (Periods) કે ગર્ભાવસ્થા સાથે જોડાયેલા હોઈ શકે?',
+      subtext: 'ફક્ત પેટનો દુખાવો, ખેંચાણ કે શરીરના દુખાવા જેવી સમસ્યામાં સુરક્ષિત દવા માટે જ પૂછાય છે.',
+      badge: 'માસિક અને સુરક્ષા તપાસ',
+      options: ['માસિક સાથે સંબંધ નથી; ગર્ભવતી નથી', 'હાલમાં માસિક ચાલુ છે / માસિકનો દુખાવો છે', 'માસિક મોડું છે અથવા ગર્ભાવસ્થાની શક્યતા છે', 'હાલમાં ગર્ભવતી કે સ્તનપાન કરાવે છે', 'જણાવવા માંગતા નથી']
+    },
+    q2_senior_male_health: {
+      question: 'શું હાઈ બીપી, હૃદય, ડાયાબિટીસ કે પ્રોસ્ટેટ/પેશાબની જૂની સમસ્યા છે?',
+      subtext: 'વરિષ્ઠ પુરુષોમાં અમુક દવાઓ બીપી કે પેશાબના પ્રવાહ પર અસર કરી શકે છે.',
+      badge: 'વરિષ્ઠ પુરુષ સુરક્ષા',
+      options: ['કોઈ મોટો જૂનો રોગ નથી', 'હાઈ બીપી કે હૃદય રોગ', 'ડાયાબિટીસ', 'પ્રોસ્ટેટ કે પેશાબ કરવામાં મુશ્કેલી', 'કિડની કે પેટનું અલ્સર']
+    },
+    q2_senior_female_health: {
+      question: 'શું હાઈ બીપી, થાઇરોઇડ, હાડકાંની નબળાઈ કે ડાયાબિટીસ છે?',
+      subtext: 'વરિષ્ઠ મહિલાઓ (60+) માટે બીપી, હાડકાં અને કિડનીની સુરક્ષા માટે.',
+      badge: 'વરિષ્ઠ મહિલા સુરક્ષા',
+      options: ['કોઈ મોટો જૂનો રોગ નથી', 'હાઈ બીપી કે હૃદય રોગ', 'થાઇરોઇડ કે હાડકાં/સાંધાની નબળાઈ', 'ડાયાબિટીસ', 'કિડની કે એસિડિટીની તકલીફ']
+    },
+    q9_boy_problem_context: {
+      question: 'છોકરો અત્યારે પાણી પીવા, રમવા અને પેશાબની બાબતમાં કેવો છે?',
+      subtext: 'રમતા છોકરાઓમાં તાવ કે પેટ ખરાબ થવાથી પાણીની ઉણપ ઝડપથી થઈ શકે છે.',
+      badge: 'છોકરાનું હાઇડ્રેશન અને રમત',
+      options: ['બરાબર પાણી પીવે છે અને રમતો રહે છે', 'બહાર રમ્યા પછી કે તડકાથી થાકી ગયો છે', 'ઓછું પાણી પીવે છે (પેશાબ ઓછો થાય છે)', 'પાણી બિલકુલ પીતો નથી, ખૂબ સુસ્ત કે ઉલટી કરે છે']
+    },
+    q9_girl_problem_context: {
+      question: 'છોકરી અત્યારે પાણી પીવા, પેશાબના આરામ અને ત્વચા/ઊંઘમાં કેવી છે?',
+      subtext: 'નાની છોકરીઓમાં પાણીની સાથે પેશાબમાં બળતરા કે સાબુની એલર્જી તપાસવી જરૂરી હોય છે.',
+      badge: 'છોકરીનું હાઇડ્રેશન અને કાળજી',
+      options: ['બરાબર પાણી પીવે છે, પેશાબ સામાન્ય છે અને ખુશ છે', 'હળવી ચામડીની બળતરા કે ભૂખ ઓછી, પણ થોડું પાણી પીવે છે', 'પેશાબ કરતી વખતે દુખાવો/રડે છે અથવા પાણી ખૂબ ઓછું પીવે છે', 'પાણી બિલકુલ પીતી નથી, ખૂબ સુસ્ત કે વારંવાર ઉલટી થાય છે']
+    },
+    q9_male_problem_context: {
+      question: 'શું કામનો થાક, તડકો કે પેશાબ સંબંધિત કોઈ કારણ આમાં સામેલ છે?',
+      subtext: 'તડકામાં મહેનત, તીખો ખોરાક, ધૂમ્રપાન કે પેશાબમાં બળતરા તપાસે છે.',
+      badge: 'પુરુષ લક્ષણ સંદર્ભ',
+      options: ['પૂરતું પાણી પીધું છે; ઊંઘ અને પેશાબ સામાન્ય છે', 'તડકો, ભારે મહેનત કે ઓછા પાણીથી વધ્યું છે', 'ઓછી ઊંઘ, સ્ક્રીન થાક, તીખો ખોરાક કે ધૂમ્રપાન', 'ખૂબ નબળાઈ, પેશાબમાં બળતરા કે પાણી ન ટકવું']
+    },
+    q9_female_problem_context: {
+      question: 'આ સમસ્યાથી તમારા પાણી પીવા, શક્તિ અને રોજિંદા કામ પર કેવી અસર થાય છે?',
+      subtext: 'ચક્કર આવવા, પાણીની ઉણપ અને રોજિંદા થાકનું મૂલ્યાંકન કરે છે.',
+      badge: 'મહિલા લક્ષણ સંદર્ભ',
+      options: ['બરાબર પાણી પીવું છું અને કામ સામાન્ય ચાલે છે', 'ઊભા થતાં ચક્કર, થાક કે ઓછું પાણી પીવાયું છે', 'ઘર/કામનો થાક, જમવાનું ચૂકી જવું કે ઓછી ઊંઘ', 'તીવ્ર નબળાઈ, પેશાબમાં બળતરા કે પાણી પીતાં જ ઉલટી થવી']
     }
   }
 };

@@ -96,17 +96,17 @@ app.get('/api/device/poll', authenticateDevice, async (req: Request, res: Respon
     const deviceId = (req.query.deviceId as string) || 'ESP32_MEDIMITRA_01';
     const commandsRef = collection(db, 'dispensing_commands');
     
-    // Find oldest pending command for this device
+    // Find pending command for this device (single-field filter avoids composite index errors)
     const q = query(
       commandsRef, 
-      where('deviceId', '==', deviceId), 
       where('status', '==', 'PENDING'),
-      limit(1)
+      limit(20)
     );
     
     const snapshot = await getDocs(q);
+    const matchingDoc = snapshot.docs.find(d => d.data()?.deviceId === deviceId);
 
-    if (snapshot.empty) {
+    if (!matchingDoc) {
       return res.json({
         status: 'IDLE',
         hasCommand: false,
@@ -114,8 +114,7 @@ app.get('/api/device/poll', authenticateDevice, async (req: Request, res: Respon
       });
     }
 
-    const docSnapshot = snapshot.docs[0];
-    const commandDocRef = doc(db, 'dispensing_commands', docSnapshot.id);
+    const commandDocRef = doc(db, 'dispensing_commands', matchingDoc.id);
     let claimedCommand: any = null;
 
     // Atomically claim the command to prevent double-execution

@@ -5,13 +5,17 @@ import {
   Cpu, 
   XCircle, 
   Play, 
-  RotateCw 
+  RotateCw,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
-import { DispensingCommand, DispenseStatus } from '../types/dispensing';
+import { DispensingCommand, DispenseStatus, DispenserDevice } from '../types/dispensing';
 import { 
   subscribeToDispensingCommand, 
   cancelDispensingCommand, 
-  simulatePhysicalServoDispensing 
+  simulatePhysicalServoDispensing,
+  subscribeToDeviceStatus,
+  isDeviceOnlineNow
 } from '../services/dispensingService';
 import { useLanguage } from '../context/LanguageContext';
 import { getAppStrings } from '../data/appTranslations';
@@ -31,6 +35,8 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
   const ui = getAppStrings(language);
 
   const [command, setCommand] = useState<DispensingCommand>(initialCommand);
+  const [deviceInfo, setDeviceInfo] = useState<DispenserDevice | null>(null);
+  const [, setTick] = useState(0);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simAngle, setSimAngle] = useState(0);
   const [simStepMsg, setSimStepMsg] = useState<string>('');
@@ -44,8 +50,19 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
       }
     );
 
-    return () => unsubscribe();
-  }, [command.commandId]);
+    const unsubDevice = subscribeToDeviceStatus(command.deviceId, (dev) => {
+      setDeviceInfo(dev);
+    });
+    const timer = setInterval(() => setTick(t => t + 1), 10000);
+
+    return () => {
+      unsubscribe();
+      unsubDevice();
+      clearInterval(timer);
+    };
+  }, [command.commandId, command.deviceId]);
+
+  const isDeviceOnline = isDeviceOnlineNow(deviceInfo);
 
   const handleCancel = async () => {
     setIsCancelling(true);
@@ -223,7 +240,21 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
           </div>
           <div className="flex items-center justify-between gap-2">
             <span className="text-slate-500">{ui.targetDeviceLabel}</span>
-            <span className="font-mono text-teal-800 font-medium">{command.deviceId}</span>
+            <div className="flex items-center gap-1.5 flex-wrap justify-end">
+              <span className="font-mono text-teal-800 font-medium">{command.deviceId}</span>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                isDeviceOnline
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : 'bg-slate-200 text-slate-600'
+              }`}>
+                {isDeviceOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                <span>
+                  {isDeviceOnline
+                    ? `${ui.esp32OnlineStatus}${deviceInfo?.ipAddress ? ` (${deviceInfo.ipAddress})` : ''}`
+                    : ui.esp32OfflineStatus}
+                </span>
+              </span>
+            </div>
           </div>
           <div className="flex items-center justify-between gap-2">
             <span className="text-slate-500">{ui.servoMovementLabel}</span>

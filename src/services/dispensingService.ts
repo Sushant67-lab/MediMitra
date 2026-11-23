@@ -9,6 +9,7 @@ import {
   Unsubscribe,
   runTransaction
 } from 'firebase/firestore';
+import firebaseConfig from '../../firebase-applet-config.json';
 import { db } from './firebase';
 import { 
   DispensingCommand, 
@@ -209,8 +210,8 @@ export async function getAllInventory(): Promise<MedicineInventory[]> {
     if (!snap.empty) {
       return snap.docs.map(d => d.data() as MedicineInventory);
     }
-  } catch (err) {
-    console.warn('Failed to get inventory list from Firestore:', err);
+  } catch {
+    // Graceful fallback to local stock defaults
   }
 
   // Seed default if empty
@@ -222,6 +223,176 @@ export async function getAllInventory(): Promise<MedicineInventory[]> {
   return DEFAULT_STOCK_ITEMS;
 }
 
+interface HeartbeatAnchor {
+  lastObservedHbMs: number;
+  observedAtClientMs: number;
+  observedChangeInSession: boolean;
+}
+
+const liveHeartbeatAnchors = new Map<string, HeartbeatAnchor>();
+let serverClockOffsetMs = 0;
+
+function recordHeartbeatObservation(deviceId: string, hbMs: number, status?: string): void {
+  if (!deviceId || hbMs <= 0) return;
+  if (status === 'OFFLINE') {
+    liveHeartbeatAnchors.delete(deviceId);
+    return;
+  }
+  const prev = liveHeartbeatAnchors.get(deviceId);
+  const now = Date.now();
+  if (!prev) {
+    liveHeartbeatAnchors.set(deviceId, {
+      lastObservedHbMs: hbMs,
+      observedAtClientMs: now,
+      observedChangeInSession: false
+    });
+  } else if (hbMs > prev.lastObservedHbMs) {
+    liveHeartbeatAnchors.set(deviceId, {
+      lastObservedHbMs: hbMs,
+      observedAtClientMs: now,
+      observedChangeInSession: true
+    });
+  }
+}
+
+export function parseHeartbeatMillis(hb: unknown): number {
+  if (!hb) return 0;
+  if (typeof hb === 'string') {
+    const ms = Date.parse(hb);
+    return Number.isFinite(ms) ? ms : 0;
+  }
+  if (typeof hb === 'object' && hb !== null) {
+    const obj = hb as { toMillis?: () => number; seconds?: number };
+    if (typeof obj.toMillis === 'function') return obj.toMillis();
+    if (typeof obj.seconds === 'number') return obj.seconds * 1000;
+  }
+  return 0;
+}
+
+export function isDeviceOnlineNow(device: Partial<DispenserDevice> | null | undefined): boolean {
+  if (!device || device.status === 'OFFLINE') return false;
+  const lastHb = parseHeartbeatMillis(device.lastHeartbeat);
+  if (lastHb <= 0) return false;
+
+  const deviceId = device.deviceId || DEFAULT_DEVICE_ID;
+  const anchor = liveHeartbeatAnchors.get(deviceId);
+  if (anchor && anchor.observedChangeInSession && anchor.lastObservedHbMs === lastHb) {
+    return Date.now() - anchor.observedAtClientMs < 35000;
+  }
+
+  const estimatedServerNow = Date.now() + serverClockOffsetMs;
+  const ageMs = estimatedServerNow - lastHb;
+  return ageMs < 35000 && ageMs > -120000;
+}
+
+function parseFirestoreRestDevice(docJson: any, fallbackDeviceId: string): DispenserDevice | null {
+  const fields = docJson?.fields;
+  if (!fields) return null;
+  const getStr = (k: string) => fields[k]?.stringValue as string | undefined;
+  const getInt = (k: string) => {
+    const v = fields[k]?.integerValue;
+    return v !== undefined ? Number(v) : undefined;
+  };
+  const hbRaw =
+    fields.lastHeartbeat?.timestampValue ||
+    fields.lastHeartbeat?.stringValue ||
+    '';
+
+  const partial: DispenserDevice = {
+    deviceId: getStr('deviceId') || fallbackDeviceId,
+    deviceName: getStr('deviceName') || 'MediMitra Smart Dispenser Unit 1',
+    status: (getStr('status') as 'ONLINE' | 'OFFLINE') || 'OFFLINE',
+    lastHeartbeat: hbRaw,
+    ipAddress: getStr('ipAddress'),
+    wifiSsid: getStr('wifiSsid'),
+    wifiRssi: getInt('wifiRssi'),
+    servoPin: getInt('servoPin') ?? 18,
+    servoInitialAngle: getInt('servoInitialAngle') ?? 0,
+    servoDispenseAngle: getInt('servoDispenseAngle') ?? 25,
+    servoHoldTimeMs: getInt('servoHoldTimeMs') ?? 300
+  };
+
+  const hbMs = parseHeartbeatMillis(partial.lastHeartbeat);
+  recordHeartbeatObservation(partial.deviceId, hbMs, partial.status);
+  return {
+    ...partial,
+    status: isDeviceOnlineNow(partial) ? 'ONLINE' : 'OFFLINE'
+  };
+}
+
+/**
+ * Subscribe in real time to ESP32 hardware Wi-Fi heartbeat in Firestore
+ * Combines Firestore WebChannel onSnapshot with a 10s REST fallback poll so status
+ * reliably turns Online on Wi-Fi connect and Offline on disconnect.
+ */
+export function subscribeToDeviceStatus(
+  deviceId: string = DEFAULT_DEVICE_ID,
+  onUpdate: (device: DispenserDevice | null) => void
+): Unsubscribe {
+  let isActive = true;
+  const docRef = doc(db, 'devices', deviceId);
+
+  const emitDevice = (raw: DispenserDevice | null) => {
+    if (!isActive) return;
+    if (!raw) {
+      onUpdate(null);
+      return;
+    }
+    const hbMs = parseHeartbeatMillis(raw.lastHeartbeat);
+    recordHeartbeatObservation(raw.deviceId || deviceId, hbMs, raw.status);
+    onUpdate({
+      ...raw,
+      status: isDeviceOnlineNow({ ...raw, deviceId: raw.deviceId || deviceId }) ? 'ONLINE' : 'OFFLINE'
+    });
+  };
+
+  const unsubSnapshot = onSnapshot(
+    docRef,
+    (snap) => {
+      if (!snap.exists()) {
+        emitDevice(null);
+        return;
+      }
+      emitDevice(snap.data() as DispenserDevice);
+    },
+    () => {
+      // REST fallback below keeps live status active even if WebChannel fails
+    }
+  );
+
+  const fetchViaRest = async () => {
+    if (!isActive || !firebaseConfig?.projectId || !firebaseConfig?.firestoreDatabaseId) return;
+    try {
+      const url = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${firebaseConfig.firestoreDatabaseId}/documents/devices/${encodeURIComponent(deviceId)}?key=${firebaseConfig.apiKey}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      const dateHdr = res.headers.get('date');
+      if (dateHdr) {
+        const serverMs = Date.parse(dateHdr);
+        if (Number.isFinite(serverMs)) {
+          serverClockOffsetMs = serverMs - Date.now();
+        }
+      }
+      if (!res.ok) return;
+      const json = await res.json();
+      const parsed = parseFirestoreRestDevice(json, deviceId);
+      if (parsed) {
+        emitDevice(parsed);
+      }
+    } catch {
+      // Non-fatal network poll error
+    }
+  };
+
+  fetchViaRest();
+  const restTimer = setInterval(fetchViaRest, 10000);
+
+  return () => {
+    isActive = false;
+    unsubSnapshot();
+    clearInterval(restTimer);
+  };
+}
+
 /**
  * Get device registry details or initialize default ESP32 dispenser
  */
@@ -231,36 +402,26 @@ export async function getDeviceRegistry(deviceId: string = DEFAULT_DEVICE_ID): P
     const snap = await getDoc(docRef);
     if (snap.exists()) {
       const data = snap.data() as DispenserDevice;
-      // Check if last heartbeat is within 90 seconds
-      const lastHb = new Date(data.lastHeartbeat || 0).getTime();
-      const isOnline = Date.now() - lastHb < 90000;
       return {
         ...data,
-        status: isOnline ? 'ONLINE' : 'OFFLINE'
+        status: isDeviceOnlineNow(data) ? 'ONLINE' : 'OFFLINE'
       };
     }
-  } catch (e) {
-    console.warn('Could not read device status:', e);
+  } catch {
+    // Non-fatal fallback
   }
 
-  const defaultDev: DispenserDevice = {
+  return {
     deviceId,
     deviceName: 'MediMitra Smart Dispenser Unit 1',
     deviceToken: DEFAULT_DEVICE_TOKEN,
-    status: 'ONLINE',
-    lastHeartbeat: new Date().toISOString(),
-    ipAddress: '192.168.1.105',
+    status: 'OFFLINE',
+    lastHeartbeat: '',
     servoPin: 18,
     servoInitialAngle: 0,
     servoDispenseAngle: 25,
     servoHoldTimeMs: 300
   };
-
-  try {
-    await setDoc(docRef, defaultDev, { merge: true });
-  } catch {}
-
-  return defaultDev;
 }
 
 /**
@@ -279,8 +440,8 @@ export async function recordDeviceHeartbeat(
       lastHeartbeat: new Date().toISOString(),
       ...(ipAddress ? { ipAddress } : {})
     }, { merge: true });
-  } catch (e) {
-    console.warn('Error recording device heartbeat:', e);
+  } catch {
+    // Non-fatal heartbeat sync fallback
   }
 }
 
@@ -381,7 +542,6 @@ export function subscribeToDispensingCommand(
       }
     },
     (err) => {
-      console.warn('Snapshot error:', err);
       if (onError) onError(err);
     }
   );
