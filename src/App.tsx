@@ -52,11 +52,13 @@ function MainApp() {
       const saved = localStorage.getItem('curahealth_patient_profile');
       if (saved) {
         const parsed = JSON.parse(saved);
-        const storedEmail = localStorage.getItem('curahealth_user_email');
-        if (storedEmail) {
-          parsed.email = storedEmail;
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          const storedEmail = localStorage.getItem('curahealth_user_email');
+          if (storedEmail) {
+            parsed.email = storedEmail;
+          }
+          return parsed;
         }
-        return parsed;
       }
       return INITIAL_PROFILE;
     } catch {

@@ -16,44 +16,86 @@
   </head>
   <body>
     <div id="root">
-      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #334155;">
+      <div data-medimitra-loader="true" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #334155; padding: 16px; text-align: center;">
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
           <div style="width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #0d9488, #059669); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px;">+</div>
           <span style="font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -0.5px;">MediMitra</span>
         </div>
-        <p style="font-size: 13px; color: #64748b; margin: 0;">Loading medical assistant...</p>
+        <p id="medimitra-boot-status" style="font-size: 13px; color: #64748b; margin: 0;">Loading medical assistant...</p>
+        <div id="medimitra-boot-recovery" style="display: none; margin-top: 16px; flex-direction: column; align-items: center; gap: 8px;">
+          <p id="medimitra-boot-error" style="font-size: 12px; color: #b91c1c; margin: 0; max-width: 360px;"></p>
+          <button type="button" onclick="window.location.reload()" style="padding: 8px 16px; border-radius: 10px; border: none; background-color: #0d9488; color: white; font-size: 12px; font-weight: 600; cursor: pointer;">Reload App</button>
+        </div>
       </div>
     </div>
+    <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Gracefully prevent unhandled rejections and errors from Vite dev-mode WebSocket in sandbox
-      window.addEventListener('unhandledrejection', function(e) {
-        var reasonStr = (e && e.reason && (e.reason.message || e.reason.stack || String(e.reason))) || '';
-        if (reasonStr.indexOf('WebSocket') !== -1 || reasonStr.indexOf('websocket') !== -1) {
-          e.preventDefault();
-        }
-      });
-      window.addEventListener('error', function(e) {
-        var msg = (e && (e.message || String(e))) || '';
-        if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('websocket') !== -1 || msg.indexOf('[vite]') !== -1) {
-          e.preventDefault();
-        }
-      });
-
-      // Fallback for GitHub Pages "Deploy from branch -> / (root)":
-      // Since raw .tsx files cannot execute directly in browsers without a build step,
-      // redirect to the pre-compiled /docs/ bundle if served statically from GitHub Pages root.
       (function() {
-        var isGitHubPages = window.location.hostname.indexOf('github.io') !== -1;
-        var isDocsPath = window.location.pathname.indexOf('/docs') !== -1;
-        var isUncompiled = document.querySelector('script[src*="main.tsx"]');
-        if (isGitHubPages && !isDocsPath && isUncompiled) {
-          var p = window.location.pathname;
-          if (!p.endsWith('/')) p += '/';
-          window.location.replace(p + 'docs/' + window.location.search + window.location.hash);
+        var bootErrorMsg = '';
+        function showBootRecovery(reason) {
+          var loader = document.querySelector('[data-medimitra-loader="true"]');
+          if (!loader) return;
+          var recovery = document.getElementById('medimitra-boot-recovery');
+          var statusEl = document.getElementById('medimitra-boot-status');
+          var errEl = document.getElementById('medimitra-boot-error');
+          if (statusEl) statusEl.textContent = 'MediMitra could not finish loading.';
+          if (errEl && (reason || bootErrorMsg)) {
+            errEl.textContent = reason || bootErrorMsg;
+          }
+          if (recovery) recovery.style.display = 'flex';
         }
+
+        // Gracefully prevent unhandled rejections and errors from Vite dev-mode WebSocket in sandbox,
+        // while capturing real startup failures if React has not mounted yet.
+        window.addEventListener('unhandledrejection', function(e) {
+          var reasonStr = (e && e.reason && (e.reason.message || e.reason.stack || String(e.reason))) || '';
+          if (reasonStr.indexOf('WebSocket') !== -1 || reasonStr.indexOf('websocket') !== -1) {
+            e.preventDefault();
+            return;
+          }
+          if (!window.__MEDIMITRA_MOUNTED__ && reasonStr && !bootErrorMsg) {
+            bootErrorMsg = reasonStr.slice(0, 180);
+          }
+        });
+        window.addEventListener('error', function(e) {
+          var msg = (e && (e.message || String(e))) || '';
+          if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('websocket') !== -1 || msg.indexOf('[vite]') !== -1) {
+            e.preventDefault();
+            return;
+          }
+          if (!window.__MEDIMITRA_MOUNTED__ && msg && !bootErrorMsg) {
+            bootErrorMsg = msg.slice(0, 180);
+          }
+        }, true);
+
+        // GitHub Pages static routing & uncompiled root safeguard:
+        // Runs AFTER <script type="module" src="/src/main.tsx"> is in the DOM so querySelector detects it accurately.
+        var host = window.location.hostname || '';
+        var pathname = window.location.pathname || '/';
+        var isGitHubPages = host.indexOf('github.io') !== -1;
+        var isDocsPath = /\/docs(\/|$)/.test(pathname);
+        var isUncompiled = !!document.querySelector('script[src*="main.tsx"]');
+
+        if (isGitHubPages && !isDocsPath && isUncompiled) {
+          var base = pathname.endsWith('/') ? pathname : pathname + '/';
+          window.location.replace(base + 'docs/' + window.location.search + window.location.hash);
+          return;
+        }
+
+        // Ensure /docs resolves relative ./assets/ from inside /docs/ rather than parent directory
+        if (isDocsPath && /\/docs$/.test(pathname)) {
+          window.location.replace(pathname + '/' + window.location.search + window.location.hash);
+          return;
+        }
+
+        // Watchdog: if React still hasn't mounted after 8s, show recovery controls instead of hanging forever
+        window.setTimeout(function() {
+          if (!window.__MEDIMITRA_MOUNTED__) {
+            showBootRecovery(bootErrorMsg || 'Please check your connection or tap Reload App.');
+          }
+        }, 8000);
       })();
     </script>
-    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
 

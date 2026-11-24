@@ -7,9 +7,11 @@
       // Clean SPA fallback redirect for GitHub Pages
       (function() {
         var path = window.location.pathname;
-        var isDocs = path.indexOf('/docs') !== -1;
+        var isDocs = /\/docs(\/|$)/.test(path);
         var repoMatch = path.match(/^\/([^\/]+)/);
-        var repoName = (repoMatch && window.location.hostname.indexOf('github.io') !== -1) ? '/' + repoMatch[1] : '';
+        var firstSeg = repoMatch ? repoMatch[1] : '';
+        var isGitHubPages = window.location.hostname.indexOf('github.io') !== -1;
+        var repoName = (isGitHubPages && firstSeg && firstSeg !== 'docs' && firstSeg !== 'assets') ? '/' + firstSeg : '';
         var target = repoName + (isDocs ? '/docs/' : '/');
         window.location.replace(target);
       })();

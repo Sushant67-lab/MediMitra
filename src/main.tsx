@@ -3,8 +3,16 @@ import App from './App.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 
-createRoot(document.getElementById('root')!).render(
+declare global {
+  interface Window {
+    __MEDIMITRA_MOUNTED__?: boolean;
+  }
+}
+
+const rootEl = document.getElementById('root')!;
+createRoot(rootEl).render(
   <ErrorBoundary>
     <App />
   </ErrorBoundary>
 );
+window.__MEDIMITRA_MOUNTED__ = true;
