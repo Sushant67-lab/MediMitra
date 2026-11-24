@@ -178,7 +178,6 @@ function MainApp() {
             currentProfile={currentProfile}
             onStartTriage={handleStartTriage}
             onOpenDoctors={() => setCurrentView('doctors')}
-            onOpenHardwareGuide={() => requestEsp32Access(() => setIsHardwareGuideOpen(true))}
           />
         )}
 

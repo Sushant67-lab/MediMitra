@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { SymptomCategory, UserProfile } from '../types/medical';
 import { MediMitraLogo } from './MediMitraLogo';
-import { ServoRotationTester } from './ServoRotationTester';
 import { useLanguage } from '../context/LanguageContext';
 import { getAppStrings } from '../data/appTranslations';
 
@@ -15,14 +14,12 @@ interface FrontPageProps {
   currentProfile: UserProfile;
   onStartTriage: (symptom: SymptomCategory, userCustomNote?: string) => void;
   onOpenDoctors: () => void;
-  onOpenHardwareGuide?: () => void;
 }
 
 export const FrontPage: React.FC<FrontPageProps> = ({
   currentProfile,
   onStartTriage,
-  onOpenDoctors,
-  onOpenHardwareGuide
+  onOpenDoctors
 }) => {
   const { t, language } = useLanguage();
   const ui = getAppStrings(language);
@@ -248,22 +245,6 @@ export const FrontPage: React.FC<FrontPageProps> = ({
             </p>
           </div>
         </div>
-      </motion.div>
-
-      {/* Direct Mobile & Desktop ESP32 Servo Rotation Check */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.28 }}
-        className="space-y-2"
-      >
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            ESP32 Hardware &amp; Motor Check
-          </span>
-          <span className="text-[11px] text-slate-400">0° → 45° → 0°</span>
-        </div>
-        <ServoRotationTester onOpenFullWiring={onOpenHardwareGuide} />
       </motion.div>
 
       {/* Google Maps Doctor Locator Banner */}
