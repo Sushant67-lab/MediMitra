@@ -491,42 +491,42 @@ void loop() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/65 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 bg-slate-900/65 backdrop-blur-sm overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-200 overflow-hidden my-6"
+        className="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-200 overflow-hidden my-2 sm:my-6"
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-teal-300">
-              <Cpu className="w-5 h-5" />
+        <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white p-3.5 sm:p-5 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center text-teal-300 shrink-0">
+              <Cpu className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <span className="text-[10px] font-semibold tracking-wider uppercase text-teal-300">
+            <div className="min-w-0">
+              <span className="text-[10px] font-semibold tracking-wider uppercase text-teal-300 block truncate">
                 {ui.hwBlueprintBadge}
               </span>
-              <h2 className="text-base font-semibold leading-tight">{ui.hwSetupTitle}</h2>
+              <h2 className="text-sm sm:text-base font-semibold leading-tight truncate">{ui.hwSetupTitle}</h2>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Live Wi-Fi Connection Strip */}
-        <div className={`px-6 py-2.5 border-b flex items-center justify-between text-xs ${
+        <div className={`px-3.5 sm:px-6 py-2 border-b flex flex-wrap items-center justify-between gap-1.5 text-xs ${
           isOnline
             ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
             : 'bg-slate-100 border-slate-200 text-slate-600'
         }`}>
-          <div className="flex items-center gap-2 font-semibold">
+          <div className="flex flex-wrap items-center gap-1.5 font-semibold">
             {isOnline ? (
               <>
                 <Wifi className="w-4 h-4 text-emerald-600" />
@@ -543,7 +543,7 @@ void loop() {
                 )}
               </>
             ) : (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <WifiOff className="w-4 h-4 text-rose-500" />
                 <span className="text-rose-700">{ui.esp32OfflineStatus}</span>
                 <span className="text-[11px] font-normal text-slate-500">
@@ -552,15 +552,15 @@ void loop() {
               </div>
             )}
           </div>
-          <span className="font-mono text-[11px] text-slate-500">{DEFAULT_DEVICE_ID}</span>
+          <span className="font-mono text-[10px] sm:text-[11px] text-slate-500">{DEFAULT_DEVICE_ID}</span>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center border-b border-slate-200 bg-slate-50 px-6 pt-2 overflow-x-auto">
+        <div className="flex items-center border-b border-slate-200 bg-slate-50 px-3 sm:px-6 pt-1.5 sm:pt-2 overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveTab('wiring')}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
+            className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
               activeTab === 'wiring'
                 ? 'border-teal-600 text-teal-800'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -571,7 +571,7 @@ void loop() {
           <button
             type="button"
             onClick={() => setActiveTab('sketch')}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
+            className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
               activeTab === 'sketch'
                 ? 'border-teal-600 text-teal-800'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -582,7 +582,7 @@ void loop() {
           <button
             type="button"
             onClick={() => setActiveTab('calibration')}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
+            className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
               activeTab === 'calibration'
                 ? 'border-teal-600 text-teal-800'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -592,12 +592,12 @@ void loop() {
           </button>
         </div>
 
-        <div className="p-6 max-h-[70vh] overflow-y-auto space-y-5">
+        <div className="p-3 sm:p-6 max-h-[82dvh] sm:max-h-[72vh] overflow-y-auto space-y-4 sm:space-y-5">
           {activeTab === 'wiring' && (
             <div className="space-y-4">
               <Esp32WiringDiagram />
 
-              <div className="rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="rounded-2xl border border-slate-200 overflow-x-auto">
                 <table className="w-full text-xs text-left">
                   <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
                     <tr>

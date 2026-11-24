@@ -19,13 +19,13 @@ export const MediMitraLogo: React.FC<MediMitraLogoProps> = ({
   const { t } = useLanguage();
 
   const iconDimensions = {
-    sm: 'w-8 h-8',
+    sm: 'w-7 h-7 sm:w-8 sm:h-8',
     md: 'w-10 h-10',
     lg: 'w-14 h-14'
   }[size];
 
   const textSize = {
-    sm: 'text-base',
+    sm: 'text-sm sm:text-base',
     md: 'text-xl',
     lg: 'text-2xl'
   }[size];
@@ -33,9 +33,9 @@ export const MediMitraLogo: React.FC<MediMitraLogoProps> = ({
   const logoUrl = `${import.meta.env.BASE_URL || './'}assets/aistudio/image_8f9dd967.png`.replace(/\/\//g, '/');
 
   return (
-    <div className={`flex items-center gap-2.5 select-none ${className}`}>
+    <div className={`flex items-center gap-2 sm:gap-2.5 select-none ${className}`}>
       {/* Official User Healthcare Emblem */}
-      <div className={`relative ${iconDimensions} rounded-2xl overflow-hidden flex items-center justify-center shrink-0 shadow-xs ring-1 ring-teal-200/50 bg-white`}>
+      <div className={`relative ${iconDimensions} rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center shrink-0 shadow-xs ring-1 ring-teal-200/50 bg-white`}>
         <img 
           src={logoUrl} 
           alt={t.brandName}
@@ -45,9 +45,9 @@ export const MediMitraLogo: React.FC<MediMitraLogoProps> = ({
 
       {/* Brand Wordmark */}
       {!imageOnly && (
-        <div className="flex flex-col">
+        <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-1.5 leading-tight">
-            <span className={`font-semibold tracking-tight text-slate-900 ${textSize}`}>
+            <span className={`font-semibold tracking-tight text-slate-900 whitespace-nowrap ${textSize}`}>
               {t.brandName === 'MediMitra' ? (
                 <>Medi<span className="text-teal-600 font-semibold">Mitra</span></>
               ) : (
@@ -61,7 +61,9 @@ export const MediMitraLogo: React.FC<MediMitraLogoProps> = ({
             )}
           </div>
           {showTagline && (
-            <p className="text-[11px] text-slate-500 font-normal leading-tight mt-0.5">
+            <p className={`text-[11px] text-slate-500 font-normal leading-tight mt-0.5 whitespace-nowrap ${
+              size === 'sm' ? 'hidden sm:block' : ''
+            }`}>
               {t.brandTagline}
             </p>
           )}

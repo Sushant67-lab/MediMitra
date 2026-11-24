@@ -47,14 +47,15 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500/30 ${buttonStyles}`}
+        className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500/30 ${buttonStyles}`}
         aria-expanded={isOpen}
         aria-haspopup="true"
         title={t.languageSelect}
       >
-        <Globe className={`w-3.5 h-3.5 ${variant === 'dark' ? 'text-teal-300' : 'text-teal-600'}`} />
-        <span className="text-xs font-semibold">{currentOption.nativeName}</span>
-        <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${variant === 'dark' ? 'text-teal-300' : 'text-slate-400'}`} />
+        <Globe className={`w-3.5 h-3.5 shrink-0 ${variant === 'dark' ? 'text-teal-300' : 'text-teal-600'}`} />
+        <span className="sm:hidden text-[11px] font-semibold uppercase">{currentOption.code}</span>
+        <span className="hidden sm:inline text-xs font-semibold">{currentOption.nativeName}</span>
+        <ChevronDown className={`w-3 h-3 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${variant === 'dark' ? 'text-teal-300' : 'text-slate-400'}`} />
       </button>
 
       {isOpen && (

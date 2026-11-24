@@ -158,7 +158,7 @@ function MainApp() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/70 text-slate-800 flex flex-col font-sans selection:bg-teal-100 selection:text-teal-900">
+    <div className="min-h-screen overflow-x-hidden bg-slate-50/70 text-slate-800 flex flex-col font-sans selection:bg-teal-100 selection:text-teal-900">
       {/* Simple Header */}
       <Header
         currentProfile={currentProfile}
@@ -176,6 +176,7 @@ function MainApp() {
             currentProfile={currentProfile}
             onStartTriage={handleStartTriage}
             onOpenDoctors={() => setCurrentView('doctors')}
+            onOpenHardwareGuide={() => requestEsp32Access(() => setIsHardwareGuideOpen(true))}
           />
         )}
 

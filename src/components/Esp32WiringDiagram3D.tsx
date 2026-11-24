@@ -1213,7 +1213,7 @@ export const Esp32WiringDiagram3D: React.FC = () => {
       <div ref={mountRef} className="w-full h-full" />
 
       {/* Top-Left Minimal Inspected Component Spec Readout (Solid non-blur overlay) */}
-      <div className="absolute top-3 left-3 z-10 pointer-events-none max-w-[290px]">
+      <div className="absolute top-3 left-3 z-10 pointer-events-none max-w-[54%] sm:max-w-[290px]">
         <div className="bg-slate-900/95 border border-slate-700/90 rounded-xl px-3 py-2 text-white shadow-lg">
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${selectedSpec.accentClass}`} />
@@ -1251,7 +1251,7 @@ export const Esp32WiringDiagram3D: React.FC = () => {
         {!hudCollapsed && (
           <div className="w-full bg-slate-900/95 border border-slate-700 rounded-2xl p-2 shadow-xl flex flex-wrap items-center justify-between gap-2 text-[11px]">
             {/* Camera View Presets */}
-            <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl">
+            <div className="flex flex-wrap items-center justify-center gap-1 bg-slate-800 p-1 rounded-xl">
               {(
                 [
                   { id: 'iso', label: '3D Iso' },

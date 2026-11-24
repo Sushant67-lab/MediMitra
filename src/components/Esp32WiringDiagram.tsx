@@ -1,33 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Check,
-  CheckCircle2,
   Copy,
   Download,
   FileCode2,
-  Loader2,
   PlayCircle,
-  RotateCw,
-  Wifi,
-  WifiOff,
-  XCircle,
   Zap
 } from 'lucide-react';
 import { Esp32WiringDiagram3D } from './Esp32WiringDiagram3D';
 import { Esp32WiringVideoModal } from './Esp32WiringVideoModal';
+import { ServoRotationTester } from './ServoRotationTester';
 import { useLanguage } from '../context/LanguageContext';
 import { getAppStrings } from '../data/appTranslations';
 import { WIRING_VIDEO_TRANSLATIONS } from '../data/wiringVideoTranslations';
-import {
-  cancelDispensingCommand,
-  DEFAULT_DEVICE_ID,
-  isDeviceOnlineNow,
-  subscribeToDeviceStatus,
-  subscribeToDispensingCommand,
-  triggerServoTestCommand
-} from '../services/dispensingService';
-import { DispensingCommand, DispenserDevice } from '../types/dispensing';
 
 const COPYABLE_WIRING_TEXT = `MediMitra ESP32 DevKit V1 (30-Pin) + SG90 Servo Wiring
 ====================================================
@@ -54,77 +40,7 @@ export const Esp32WiringDiagram: React.FC = () => {
   const [copiedConnections, setCopiedConnections] = useState(false);
   const [isVideoOpen, setIsVideoOpen] = useState(false);
 
-  // Live Servo Motor Test state (writes real command to ESP32_MEDIMITRA_01 in Firestore)
-  const [deviceInfo, setDeviceInfo] = useState<DispenserDevice | null>(null);
-  const [isTestingServo, setIsTestingServo] = useState(false);
-  const [testCommand, setTestCommand] = useState<DispensingCommand | null>(null);
-  const [testError, setTestError] = useState<string | null>(null);
   const [svgHornAngle, setSvgHornAngle] = useState(0);
-  const unsubTestRef = useRef<(() => void) | null>(null);
-  const animTimerRef = useRef<number[]>([]);
-
-  useEffect(() => {
-    const unsubDevice = subscribeToDeviceStatus(DEFAULT_DEVICE_ID, (info) => {
-      setDeviceInfo(info);
-    });
-    return () => {
-      unsubDevice();
-      if (unsubTestRef.current) unsubTestRef.current();
-      animTimerRef.current.forEach((id) => window.clearTimeout(id));
-    };
-  }, []);
-
-  const isEspOnline = isDeviceOnlineNow(deviceInfo);
-
-  const runVisualHornSweep = () => {
-    animTimerRef.current.forEach((id) => window.clearTimeout(id));
-    animTimerRef.current = [];
-    setSvgHornAngle(0);
-    animTimerRef.current.push(window.setTimeout(() => setSvgHornAngle(45), 180));
-    animTimerRef.current.push(window.setTimeout(() => setSvgHornAngle(0), 900));
-  };
-
-  const handleTestServoMotor = async () => {
-    setTestError(null);
-    setIsTestingServo(true);
-    runVisualHornSweep();
-
-    if (unsubTestRef.current) {
-      unsubTestRef.current();
-      unsubTestRef.current = null;
-    }
-
-    try {
-      const cmd = await triggerServoTestCommand(DEFAULT_DEVICE_ID);
-      setTestCommand(cmd);
-      unsubTestRef.current = subscribeToDispensingCommand(
-        cmd.commandId,
-        (updated) => {
-          setTestCommand(updated);
-          if (updated.status === 'PROCESSING') {
-            setSvgHornAngle(45);
-          } else if (updated.status === 'COMPLETED' || updated.status === 'FAILED' || updated.status === 'CANCELLED') {
-            setSvgHornAngle(0);
-            setIsTestingServo(false);
-          }
-        },
-        (err) => {
-          setTestError(err.message);
-          setIsTestingServo(false);
-        }
-      );
-    } catch (err) {
-      setTestError(err instanceof Error ? err.message : 'Unable to send servo test command.');
-      setIsTestingServo(false);
-    }
-  };
-
-  const handleCancelTest = async () => {
-    if (!testCommand) return;
-    await cancelDispensingCommand(testCommand.commandId);
-    setIsTestingServo(false);
-    setTestCommand((prev) => (prev ? { ...prev, status: 'CANCELLED', executionResult: 'Test cancelled.' } : null));
-  };
 
   const handleCopyConnections = async () => {
     try {
@@ -181,7 +97,7 @@ export const Esp32WiringDiagram: React.FC = () => {
           ESP32 DevKit V1 (30-Pin) + 5V Supply + SG90 Servo
         </span>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700">
             <button
               type="button"
@@ -212,7 +128,7 @@ export const Esp32WiringDiagram: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsVideoOpen(true)}
-            className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+            className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
           >
             <PlayCircle className="w-3.5 h-3.5" />
             <span>{videoStrings.buttonLabel}</span>
@@ -221,7 +137,7 @@ export const Esp32WiringDiagram: React.FC = () => {
           <button
             type="button"
             onClick={handleCopyConnections}
-            className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+            className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
               copiedConnections
                 ? 'bg-emerald-600 text-white'
                 : 'bg-teal-600 hover:bg-teal-500 text-white'
@@ -245,17 +161,17 @@ export const Esp32WiringDiagram: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-slate-50 p-3 space-y-3">
+      <div className="bg-slate-50 p-2.5 sm:p-3 space-y-3">
         {viewMode === '3d' ? (
           <div className="rounded-xl overflow-hidden border border-slate-200 bg-white">
             <Esp32WiringDiagram3D />
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
             <svg
               id="esp32-power-wiring-svg"
               viewBox="0 0 920 462"
-              className="w-full h-auto min-w-[660px] select-none"
+              className="w-full h-auto block select-none"
               xmlns="http://www.w3.org/2000/svg"
             >
               <defs>
@@ -582,81 +498,7 @@ export const Esp32WiringDiagram: React.FC = () => {
         )}
 
         {/* Direct Servo Motor Test Button Right Below Connection Image */}
-        <div className="p-3.5 rounded-xl bg-white border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold text-slate-900">
-                Live Hardware Test (GPIO 18 Servo Motor)
-              </span>
-              <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
-                isEspOnline ? 'text-emerald-700' : 'text-rose-700'
-              }`}>
-                {isEspOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-                <span>{isEspOnline ? 'ESP32 Online' : 'ESP32 Offline'}</span>
-              </span>
-            </div>
-
-            {testError ? (
-              <p className="text-[11px] text-rose-700 font-medium">{testError}</p>
-            ) : testCommand ? (
-              <p className={`text-[11px] font-medium flex items-center gap-1.5 ${
-                testCommand.status === 'COMPLETED'
-                  ? 'text-emerald-700'
-                  : testCommand.status === 'FAILED' || testCommand.status === 'CANCELLED'
-                  ? 'text-rose-700'
-                  : 'text-amber-700'
-              }`}>
-                {testCommand.status === 'COMPLETED' ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                ) : testCommand.status === 'FAILED' || testCommand.status === 'CANCELLED' ? (
-                  <XCircle className="w-3.5 h-3.5 shrink-0" />
-                ) : (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-                )}
-                <span>
-                  {testCommand.status === 'COMPLETED'
-                    ? 'Servo Test Passed! Motor turned 0° → 45° → 0°.'
-                    : testCommand.status === 'PROCESSING'
-                    ? 'ESP32 claimed test — rotating servo 0° → 45°...'
-                    : testCommand.status === 'CANCELLED'
-                    ? 'Servo test cancelled.'
-                    : isEspOnline
-                    ? 'Test pulse sent — ESP32 picking up within 2.5s...'
-                    : 'Test queued in cloud — waiting for ESP32 to come Online & connect Wi-Fi.'}
-                </span>
-              </p>
-            ) : (
-              <p className="text-[11px] text-slate-500">
-                Sends a real 0° → 45° → 0° test pulse to your ESP32 motor without changing medicine stock.
-              </p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {testCommand?.status === 'PENDING' && (
-              <button
-                type="button"
-                onClick={handleCancelTest}
-                className="px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap"
-              >
-                Cancel
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={handleTestServoMotor}
-              disabled={isTestingServo && (testCommand?.status === 'PROCESSING' || !testCommand)}
-              className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shadow-xs"
-            >
-              {isTestingServo && (testCommand?.status === 'PROCESSING' || !testCommand) ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <RotateCw className="w-3.5 h-3.5" />
-              )}
-              <span>Test Servo Motor (0° → 45° → 0°)</span>
-            </button>
-          </div>
-        </div>
+        <ServoRotationTester compact onHornAngleChange={setSvgHornAngle} />
 
         {viewMode === '2d' && (
           <>
