@@ -1,49 +1,147 @@
-import React, { useState } from 'react';
-import { Box, Download, FileCode2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Box,
+  Check,
+  CheckCircle2,
+  Copy,
+  Download,
+  FileCode2,
+  Loader2,
+  PlayCircle,
+  RotateCw,
+  Wifi,
+  WifiOff,
+  XCircle,
+  Zap
+} from 'lucide-react';
 import { Esp32WiringDiagram3D } from './Esp32WiringDiagram3D';
+import { Esp32WiringVideoModal } from './Esp32WiringVideoModal';
 import { useLanguage } from '../context/LanguageContext';
 import { getAppStrings } from '../data/appTranslations';
+import { WIRING_VIDEO_TRANSLATIONS } from '../data/wiringVideoTranslations';
+import {
+  cancelDispensingCommand,
+  DEFAULT_DEVICE_ID,
+  isDeviceOnlineNow,
+  subscribeToDeviceStatus,
+  subscribeToDispensingCommand,
+  triggerServoTestCommand
+} from '../services/dispensingService';
+import { DispensingCommand, DispenserDevice } from '../types/dispensing';
 
-const LEFT_PINS = [
-  'EN',
-  'VP (36)',
-  'VN (39)',
-  'D34',
-  'D35',
-  'D32',
-  'D33',
-  'D25',
-  'D26',
-  'D27',
-  'D14',
-  'D12',
-  'D13',
-  'GND',
-  'VIN (5V)'
-];
+const COPYABLE_WIRING_TEXT = `MediMitra ESP32 DevKit V1 (30-Pin) + SG90 Servo Wiring
+====================================================
+How BOTH the Servo AND ESP32 get 5V Power (4 Simple Wires):
 
-const RIGHT_PINS = [
-  'D23',
-  'D22',
-  'TX0',
-  'RX0',
-  'D21',
-  'D19',
-  'D18',
-  'D5',
-  'TX2 (17)',
-  'RX2 (16)',
-  'D4',
-  'D2',
-  'D15',
-  'GND',
-  '3V3'
-];
+1. ORANGE / YELLOW Wire (Signal): ESP32 Pin D18 (GPIO 18, 7th pin from top-right) ---> SG90 Servo YELLOW or ORANGE wire
+2. RED Wire A (Servo Power)     : External 5V 2A Power Supply (+)                ---> SG90 Servo RED wire
+3. RED Wire B (ESP32 Power)  : External 5V 2A Power Supply (+)                ---> ESP32 VIN (bottom-left pin)
+4. BLACK/BROWN Wire (GND)    : External 5V Supply (-) GND ---> ESP32 GND      ---> SG90 Servo BROWN wire
+
+Important Safety Note (USB vs VIN):
+- Running Standalone (USB unplugged): Keep RED Wire B connected to ESP32 VIN so the ESP32 turns ON.
+- Uploading Code via PC USB Cable : Unplug RED Wire B from VIN first (or turn OFF the 5V supply) before plugging in PC USB.
+- Alternative Power: Leave VIN unconnected and power the ESP32 using a 5V phone charger plugged into its USB port (keep Common GND connected).`;
+
+const LEFT_PIN_INDICES = Array.from({ length: 15 }, (_, idx) => idx);
+const RIGHT_PIN_INDICES = Array.from({ length: 15 }, (_, idx) => idx);
 
 export const Esp32WiringDiagram: React.FC = () => {
   const { language } = useLanguage();
   const ui = getAppStrings(language);
-  const [viewMode, setViewMode] = useState<'3d' | '2d'>('3d');
+  const videoStrings = WIRING_VIDEO_TRANSLATIONS[language] || WIRING_VIDEO_TRANSLATIONS.en;
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
+  const [copiedConnections, setCopiedConnections] = useState(false);
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
+
+  // Live Servo Motor Test state (writes real command to ESP32_MEDIMITRA_01 in Firestore)
+  const [deviceInfo, setDeviceInfo] = useState<DispenserDevice | null>(null);
+  const [isTestingServo, setIsTestingServo] = useState(false);
+  const [testCommand, setTestCommand] = useState<DispensingCommand | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
+  const [svgHornAngle, setSvgHornAngle] = useState(0);
+  const unsubTestRef = useRef<(() => void) | null>(null);
+  const animTimerRef = useRef<number[]>([]);
+
+  useEffect(() => {
+    const unsubDevice = subscribeToDeviceStatus(DEFAULT_DEVICE_ID, (info) => {
+      setDeviceInfo(info);
+    });
+    return () => {
+      unsubDevice();
+      if (unsubTestRef.current) unsubTestRef.current();
+      animTimerRef.current.forEach((id) => window.clearTimeout(id));
+    };
+  }, []);
+
+  const isEspOnline = isDeviceOnlineNow(deviceInfo);
+
+  const runVisualHornSweep = () => {
+    animTimerRef.current.forEach((id) => window.clearTimeout(id));
+    animTimerRef.current = [];
+    setSvgHornAngle(0);
+    animTimerRef.current.push(window.setTimeout(() => setSvgHornAngle(45), 180));
+    animTimerRef.current.push(window.setTimeout(() => setSvgHornAngle(0), 900));
+  };
+
+  const handleTestServoMotor = async () => {
+    setTestError(null);
+    setIsTestingServo(true);
+    runVisualHornSweep();
+
+    if (unsubTestRef.current) {
+      unsubTestRef.current();
+      unsubTestRef.current = null;
+    }
+
+    try {
+      const cmd = await triggerServoTestCommand(DEFAULT_DEVICE_ID);
+      setTestCommand(cmd);
+      unsubTestRef.current = subscribeToDispensingCommand(
+        cmd.commandId,
+        (updated) => {
+          setTestCommand(updated);
+          if (updated.status === 'PROCESSING') {
+            setSvgHornAngle(45);
+          } else if (updated.status === 'COMPLETED' || updated.status === 'FAILED' || updated.status === 'CANCELLED') {
+            setSvgHornAngle(0);
+            setIsTestingServo(false);
+          }
+        },
+        (err) => {
+          setTestError(err.message);
+          setIsTestingServo(false);
+        }
+      );
+    } catch (err) {
+      setTestError(err instanceof Error ? err.message : 'Unable to send servo test command.');
+      setIsTestingServo(false);
+    }
+  };
+
+  const handleCancelTest = async () => {
+    if (!testCommand) return;
+    await cancelDispensingCommand(testCommand.commandId);
+    setIsTestingServo(false);
+    setTestCommand((prev) => (prev ? { ...prev, status: 'CANCELLED', executionResult: 'Test cancelled.' } : null));
+  };
+
+  const handleCopyConnections = async () => {
+    try {
+      await navigator.clipboard.writeText(COPYABLE_WIRING_TEXT);
+      setCopiedConnections(true);
+      setTimeout(() => setCopiedConnections(false), 2400);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = COPYABLE_WIRING_TEXT;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+      setCopiedConnections(true);
+      setTimeout(() => setCopiedConnections(false), 2400);
+    }
+  };
 
   const handleDownloadSvg = () => {
     const svgEl = document.getElementById('esp32-power-wiring-svg');
@@ -59,437 +157,586 @@ export const Esp32WiringDiagram: React.FC = () => {
     link.remove();
   };
 
-  // Pin geometry for ESP32 DevKit V1 (30-Pin) centered around x=395
-  const boardX = 335;
-  const boardY = 85;
-  const boardW = 136;
-  const boardH = 310;
-  const pinStartY = 148;
-  const pinStepY = 15.5;
-  const leftPinX = boardX + 8;
-  const rightPinX = boardX + boardW - 8;
+  // Clean 30-Pin ESP32 DevKit V1 geometry centered at x = 445
+  const boardX = 355;
+  const boardY = 98;
+  const boardW = 180;
+  const boardH = 294;
+  const pinStartY = 140;
+  const pinStepY = 16;
+  const leftPinX = boardX + 10;
+  const rightPinX = boardX + boardW - 10;
 
-  const vinY = pinStartY + 14 * pinStepY; // Left row index 14 (y = 365)
-  const leftGndY = pinStartY + 13 * pinStepY; // Left row index 13 (y = 349.5)
-  const gpio18Y = pinStartY + 6 * pinStepY; // Right row index 6 (y = 241)
-  const rightGndY = pinStartY + 13 * pinStepY; // Right row index 13 (y = 349.5)
+  // Highlighted physical pin coordinates
+  const gpio18Y = pinStartY + 6 * pinStepY; // Pin 7 from top-right (y = 236)
+  const gpio2Y = pinStartY + 11 * pinStepY; // Pin 12 from top-right (y = 316)
+  const gndY = pinStartY + 13 * pinStepY; // Pin 14 from top on both sides (y = 348)
+  const vinY = pinStartY + 14 * pinStepY; // Pin 15 bottom-left (y = 364)
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
-      <div className="px-3.5 py-2 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-2 text-[11px]">
-        <span className="font-semibold tracking-wide truncate">
-          ESP32 DevKit V1 (30-Pin) + External 5V 2A Power Supply + SG90 Servo
+    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+      {/* Toolbar Header */}
+      <div className="px-4 py-2.5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="font-semibold tracking-tight truncate">
+          ESP32 DevKit V1 (30-Pin) + 5V Supply + SG90 Servo
         </span>
 
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700">
             <button
               type="button"
-              onClick={() => setViewMode('3d')}
-              className={`px-2.5 py-1 rounded-md font-semibold flex items-center gap-1 whitespace-nowrap transition-colors cursor-pointer ${
-                viewMode === '3d'
-                  ? 'bg-teal-600 text-white'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              <Box className="w-3 h-3" />
-              <span>{ui.diagramMode3d}</span>
-            </button>
-            <button
-              type="button"
               onClick={() => setViewMode('2d')}
-              className={`px-2.5 py-1 rounded-md font-semibold flex items-center gap-1 whitespace-nowrap transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                 viewMode === '2d'
                   ? 'bg-teal-600 text-white'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
-              <FileCode2 className="w-3 h-3" />
+              <FileCode2 className="w-3.5 h-3.5" />
               <span>{ui.diagramMode2d}</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('3d')}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                viewMode === '3d'
+                  ? 'bg-teal-600 text-white'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Box className="w-3.5 h-3.5" />
+              <span>{ui.diagramMode3d}</span>
+            </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsVideoOpen(true)}
+            className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          >
+            <PlayCircle className="w-3.5 h-3.5" />
+            <span>{videoStrings.buttonLabel}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopyConnections}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+              copiedConnections
+                ? 'bg-emerald-600 text-white'
+                : 'bg-teal-600 hover:bg-teal-500 text-white'
+            }`}
+          >
+            {copiedConnections ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copiedConnections ? 'Copied' : 'Copy Connections'}</span>
+          </button>
 
           {viewMode === '2d' && (
             <button
               type="button"
               onClick={handleDownloadSvg}
-              className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-teal-200 font-medium flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
+              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              title="Download Schematic SVG"
             >
-              <Download className="w-3 h-3" />
+              <Download className="w-3.5 h-3.5" />
               <span>SVG</span>
             </button>
           )}
         </div>
       </div>
 
-      {viewMode === '3d' ? (
-        <Esp32WiringDiagram3D />
-      ) : (
-      <div className="bg-slate-50 p-2 overflow-x-auto">
-        <svg
-          id="esp32-power-wiring-svg"
-          viewBox="0 0 880 510"
-          className="w-full h-auto min-w-[640px] select-none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <defs>
-            <pattern id="gridPattern" width="20" height="20" patternUnits="userSpaceOnUse">
-              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" strokeWidth="0.7" />
-            </pattern>
-            <marker id="arrowTeal" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-              <path d="M0,0 L6,3 L0,6 Z" fill="#0d9488" />
-            </marker>
-          </defs>
+      <div className="bg-slate-50 p-3 space-y-3">
+        {viewMode === '3d' ? (
+          <div className="rounded-xl overflow-hidden border border-slate-200 bg-white">
+            <Esp32WiringDiagram3D />
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <svg
+              id="esp32-power-wiring-svg"
+              viewBox="0 0 920 462"
+              className="w-full h-auto min-w-[660px] select-none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <defs>
+                <pattern id="cleanGrid" width="24" height="24" patternUnits="userSpaceOnUse">
+                  <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#f1f5f9" strokeWidth="1" />
+                </pattern>
+                <marker id="servoArcArrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                  <path d="M0,0 L6,3 L0,6 Z" fill="#0d9488" />
+                </marker>
+              </defs>
 
-          {/* Engineering Blueprint Background */}
-          <rect x="0" y="0" width="880" height="510" fill="#ffffff" />
-          <rect x="10" y="10" width="860" height="490" fill="url(#gridPattern)" stroke="#cbd5e1" strokeWidth="1.5" rx="8" />
+              {/* Crisp Blueprint Canvas */}
+              <rect x="0" y="0" width="920" height="462" fill="#ffffff" />
+              <rect x="12" y="12" width="896" height="438" rx="10" fill="url(#cleanGrid)" stroke="#e2e8f0" strokeWidth="1.2" />
 
-          {/* Header Strip */}
-          <text x="28" y="38" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="14" fontWeight="700" fill="#0f172a">
-            MEDIMITRA HARDWARE SCHEMATIC — EXTERNAL 5V SUPPLY + COMMON GROUND
-          </text>
-          <text x="28" y="55" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="10.5" fill="#475569">
-            All pin numbers verified for ESP32 DevKit V1 (30-Pin) • Servo powered by 5V 2A Supply to prevent brownout resets
-          </text>
+              {/* Title Top-Left */}
+              <text x="32" y="36" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="13.5" fontWeight="700" fill="#0f172a">
+                Clean 4-Wire Standalone Diagram (Powers BOTH ESP32 &amp; Servo)
+              </text>
+              <text x="32" y="52" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="10.2" fill="#64748b">
+                Zero Crossing Wires · Connect +5V to BOTH Servo RED and ESP32 VIN when USB cable is unplugged
+              </text>
 
-          {/* ========================================================= */}
-          {/* 1. EXTERNAL 5V POWER SUPPLY MODULE (LEFT)                */}
-          {/* ========================================================= */}
-          <g>
-            {/* Adapter / PSU Enclosure */}
-            <rect x="34" y="130" width="185" height="168" rx="12" fill="#f8fafc" stroke="#334155" strokeWidth="2" />
-            <rect x="34" y="130" width="185" height="32" rx="12" fill="#0f172a" />
-            <rect x="34" y="150" width="185" height="12" fill="#0f172a" />
-            <text x="126.5" y="150" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="11" fontWeight="700" fill="#ffffff">
-              5V DC POWER SUPPLY
-            </text>
+              {/* ========================================================= */}
+              {/* LANE 1 (RED +5V): PSU (+5V) -> SPLITS TO SERVO RED & ESP32 VIN */}
+              {/* ========================================================= */}
+              {/* Main Red trunk out of PSU +5V (218, 212) to junction (286, 212) */}
+              <path
+                d="M 218 212 H 286"
+                fill="none"
+                stroke="#dc2626"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+              {/* Wire 2A: Overhead Red branch to SG90 RED (+5V) */}
+              <path
+                d="M 286 212 V 62 H 608 V 192 H 636"
+                fill="none"
+                stroke="#dc2626"
+                strokeWidth="4"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              {/* Wire 2B: Red branch straight to ESP32 VIN (powers ESP32 without USB!) */}
+              <path
+                d={`M 286 212 V ${vinY} H ${leftPinX}`}
+                fill="none"
+                stroke="#dc2626"
+                strokeWidth="4"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              <circle cx="286" cy="212" r="5.5" fill="#dc2626" stroke="#ffffff" strokeWidth="1.8" />
 
-            {/* DC Barrel / Adapter Badge */}
-            <rect x="52" y="176" width="148" height="44" rx="7" fill="#fffbeb" stroke="#f59e0b" strokeWidth="1.2" />
-            <text x="126" y="194" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="11" fontWeight="700" fill="#92400e">
-              5V 2A Regulated Adapter
-            </text>
-            <text x="126" y="210" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="9.5" fill="#b45309">
-              (USB 5V 2A / MB102 / Buck Converter)
-            </text>
+              <rect x="348" y="50" width="212" height="22" rx="6" fill="#fef2f2" stroke="#fca5a5" strokeWidth="1.2" />
+              <text x="454" y="64.5" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="10" fontWeight="700" fill="#991b1b">
+                +5V RED (TO SERVO + ESP32 VIN)
+              </text>
 
-            {/* +5V Positive Terminal */}
-            <rect x="150" y="232" width="60" height="22" rx="4" fill="#fee2e2" stroke="#dc2626" strokeWidth="1.3" />
-            <text x="176" y="246.5" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="10.5" fontWeight="700" fill="#991b1b">
-              +5V OUT
-            </text>
-            <circle cx="219" cy="243" r="5" fill="#dc2626" stroke="#ffffff" strokeWidth="1.5" />
+              {/* Clean callout for Wire 2B powering ESP32 */}
+              <rect x="234" y="276" width="104" height="32" rx="6" fill="#fef2f2" stroke="#fca5a5" strokeWidth="1.2" />
+              <text x="286" y="290" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="9.2" fontWeight="700" fill="#991b1b">
+                Powers ESP32
+              </text>
+              <text x="286" y="302" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" fill="#dc2626">
+                +5V → VIN Pin
+              </text>
 
-            {/* GND Negative Terminal */}
-            <rect x="150" y="264" width="60" height="22" rx="4" fill="#e2e8f0" stroke="#1e293b" strokeWidth="1.3" />
-            <text x="176" y="278.5" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="10.5" fontWeight="700" fill="#0f172a">
-              GND (-)
-            </text>
-            <circle cx="219" cy="275" r="5" fill="#1e293b" stroke="#ffffff" strokeWidth="1.5" />
+              {/* ========================================================= */}
+              {/* LANE 2 (ORANGE PWM): ESP32 D18 -> SG90 ORANGE (STRAIGHT)  */}
+              {/* ========================================================= */}
+              <path
+                d={`M ${rightPinX} ${gpio18Y} H 628`}
+                fill="none"
+                stroke="#f97316"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+              <rect x="534" y="209" width="94" height="20" rx="5" fill="#fff7ed" stroke="#fdba74" strokeWidth="1.2" />
+              <text x="581" y="222.5" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="9.5" fontWeight="700" fill="#c2410c">
+                D18 → PWM
+              </text>
 
-            {/* Filter Capacitor Symbol between +5V and GND */}
-            <line x1="88" y1="243" x2="150" y2="243" stroke="#dc2626" strokeWidth="2" />
-            <line x1="88" y1="275" x2="150" y2="275" stroke="#1e293b" strokeWidth="2" />
-            <line x1="88" y1="243" x2="88" y2="254" stroke="#475569" strokeWidth="2" />
-            <line x1="78" y1="254" x2="98" y2="254" stroke="#0f172a" strokeWidth="2.5" />
-            <line x1="78" y1="262" x2="98" y2="262" stroke="#0f172a" strokeWidth="2.5" />
-            <line x1="88" y1="262" x2="88" y2="275" stroke="#475569" strokeWidth="2" />
-            <text x="64" y="261" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" fill="#475569">
-              470µF
-            </text>
-          </g>
+              {/* ========================================================= */}
+              {/* LANE 3 (BLACK / BROWN GND): PSU (-) -> BOTTOM RAIL -> ESP32 RIGHT GND & SERVO BROWN */}
+              {/* ========================================================= */}
+              <path
+                d={`M 218 ${gndY} H 248 V 422 H 608 V 284 H 636`}
+                fill="none"
+                stroke="#0f172a"
+                strokeWidth="4"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
 
-          {/* ========================================================= */}
-          {/* 2. ESP32 DEVKIT V1 (30-PIN REAL PINOUT, CENTER)           */}
-          {/* ========================================================= */}
-          <g>
-            {/* Title above board */}
-            <text x={boardX + boardW / 2} y="76" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="12" fontWeight="700" fill="#0f172a">
-              ESP32 DEVKIT V1 (30-Pin)
-            </text>
+              {/* Tie ESP32 Right GND Pin cleanly down into Common Ground Bus */}
+              <path
+                d={`M ${rightPinX} ${gndY} H 576 V 422`}
+                fill="none"
+                stroke="#0f172a"
+                strokeWidth="4"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              <circle cx="576" cy="422" r="5.5" fill="#0f172a" stroke="#ffffff" strokeWidth="1.8" />
 
-            {/* PCB Body */}
-            <rect x={boardX} y={boardY} width={boardW} height={boardH} rx="10" fill="#1e293b" stroke="#0f172a" strokeWidth="2" />
+              {/* Bottom GND Label Pill placed cleanly clear of x=576 junction */}
+              <rect x="302" y="410" width="224" height="24" rx="6" fill="#0f172a" />
+              <text x="414" y="425.5" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="10" fontWeight="700" fill="#ffffff">
+                COMMON GND (PSU + ESP32 + SERVO)
+              </text>
 
-            {/* Mounting Holes */}
-            <circle cx={boardX + 10} cy={boardY + 10} r="4" fill="#cbd5e1" stroke="#475569" strokeWidth="1" />
-            <circle cx={boardX + boardW - 10} cy={boardY + 10} r="4" fill="#cbd5e1" stroke="#475569" strokeWidth="1" />
-            <circle cx={boardX + 10} cy={boardY + boardH - 10} r="4" fill="#cbd5e1" stroke="#475569" strokeWidth="1" />
-            <circle cx={boardX + boardW - 10} cy={boardY + boardH - 10} r="4" fill="#cbd5e1" stroke="#475569" strokeWidth="1" />
+              {/* ========================================================= */}
+              {/* 1. LEFT BLOCK: EXTERNAL 5V 2A POWER SUPPLY                */}
+              {/* ========================================================= */}
+              <g>
+                <rect x="36" y="158" width="182" height="214" rx="12" fill="#f8fafc" stroke="#334155" strokeWidth="1.8" />
+                <rect x="36" y="158" width="182" height="34" rx="12" fill="#0f172a" />
+                <rect x="36" y="180" width="182" height="12" fill="#0f172a" />
+                <text x="127" y="179.5" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="11" fontWeight="700" fill="#ffffff">
+                  EXTERNAL 5V SUPPLY
+                </text>
 
-            {/* PCB Wi-Fi Antenna Trace */}
-            <rect x={boardX + 28} y={boardY + 6} width="80" height="22" rx="3" fill="#0f172a" />
-            <path
-              d={`M ${boardX + 38} ${boardY + 23} v -11 h 10 v 11 h 10 v -11 h 10 v 11 h 10 v -11 h 10 v 11`}
-              fill="none"
-              stroke="#eab308"
-              strokeWidth="2"
-            />
+                {/* Positive Terminal (+5V) */}
+                <rect x="52" y="200" width="154" height="24" rx="6" fill="#fee2e2" stroke="#dc2626" strokeWidth="1.4" />
+                <text x="126" y="216" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="11" fontWeight="700" fill="#991b1b">
+                  +5V OUT (+)
+                </text>
+                <circle cx="218" cy="212" r="6" fill="#dc2626" stroke="#ffffff" strokeWidth="1.8" />
 
-            {/* RF Shield Can */}
-            <rect x={boardX + 34} y={boardY + 33} width="68" height="82" rx="4" fill="#94a3b8" stroke="#64748b" strokeWidth="1.5" />
-            <text x={boardX + 68} y={boardY + 68} textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="8.5" fontWeight="700" fill="#1e293b">
-              ESP-WROOM-32
-            </text>
-            <text x={boardX + 68} y={boardY + 80} textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="7.5" fontWeight="600" fill="#334155">
-              Wi-Fi + BLE
-            </text>
+                {/* Spec Note inside PSU */}
+                <rect x="52" y="242" width="150" height="72" rx="8" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.2" />
+                <text x="127" y="263" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="11" fontWeight="700" fill="#1e293b">
+                  5V 2A DC Adapter
+                </text>
+                <text x="127" y="281" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="9.5" fill="#475569">
+                  Powers BOTH ESP32
+                </text>
+                <text x="127" y="296" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="9.5" fill="#475569">
+                  and SG90 Servo
+                </text>
 
-            {/* Voltage Regulator + CP2102 USB Chip */}
-            <rect x={boardX + 54} y={boardY + 145} width="28" height="20" rx="2" fill="#0f172a" stroke="#475569" />
-            <text x={boardX + 68} y={boardY + 158} textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="6.5" fill="#94a3b8">
-              AMS1117
-            </text>
-            <rect x={boardX + 56} y={boardY + 195} width="24" height="24" rx="2" fill="#0f172a" stroke="#475569" />
-            <text x={boardX + 68} y={boardY + 210} textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="6.5" fill="#94a3b8">
-              UART
-            </text>
+                {/* Negative Terminal (GND) */}
+                <rect x="52" y="336" width="154" height="24" rx="6" fill="#e2e8f0" stroke="#1e293b" strokeWidth="1.4" />
+                <text x="126" y="352" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="11" fontWeight="700" fill="#0f172a">
+                  GND (-)
+                </text>
+                <circle cx="218" cy={gndY} r="6" fill="#0f172a" stroke="#ffffff" strokeWidth="1.8" />
+              </g>
 
-            {/* EN & BOOT Buttons */}
-            <rect x={boardX + 28} y={boardY + 272} width="14" height="14" rx="2" fill="#475569" />
-            <circle cx={boardX + 35} cy={boardY + 279} r="3.5" fill="#e2e8f0" />
-            <text x={boardX + 35} y={boardY + 268} textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="6" fill="#94a3b8">EN</text>
+              {/* ========================================================= */}
+              {/* 2. CENTER BLOCK: ESP32 DEVKIT V1 (CLEAN READABLE PINS)    */}
+              {/* ========================================================= */}
+              <g>
+                <text x={boardX + boardW / 2} y="90" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="12" fontWeight="700" fill="#0f172a">
+                  ESP32 DEVKIT V1 (30-Pin)
+                </text>
 
-            <rect x={boardX + 94} y={boardY + 272} width="14" height="14" rx="2" fill="#475569" />
-            <circle cx={boardX + 101} cy={boardY + 279} r="3.5" fill="#e2e8f0" />
-            <text x={boardX + 101} y={boardY + 268} textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="6" fill="#94a3b8">BOOT</text>
+                {/* Main PCB */}
+                <rect x={boardX} y={boardY} width={boardW} height={boardH} rx="12" fill="#1e293b" stroke="#0f172a" strokeWidth="2" />
 
-            {/* Micro-USB / USB-C Port */}
-            <rect x={boardX + 49} y={boardY + boardH - 18} width="38" height="22" rx="3" fill="#cbd5e1" stroke="#475569" strokeWidth="1.5" />
-            <text x={boardX + 68} y={boardY + boardH + 15} textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="9.5" fontWeight="600" fill="#475569">
-              USB Port (5V Prog/Debug)
-            </text>
+                {/* Corner Mounting Holes */}
+                <circle cx={boardX + 12} cy={boardY + 12} r="4" fill="#cbd5e1" />
+                <circle cx={boardX + boardW - 12} cy={boardY + 12} r="4" fill="#cbd5e1" />
+                <circle cx={boardX + 12} cy={boardY + boardH - 12} r="4" fill="#cbd5e1" />
+                <circle cx={boardX + boardW - 12} cy={boardY + boardH - 12} r="4" fill="#cbd5e1" />
 
-            {/* Left Header Pins (15) */}
-            {LEFT_PINS.map((label, idx) => {
-              const py = pinStartY + idx * pinStepY;
-              const isVin = label.startsWith('VIN');
-              const isGnd = label === 'GND';
-              return (
-                <g key={`L-${idx}`}>
-                  <circle
-                    cx={leftPinX}
-                    cy={py}
-                    r="3.8"
-                    fill={isVin ? '#ef4444' : isGnd ? '#0f172a' : '#f59e0b'}
-                    stroke="#f8fafc"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x={leftPinX + 7}
-                    y={py + 3}
-                    fontFamily="ui-monospace, monospace"
-                    fontSize="7.5"
-                    fontWeight={isVin || isGnd ? '700' : '500'}
-                    fill={isVin ? '#fca5a5' : isGnd ? '#e2e8f0' : '#94a3b8'}
-                  >
-                    {label}
-                  </text>
-                </g>
-              );
-            })}
+                {/* Top PCB Antenna Trace */}
+                <rect x={boardX + 46} y={boardY + 8} width="88" height="20" rx="3" fill="#0f172a" />
+                <path
+                  d={`M ${boardX + 56} ${boardY + 23} v -10 h 11 v 10 h 11 v -10 h 11 v 10 h 11 v -10 h 11 v 10`}
+                  fill="none"
+                  stroke="#eab308"
+                  strokeWidth="1.8"
+                />
 
-            {/* Right Header Pins (15) */}
-            {RIGHT_PINS.map((label, idx) => {
-              const py = pinStartY + idx * pinStepY;
-              const isGpio18 = label === 'D18';
-              const isGnd = label === 'GND';
-              return (
-                <g key={`R-${idx}`}>
-                  <circle
-                    cx={rightPinX}
-                    cy={py}
-                    r="3.8"
-                    fill={isGpio18 ? '#f97316' : isGnd ? '#0f172a' : '#f59e0b'}
-                    stroke="#f8fafc"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x={rightPinX - 7}
-                    y={py + 3}
-                    textAnchor="end"
-                    fontFamily="ui-monospace, monospace"
-                    fontSize="7.5"
-                    fontWeight={isGpio18 || isGnd ? '700' : '500'}
-                    fill={isGpio18 ? '#fdba74' : isGnd ? '#e2e8f0' : '#94a3b8'}
-                  >
-                    {label}
-                  </text>
-                </g>
-              );
-            })}
-          </g>
+                {/* ESP-WROOM-32 Metal Shield */}
+                <rect x={boardX + 44} y={boardY + 34} width="92" height="72" rx="6" fill="#94a3b8" stroke="#64748b" strokeWidth="1.5" />
+                <text x={boardX + 90} y={boardY + 67} textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="9.5" fontWeight="700" fill="#0f172a">
+                  ESP-WROOM-32
+                </text>
+                <text x={boardX + 90} y={boardY + 82} textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="8.5" fontWeight="600" fill="#334155">
+                  Wi-Fi Module
+                </text>
 
-          {/* ========================================================= */}
-          {/* 3. SG90 MICRO SERVO MOTOR (RIGHT)                         */}
-          {/* ========================================================= */}
-          <g>
-            <text x="740" y="130" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="12" fontWeight="700" fill="#0f172a">
-              SG90 MICRO SERVO MOTOR
-            </text>
+                {/* On-board Status LED Indicator */}
+                <circle cx={boardX + 90} cy={gpio2Y - 12} r="5" fill="#3b82f6" stroke="#bfdbfe" strokeWidth="1.5" />
+                <text x={boardX + 90} y={gpio2Y - 22} textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="8" fontWeight="600" fill="#93c5fd">
+                  Blue LED (D2)
+                </text>
 
-            {/* 0° to 25° Arc Indicator */}
-            <line x1="740" y1="162" x2="740" y2="215" stroke="#94a3b8" strokeWidth="1.2" strokeDasharray="3,3" />
-            <line x1="740" y1="215" x2="800" y2="180" stroke="#0d9488" strokeWidth="1.5" strokeDasharray="4,3" />
-            <path d="M 740 175 A 40 40 0 0 1 765 184" fill="none" stroke="#0d9488" strokeWidth="2" markerEnd="url(#arrowTeal)" />
-            <text x="772" y="160" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="10" fontWeight="700" fill="#0f766e">
-              25° Dispense Arc
-            </text>
-            <text x="772" y="172" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="9" fill="#475569">
-              (0° → 25° hold 300ms → 0°)
-            </text>
+                {/* Micro-USB / USB-C Port (cleanly positioned below pins) */}
+                <rect x={boardX + 66} y={boardY + boardH - 12} width="48" height="18" rx="4" fill="#cbd5e1" stroke="#475569" strokeWidth="1.5" />
+                <text x={boardX + 90} y={boardY + boardH} textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="7.5" fontWeight="700" fill="#0f172a">
+                  USB Port
+                </text>
 
-            {/* Servo Body */}
-            <rect x="698" y="232" width="84" height="92" rx="5" fill="#2563eb" stroke="#1e3a8a" strokeWidth="2" />
-            {/* Mounting Tabs */}
-            <rect x="680" y="250" width="120" height="12" rx="3" fill="#3b82f6" stroke="#1e3a8a" strokeWidth="1.5" />
-            <circle cx="688" cy="256" r="2.8" fill="#ffffff" />
-            <circle cx="792" cy="256" r="2.8" fill="#ffffff" />
-            {/* Gear Housing Top */}
-            <rect x="714" y="210" width="52" height="24" rx="4" fill="#1d4ed8" stroke="#1e3a8a" strokeWidth="1.5" />
-            <circle cx="740" cy="210" r="14" fill="#3b82f6" stroke="#1e3a8a" strokeWidth="1.5" />
-            {/* Servo Horn */}
-            <rect x="733" y="182" width="14" height="34" rx="7" fill="#f1f5f9" stroke="#475569" strokeWidth="1.4" transform="rotate(25 740 210)" />
-            <circle cx="740" cy="210" r="4" fill="#64748b" />
+                {/* Clean Header Pads (15 Left) */}
+                {LEFT_PIN_INDICES.map((idx) => {
+                  const py = pinStartY + idx * pinStepY;
+                  const isGnd = idx === 13;
+                  const isVin = idx === 14;
+                  return (
+                    <circle
+                      key={`L-${idx}`}
+                      cx={leftPinX}
+                      cy={py}
+                      r={isVin ? 5.6 : isGnd ? 4.2 : 3.1}
+                      fill={isVin ? '#ef4444' : isGnd ? '#0f172a' : '#475569'}
+                      stroke={isVin ? '#ffffff' : isGnd ? '#94a3b8' : '#64748b'}
+                      strokeWidth={isVin ? 2 : 0.9}
+                    />
+                  );
+                })}
 
-            {/* Servo Label Badge */}
-            <rect x="710" y="276" width="60" height="32" rx="4" fill="#1e40af" />
-            <text x="740" y="291" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="9.5" fontWeight="700" fill="#ffffff">
-              SG90 9g
-            </text>
-            <text x="740" y="302" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="7.5" fill="#bfdbfe">
-              4.8V - 6.0V
-            </text>
+                {/* Clean Header Pads (15 Right) */}
+                {RIGHT_PIN_INDICES.map((idx) => {
+                  const py = pinStartY + idx * pinStepY;
+                  const isGpio18 = idx === 6;
+                  const isGnd = idx === 13;
+                  return (
+                    <circle
+                      key={`R-${idx}`}
+                      cx={rightPinX}
+                      cy={py}
+                      r={isGpio18 || isGnd ? 5.6 : 3.1}
+                      fill={isGpio18 ? '#f97316' : isGnd ? '#0f172a' : '#475569'}
+                      stroke={isGpio18 || isGnd ? '#ffffff' : '#64748b'}
+                      strokeWidth={isGpio18 || isGnd ? 2 : 0.9}
+                    />
+                  );
+                })}
 
-            {/* Wire Pin Labels on Servo Side */}
-            <rect x="615" y="232" width="83" height="19" rx="4" fill="#fff7ed" stroke="#f97316" strokeWidth="1.2" />
-            <text x="656.5" y="244.5" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" fill="#9a3412">
-              ORANGE (PWM)
-            </text>
+                {/* Highlight Callout Badges ONLY for Wired Pins */}
+                {/* Left VIN (bottom-left corner pin — powered by RED Wire 2B) */}
+                <rect x={leftPinX + 10} y={vinY - 10} width="84" height="20" rx="5" fill="#dc2626" stroke="#fecaca" strokeWidth="1.2" />
+                <text x={leftPinX + 52} y={vinY + 3.5} textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="9" fontWeight="700" fill="#ffffff">
+                  VIN (+5V IN)
+                </text>
 
-            <rect x="615" y="264" width="83" height="19" rx="4" fill="#fef2f2" stroke="#dc2626" strokeWidth="1.2" />
-            <text x="656.5" y="276.5" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" fill="#991b1b">
-              RED (+5V VCC)
-            </text>
+                {/* Right D18 / GPIO 18 (7th pin from top-right) */}
+                <rect x={rightPinX - 110} y={gpio18Y - 11} width="100" height="22" rx="5" fill="#f97316" stroke="#ffedd5" strokeWidth="1.2" />
+                <text x={rightPinX - 60} y={gpio18Y + 3.5} textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="10" fontWeight="700" fill="#ffffff">
+                  D18 (GPIO 18)
+                </text>
+                <text x={rightPinX - 14} y={gpio18Y - 15} textAnchor="end" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="8" fontWeight="600" fill="#fdba74">
+                  7th pin down
+                </text>
 
-            <rect x="615" y="296" width="83" height="19" rx="4" fill="#f1f5f9" stroke="#78350f" strokeWidth="1.2" />
-            <text x="656.5" y="308.5" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" fill="#451a03">
-              BROWN (GND)
-            </text>
-          </g>
+                {/* Right GND (2nd pin from bottom-right) */}
+                <rect x={rightPinX - 78} y={gndY - 10} width="68" height="20" rx="5" fill="#0f172a" stroke="#94a3b8" strokeWidth="1.2" />
+                <text x={rightPinX - 44} y={gndY + 3.5} textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="9.5" fontWeight="700" fill="#ffffff">
+                  GND
+                </text>
+              </g>
 
-          {/* ========================================================= */}
-          {/* 4. ACCURATE WIRES & JUNCTIONS                             */}
-          {/* ========================================================= */}
+              {/* ========================================================= */}
+              {/* 3. RIGHT BLOCK: SG90 MICRO SERVO MOTOR                    */}
+              {/* ========================================================= */}
+              <g>
+                <text x="804" y="106" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="12" fontWeight="700" fill="#0f172a">
+                  SG90 SERVO MOTOR
+                </text>
 
-          {/* ORANGE WIRE: ESP32 GPIO 18 (D18) -> SG90 Orange PWM */}
-          <path
-            d={`M ${rightPinX} ${gpio18Y} H 615`}
-            fill="none"
-            stroke="#f97316"
-            strokeWidth="3.2"
-            strokeLinecap="round"
-          />
-          <rect x="498" y="222" width="102" height="15" rx="3" fill="#fff7ed" stroke="#fdba74" strokeWidth="1" />
-          <text x="549" y="232.5" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" fill="#c2410c">
-            GPIO 18 → PWM Signal
-          </text>
+                {/* Clean 45° Dispense Sweep Preview */}
+                <line x1="804" y1="126" x2="804" y2="175" stroke="#cbd5e1" strokeWidth="1.4" strokeDasharray="3,3" />
+                <path d="M 804 138 A 34 34 0 0 1 828 148" fill="none" stroke="#0d9488" strokeWidth="2.2" markerEnd="url(#servoArcArrow)" />
+                <text x="835" y="138" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="9.5" fontWeight="700" fill="#0f766e">
+                  45° Sweep
+                </text>
 
-          {/* RED POWER RAIL: External 5V OUT (219, 243) -> Drops below board -> SG90 RED (615, 273.5) */}
-          <path
-            d="M 219 243 H 256 V 426 H 576 V 273.5 H 615"
-            fill="none"
-            stroke="#dc2626"
-            strokeWidth="3.2"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-          {/* Junction dot on Red rail for optional standalone ESP32 VIN */}
-          <circle cx="256" cy={vinY} r="4.5" fill="#dc2626" stroke="#ffffff" strokeWidth="1.2" />
-          <path
-            d={`M 256 ${vinY} H ${leftPinX}`}
-            fill="none"
-            stroke="#dc2626"
-            strokeWidth="2.4"
-            strokeDasharray="5,4"
-          />
-          <rect x="256" y="374" width="76" height="24" rx="3" fill="#fef2f2" stroke="#fca5a5" strokeWidth="1" />
-          <text x="294" y="384.5" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="7.2" fontWeight="700" fill="#991b1b">
-            VIN (Standalone)
-          </text>
-          <text x="294" y="394" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="6.8" fill="#b91c1c">
-            Unplug if USB in
-          </text>
+                {/* Servo Body */}
+                <rect x="760" y="196" width="88" height="102" rx="8" fill="#2563eb" stroke="#1e3a8a" strokeWidth="2" />
+                <rect x="744" y="216" width="120" height="14" rx="4" fill="#3b82f6" stroke="#1e3a8a" strokeWidth="1.5" />
+                <circle cx="752" cy="223" r="3" fill="#ffffff" />
+                <circle cx="856" cy="223" r="3" fill="#ffffff" />
 
-          {/* Label on Red Rail */}
-          <rect x="338" y="418" width="145" height="16" rx="3" fill="#fee2e2" stroke="#fca5a5" strokeWidth="1" />
-          <text x="410.5" y="429" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" fill="#991b1b">
-            +5V DC RAIL (2A to Servo)
-          </text>
+                {/* Gear Head & Horn */}
+                <rect x="776" y="172" width="56" height="26" rx="5" fill="#1d4ed8" stroke="#1e3a8a" strokeWidth="1.5" />
+                <circle cx="804" cy="172" r="15" fill="#3b82f6" stroke="#1e3a8a" strokeWidth="1.5" />
+                <rect x="797" y="144" width="14" height="34" rx="7" fill="#f8fafc" stroke="#475569" strokeWidth="1.4" transform={`rotate(${svgHornAngle} 804 172)`} />
+                <circle cx="804" cy="172" r="4" fill="#64748b" />
 
-          {/* BLACK / BROWN COMMON GROUND RAIL:
-              5V Supply GND (219, 275) -> Common GND Bus (238, 456) -> Up to ESP32 Left GND & Right GND -> SG90 Brown GND (615, 305.5) */}
-          <path
-            d="M 219 275 H 238 V 456 H 594 V 305.5 H 615"
-            fill="none"
-            stroke="#0f172a"
-            strokeWidth="3.2"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-          {/* Tie ESP32 Left GND pin into Common GND rail */}
-          <path
-            d={`M 238 ${leftGndY} H ${leftPinX}`}
-            fill="none"
-            stroke="#0f172a"
-            strokeWidth="2.8"
-          />
-          <circle cx="238" cy={leftGndY} r="4.5" fill="#0f172a" stroke="#ffffff" strokeWidth="1.2" />
+                <rect x="772" y="248" width="64" height="34" rx="5" fill="#1e40af" />
+                <text x="804" y="264" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="10" fontWeight="700" fill="#ffffff">
+                  SG90 9g
+                </text>
+                <text x="804" y="276" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8" fill="#bfdbfe">
+                  4.8V - 6.0V
+                </text>
 
-          {/* Tie ESP32 Right GND pin into Common GND rail */}
-          <path
-            d={`M ${rightPinX} ${rightGndY} H 520 V 456`}
-            fill="none"
-            stroke="#0f172a"
-            strokeWidth="2.8"
-            strokeLinejoin="round"
-          />
-          <circle cx="520" cy="456" r="4.5" fill="#0f172a" stroke="#ffffff" strokeWidth="1.2" />
+                {/* 3 Wide Terminal Connector Blocks Matching the 3 Clean Lanes */}
+                {/* Top: RED (+5V) */}
+                <line x1="746" y1="192" x2="760" y2="192" stroke="#dc2626" strokeWidth="3" />
+                <rect x="636" y="178" width="110" height="28" rx="6" fill="#fef2f2" stroke="#dc2626" strokeWidth="1.6" />
+                <text x="691" y="196" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="10.5" fontWeight="700" fill="#991b1b">
+                  RED (+5V VCC)
+                </text>
+                <circle cx="636" cy="192" r="5" fill="#dc2626" stroke="#ffffff" strokeWidth="1.5" />
 
-          {/* Label on Common GND Rail */}
-          <rect x="315" y="448" width="192" height="16" rx="3" fill="#0f172a" />
-          <text x="411" y="459" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" fill="#ffffff">
-            COMMON GROUND BUS (PSU + ESP32 + SERVO)
-          </text>
+                {/* Middle: ORANGE / YELLOW (PWM) */}
+                <line x1="746" y1="236" x2="760" y2="236" stroke="#f59e0b" strokeWidth="3" />
+                <rect x="628" y="222" width="118" height="28" rx="6" fill="#fffbeb" stroke="#f59e0b" strokeWidth="1.6" />
+                <text x="687" y="240" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="9.5" fontWeight="700" fill="#9a3412">
+                  ORANGE/YELLOW PWM
+                </text>
+                <circle cx="628" cy="236" r="5" fill="#f97316" stroke="#ffffff" strokeWidth="1.5" />
 
-          {/* ========================================================= */}
-          {/* 5. LEGEND & SAFETY NOTES FOOTER                           */}
-          {/* ========================================================= */}
-          <g>
-            <rect x="28" y="473" width="824" height="22" rx="5" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="1" />
-            <line x1="42" y1="484" x2="64" y2="484" stroke="#f97316" strokeWidth="3" />
-            <text x="70" y="487.5" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="9.5" fontWeight="600" fill="#0f172a">
-              Orange: GPIO 18 (PWM)
-            </text>
+                {/* Bottom: BROWN (GND) */}
+                <line x1="746" y1="284" x2="760" y2="284" stroke="#0f172a" strokeWidth="3" />
+                <rect x="636" y="270" width="110" height="28" rx="6" fill="#f1f5f9" stroke="#334155" strokeWidth="1.6" />
+                <text x="691" y="288" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="10.5" fontWeight="700" fill="#0f172a">
+                  BROWN (GND)
+                </text>
+                <circle cx="636" cy="284" r="5" fill="#0f172a" stroke="#ffffff" strokeWidth="1.5" />
 
-            <line x1="205" y1="484" x2="227" y2="484" stroke="#dc2626" strokeWidth="3" />
-            <text x="233" y="487.5" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="9.5" fontWeight="600" fill="#0f172a">
-              Red: External +5V DC
-            </text>
+                {/* Physical 3-pin plug order hint */}
+                <text x="691" y="318" textAnchor="middle" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="8.8" fill="#64748b">
+                  (On 3-pin plug: Red is center wire)
+                </text>
+              </g>
+            </svg>
+          </div>
+        )}
 
-            <line x1="375" y1="484" x2="397" y2="484" stroke="#0f172a" strokeWidth="3" />
-            <text x="403" y="487.5" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="9.5" fontWeight="600" fill="#0f172a">
-              Brown/Black: Common GND
-            </text>
+        {/* Direct Servo Motor Test Button Right Below Connection Image */}
+        <div className="p-3.5 rounded-xl bg-white border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-slate-900">
+                Live Hardware Test (GPIO 18 Servo Motor)
+              </span>
+              <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
+                isEspOnline ? 'text-emerald-700' : 'text-rose-700'
+              }`}>
+                {isEspOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                <span>{isEspOnline ? 'ESP32 Online' : 'ESP32 Offline'}</span>
+              </span>
+            </div>
 
-            <text x="840" y="487.5" textAnchor="end" fontFamily="ui-sans-serif, system-ui, sans-serif" fontSize="9" fontWeight="700" fill="#0f766e">
-              ★ Always connect Supply GND to ESP32 GND
-            </text>
-          </g>
-        </svg>
+            {testError ? (
+              <p className="text-[11px] text-rose-700 font-medium">{testError}</p>
+            ) : testCommand ? (
+              <p className={`text-[11px] font-medium flex items-center gap-1.5 ${
+                testCommand.status === 'COMPLETED'
+                  ? 'text-emerald-700'
+                  : testCommand.status === 'FAILED' || testCommand.status === 'CANCELLED'
+                  ? 'text-rose-700'
+                  : 'text-amber-700'
+              }`}>
+                {testCommand.status === 'COMPLETED' ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                ) : testCommand.status === 'FAILED' || testCommand.status === 'CANCELLED' ? (
+                  <XCircle className="w-3.5 h-3.5 shrink-0" />
+                ) : (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                )}
+                <span>
+                  {testCommand.status === 'COMPLETED'
+                    ? 'Servo Test Passed! Motor turned 0° → 45° → 0°.'
+                    : testCommand.status === 'PROCESSING'
+                    ? 'ESP32 claimed test — rotating servo 0° → 45°...'
+                    : testCommand.status === 'CANCELLED'
+                    ? 'Servo test cancelled.'
+                    : isEspOnline
+                    ? 'Test pulse sent — ESP32 picking up within 2.5s...'
+                    : 'Test queued in cloud — waiting for ESP32 to come Online & connect Wi-Fi.'}
+                </span>
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-500">
+                Sends a real 0° → 45° → 0° test pulse to your ESP32 motor without changing medicine stock.
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {testCommand?.status === 'PENDING' && (
+              <button
+                type="button"
+                onClick={handleCancelTest}
+                className="px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap"
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleTestServoMotor}
+              disabled={isTestingServo && (testCommand?.status === 'PROCESSING' || !testCommand)}
+              className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shadow-xs"
+            >
+              {isTestingServo && (testCommand?.status === 'PROCESSING' || !testCommand) ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <RotateCw className="w-3.5 h-3.5" />
+              )}
+              <span>Test Servo Motor (0° → 45° → 0°)</span>
+            </button>
+          </div>
+        </div>
+
+        {viewMode === '2d' && (
+          <>
+            {/* Easy-to-Read 4-Wire Connection Cards (Including ESP32 VIN Power!) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <div className="p-3 rounded-xl bg-white border border-orange-200 flex items-start gap-2.5">
+              <span className="w-6 h-6 rounded-lg bg-orange-500 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                1
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-900">Orange / Yellow (Signal)</p>
+                <p className="text-[11px] font-mono text-orange-800 mt-0.5">
+                  ESP32 D18 → Servo YELLOW / ORANGE
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">7th pin down on right header</p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-white border border-rose-200 flex items-start gap-2.5">
+              <span className="w-6 h-6 rounded-lg bg-rose-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                2
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-900">Red A (Servo +5V)</p>
+                <p className="text-[11px] font-mono text-rose-800 mt-0.5">
+                  5V Supply (+) → Servo RED
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">Powers servo motor</p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-rose-50/60 border border-rose-300 flex items-start gap-2.5">
+              <span className="w-6 h-6 rounded-lg bg-rose-700 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                3
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-900">Red B (ESP32 Power)</p>
+                <p className="text-[11px] font-mono text-rose-900 mt-0.5">
+                  5V Supply (+) → ESP32 VIN
+                </p>
+                <p className="text-[10px] text-rose-800 mt-0.5">Starts ESP32 without USB</p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-white border border-slate-300 flex items-start gap-2.5">
+              <span className="w-6 h-6 rounded-lg bg-slate-900 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                4
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-900">Black / Brown (GND)</p>
+                <p className="text-[11px] font-mono text-slate-800 mt-0.5">
+                  PSU (-) + ESP32 GND + Servo BROWN
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">All 3 grounds joined together</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Crystal-Clear ESP32 Power Rule */}
+          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 text-xs flex items-start gap-2.5">
+            <Zap className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-1 leading-relaxed">
+              <p className="font-bold">Why didn&apos;t the ESP32 start after unplugging USB?</p>
+              <p className="text-[11px] text-amber-900">
+                After unplugging the PC USB cable, the ESP32 needs <strong>5V power</strong> in one of two ways:
+                <br />
+                <strong>Option A (Shown above — Red Wire 3):</strong> Connect your External 5V Supply <strong>(+)</strong> directly to the ESP32 <strong>VIN</strong> pin (bottom-left pin) and Supply <strong>(-)</strong> to ESP32 <strong>GND</strong>. Unplug this VIN wire before connecting your laptop USB again.
+                <br />
+                <strong>Option B (Easier Phone Charger):</strong> Leave <strong>VIN</strong> empty and plug a normal <strong>5V USB phone charger</strong> into the ESP32 USB port (keep GND connected between the 5V servo supply and ESP32 GND).
+              </p>
+            </div>
+          </div>
+          </>
+        )}
       </div>
-      )}
+
+      <Esp32WiringVideoModal
+        isOpen={isVideoOpen}
+        onClose={() => setIsVideoOpen(false)}
+      />
     </div>
   );
 };

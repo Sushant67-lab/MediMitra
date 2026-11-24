@@ -10,7 +10,7 @@ import {
   runTransaction
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { db } from './firebase';
+import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { 
   DispensingCommand, 
   DispenseStatus, 
@@ -25,7 +25,7 @@ export const DEFAULT_DEVICE_TOKEN = 'mm_esp32_sec_key_2025';
 export const DEFAULT_SERVO_CONFIG: ServoConfig = {
   gpioPin: 18,
   initialAngle: 0,
-  dispenseAngle: 25,
+  dispenseAngle: 45,
   returnAngle: 0,
   holdTimeMs: 300
 };
@@ -308,7 +308,7 @@ function parseFirestoreRestDevice(docJson: any, fallbackDeviceId: string): Dispe
     wifiRssi: getInt('wifiRssi'),
     servoPin: getInt('servoPin') ?? 18,
     servoInitialAngle: getInt('servoInitialAngle') ?? 0,
-    servoDispenseAngle: getInt('servoDispenseAngle') ?? 25,
+    servoDispenseAngle: getInt('servoDispenseAngle') ?? 45,
     servoHoldTimeMs: getInt('servoHoldTimeMs') ?? 300
   };
 
@@ -419,7 +419,7 @@ export async function getDeviceRegistry(deviceId: string = DEFAULT_DEVICE_ID): P
     lastHeartbeat: '',
     servoPin: 18,
     servoInitialAngle: 0,
-    servoDispenseAngle: 25,
+    servoDispenseAngle: 45,
     servoHoldTimeMs: 300
   };
 }
@@ -449,7 +449,7 @@ export async function recordDeviceHeartbeat(
  * Create an authorized dispensing command in Firestore
  * - Enforces human clinical confirmation
  * - Checks and reserves stock in inventory
- * - Strict servo specs: 0° -> 25° -> 0° with 300ms hold
+ * - Strict servo specs: 0° -> 45° -> 0° with 300ms hold
  */
 export async function createDispensingCommand(params: {
   medicineName: string;
@@ -526,6 +526,40 @@ export async function createDispensingCommand(params: {
 }
 
 /**
+ * Queue a non-inventory Hardware Servo Test command (0° -> 45° -> 0°) directly to Firestore
+ * for live ESP32 GPIO 18 motor verification.
+ */
+export async function triggerServoTestCommand(
+  deviceId: string = DEFAULT_DEVICE_ID
+): Promise<DispensingCommand> {
+  const commandId = `TEST-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const command: DispensingCommand = {
+    commandId,
+    medicineId: 'hardware_servo_test',
+    medicineName: 'Hardware Servo Test (0° -> 45° -> 0°)',
+    requestedQuantity: 1,
+    cycles: 1,
+    deviceId,
+    userId: auth.currentUser?.uid || 'hardware_test',
+    userEmail: auth.currentUser?.email || 'hardware@medimitra.local',
+    status: 'PENDING',
+    executionResult: 'Test pulse queued. Waiting for ESP32 GPIO 18 pickup (every 2.5s).',
+    servoConfig: { ...DEFAULT_SERVO_CONFIG },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  const docPath = `dispensing_commands/${commandId}`;
+  try {
+    await setDoc(doc(db, 'dispensing_commands', commandId), command);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, docPath);
+  }
+
+  return command;
+}
+
+/**
  * Subscribe to real-time status updates of a dispensing command
  */
 export function subscribeToDispensingCommand(
@@ -586,9 +620,9 @@ export async function cancelDispensingCommand(commandId: string): Promise<void> 
  * For testing and demonstrations when physical ESP32 is offline:
  * Simulates the exact physical cycle:
  * Step 1: PENDING -> PROCESSING (ESP32 claims)
- * Step 2: Servo rotates 0° -> 25°
+ * Step 2: Servo rotates 0° -> 45°
  * Step 3: Holds 300ms
- * Step 4: Servo returns 25° -> 0°
+ * Step 4: Servo returns 45° -> 0°
  * Step 5: COMPLETED (Physical acknowledgment)
  */
 export async function simulatePhysicalServoDispensing(
@@ -612,7 +646,7 @@ export async function simulatePhysicalServoDispensing(
   if (!cmd) return;
 
   const cycles = cmd.cycles || 1;
-  const angle = cmd.servoConfig?.dispenseAngle || 25;
+  const angle = cmd.servoConfig?.dispenseAngle || 45;
   const holdMs = cmd.servoConfig?.holdTimeMs || 300;
   const gpioPin = cmd.servoConfig?.gpioPin || 18;
 

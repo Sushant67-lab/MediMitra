@@ -37,7 +37,7 @@ const COMPONENT_SPECS: Record<string, ComponentSpec> = {
   gpio18: {
     id: 'gpio18',
     title: 'Orange Signal Wire (PWM)',
-    pinInfo: 'ESP32 GPIO 18 (D18) -> SG90 Orange Signal Pin (50Hz 0°->25°->0°)',
+    pinInfo: 'ESP32 GPIO 18 (D18) -> SG90 Orange Signal Pin (50Hz 0°->45°->0°)',
     accentClass: 'bg-orange-500'
   },
   power5v: {
@@ -55,7 +55,7 @@ const COMPONENT_SPECS: Record<string, ComponentSpec> = {
   servo: {
     id: 'servo',
     title: 'SG90 9g Micro Servo Motor',
-    pinInfo: 'Orange = D18 | Red = +5V | Brown = Common GND (0° -> 25° Arc)',
+    pinInfo: 'Orange = D18 | Red = +5V | Brown = Common GND (0° -> 45° Arc)',
     accentClass: 'bg-blue-500'
   }
 };
@@ -270,7 +270,7 @@ function createServoLabelTexture(maxAniso: number): THREE.CanvasTexture {
   ctx.fillText('4.8V - 6.0V', 128, 178);
   ctx.fillStyle = '#34d399';
   ctx.font = '16px ui-monospace, monospace';
-  ctx.fillText('0° -> 25° -> 0°', 128, 214);
+  ctx.fillText('0° -> 45° -> 0°', 128, 214);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -750,7 +750,7 @@ export const Esp32WiringDiagram3D: React.FC = () => {
     shaft.position.set(0, 1.75, -0.42);
     servoGroup.add(shaft);
 
-    // Pivoting Servo Horn Assembly (rotates 0° -> 25° -> 0°)
+    // Pivoting Servo Horn Assembly (rotates 0° -> 45° -> 0°)
     const hornPivot = new THREE.Group();
     hornPivot.position.set(0, 1.84, -0.42);
     servoGroup.add(hornPivot);
@@ -785,8 +785,8 @@ export const Esp32WiringDiagram3D: React.FC = () => {
     centerScrew.position.y = 0.04;
     hornPivot.add(centerScrew);
 
-    // Floating 25-degree visual sweep arc above servo shaft
-    const arcGeo = trackGeo(new THREE.RingGeometry(0.75, 0.92, 24, 1, Math.PI / 2 - THREE.MathUtils.degToRad(25), THREE.MathUtils.degToRad(25)));
+    // Floating 45-degree visual sweep arc above servo shaft
+    const arcGeo = trackGeo(new THREE.RingGeometry(0.75, 0.92, 24, 1, Math.PI / 2 - THREE.MathUtils.degToRad(45), THREE.MathUtils.degToRad(45)));
     const arcMat = trackMat(new THREE.MeshBasicMaterial({ color: 0x2dd4bf, side: THREE.DoubleSide, transparent: true, opacity: 0.78 }));
     const sweepArc = new THREE.Mesh(arcGeo, arcMat);
     sweepArc.rotation.x = -Math.PI / 2;
@@ -938,7 +938,7 @@ export const Esp32WiringDiagram3D: React.FC = () => {
     raycaster.layers.set(1);
     const pointerNdc = new THREE.Vector2();
 
-    // Dispense Animation State Machine (PWM travel -> 0°->25° -> Hold 300ms -> 25°->0° -> 1 Slow Blue LED Blink)
+    // Dispense Animation State Machine (PWM travel -> 0°->45° -> Hold 300ms -> 45°->0° -> 1 Slow Blue LED Blink)
     let dispenseActive = false;
     let dispenseElapsed = 0;
 
@@ -1043,24 +1043,24 @@ export const Esp32WiringDiagram3D: React.FC = () => {
             hornPivot.rotation.y = 0;
             setServoAngleDisplay(0);
           }
-          // Phase B: 0.45s -> 0.9s Servo rotates smoothly 0° -> 25°
+          // Phase B: 0.45s -> 0.9s Servo rotates smoothly 0° -> 45°
           else if (dispenseElapsed < 0.9) {
             pulseSphere.visible = false;
             const u = (dispenseElapsed - 0.45) / 0.45;
-            const deg = Math.round(u * 25);
-            hornPivot.rotation.y = -THREE.MathUtils.degToRad(u * 25);
+            const deg = Math.round(u * 45);
+            hornPivot.rotation.y = -THREE.MathUtils.degToRad(u * 45);
             setServoAngleDisplay(deg);
           }
-          // Phase C: 0.9s -> 1.2s Hold at 25° (300ms)
+          // Phase C: 0.9s -> 1.2s Hold at 45° (300ms)
           else if (dispenseElapsed < 1.2) {
-            hornPivot.rotation.y = -THREE.MathUtils.degToRad(25);
-            setServoAngleDisplay(25);
+            hornPivot.rotation.y = -THREE.MathUtils.degToRad(45);
+            setServoAngleDisplay(45);
           }
-          // Phase D: 1.2s -> 1.65s Servo returns 25° -> 0°
+          // Phase D: 1.2s -> 1.65s Servo returns 45° -> 0°
           else if (dispenseElapsed < 1.65) {
             const u = 1 - (dispenseElapsed - 1.2) / 0.45;
-            const deg = Math.round(u * 25);
-            hornPivot.rotation.y = -THREE.MathUtils.degToRad(u * 25);
+            const deg = Math.round(u * 45);
+            hornPivot.rotation.y = -THREE.MathUtils.degToRad(u * 45);
             setServoAngleDisplay(deg);
           }
           // Phase E: 1.65s -> 2.85s 1 Slow 1.2s Blue LED blink on ESP32 GPIO 2!
@@ -1232,7 +1232,7 @@ export const Esp32WiringDiagram3D: React.FC = () => {
         <div className="bg-slate-900/95 border border-slate-700/90 rounded-xl px-3 py-1.5 text-white text-right shadow-lg">
           <div className="text-[10px] text-slate-400 font-medium">Servo Angle (GPIO 18)</div>
           <div className="text-sm font-bold font-mono tabular-nums text-teal-300">
-            {servoAngleDisplay}° / 25°
+            {servoAngleDisplay}° / 45°
           </div>
         </div>
       </div>

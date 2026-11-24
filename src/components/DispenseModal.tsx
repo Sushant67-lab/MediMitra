@@ -236,7 +236,7 @@ export const DispenseModal: React.FC<DispenseModalProps> = ({
                     min="10"
                     max="60"
                     value={servoConfig.dispenseAngle}
-                    onChange={(e) => setServoConfig({ ...servoConfig, dispenseAngle: Number(e.target.value) || 25 })}
+                    onChange={(e) => setServoConfig({ ...servoConfig, dispenseAngle: Number(e.target.value) || 45 })}
                     className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white"
                   />
                 </div>

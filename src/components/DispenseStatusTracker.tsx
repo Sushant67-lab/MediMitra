@@ -284,7 +284,7 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
                 strokeLinecap="round"
               />
               <path
-                d="M 10 50 A 40 40 0 0 1 30 20"
+                d="M 10 50 A 40 40 0 0 1 21.7 21.7"
                 fill="none"
                 stroke="#0d9488"
                 strokeWidth="6"
@@ -306,7 +306,7 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
           <div className="text-xs">
             <span className="text-slate-500 font-medium">{ui.currentPositionLabel}: </span>
             <strong className="text-teal-900 font-mono text-sm">{simAngle || 0}°</strong>
-            <span className="text-slate-400 text-[10px] ml-1">(0° → 25°)</span>
+            <span className="text-slate-400 text-[10px] ml-1">(0° → 45°)</span>
           </div>
 
           {simStepMsg && (

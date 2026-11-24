@@ -443,16 +443,16 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
     [language]
   );
 
-  // Derived animation states for Scene 6 physical dispense (0 -> 25 -> 0 degrees)
+  // Derived animation states for Scene 6 physical dispense (0 -> 45 -> 0 degrees)
   const servoAngle = useMemo(() => {
     if (activeSceneIndex !== 5) return 0;
     if (sceneProgress < 0.22) return 0;
     if (sceneProgress < 0.40) {
-      return Math.round(((sceneProgress - 0.22) / 0.18) * 25);
+      return Math.round(((sceneProgress - 0.22) / 0.18) * 45);
     }
-    if (sceneProgress < 0.56) return 25;
+    if (sceneProgress < 0.56) return 45;
     if (sceneProgress < 0.72) {
-      return Math.round((1 - (sceneProgress - 0.56) / 0.16) * 25);
+      return Math.round((1 - (sceneProgress - 0.56) / 0.16) * 45);
     }
     return 0;
   }, [activeSceneIndex, sceneProgress]);
@@ -899,7 +899,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                     {/* SG90 Servo */}
                     <rect x="302" y="16" width="104" height="72" rx="10" fill="#1e293b" stroke="#14b8a6" strokeWidth="2" />
                     <text x="354" y="40" textAnchor="middle" fill="#ffffff" fontSize="11" fontWeight="bold">SG90 Servo</text>
-                    <text x="354" y="56" textAnchor="middle" fill="#99f6e4" fontSize="9">25° Medicine Gate</text>
+                    <text x="354" y="56" textAnchor="middle" fill="#99f6e4" fontSize="9">45° Medicine Gate</text>
 
                     {/* Orange Signal Wire (GPIO 18 -> Servo Orange) */}
                     <path d="M 256 76 L 284 76 L 284 52 L 302 52" fill="none" stroke="#f97316" strokeWidth="2.5" />
@@ -998,7 +998,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                     <p className="text-[11px] text-slate-300 mt-1.5">
                       {slowBlueLedActive
                         ? 'Slow 1.2s Blue Blink ON — Hardware Dispense Confirmed!'
-                        : 'Waits for 25° rotation before firing slow confirmation blink.'}
+                        : 'Waits for 45° rotation before firing slow confirmation blink.'}
                     </p>
                   </div>
 

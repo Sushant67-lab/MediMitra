@@ -17,6 +17,7 @@ import { Esp32WiringDiagram } from './Esp32WiringDiagram';
 import {
   subscribeToDeviceStatus,
   isDeviceOnlineNow,
+  parseHeartbeatMillis,
   DEFAULT_DEVICE_ID
 } from '../services/dispensingService';
 import { DispenserDevice } from '../types/dispensing';
@@ -53,6 +54,10 @@ export const Esp32HardwareGuideModal: React.FC<Esp32HardwareGuideModalProps> = (
   }, [isOpen]);
 
   const isOnline = isDeviceOnlineNow(deviceInfo);
+  const lastHbMs = parseHeartbeatMillis(deviceInfo?.lastHeartbeat);
+  const lastSeenText = lastHbMs > 0
+    ? new Date(lastHbMs).toLocaleString()
+    : 'Never received a heartbeat from hardware yet';
 
   const escapeCpp = (val: string) => val.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const resolvedSsid = escapeCpp(hotspotSsid.trim() || 'YOUR_HOTSPOT_NAME');
@@ -60,25 +65,24 @@ export const Esp32HardwareGuideModal: React.FC<Esp32HardwareGuideModalProps> = (
 
   const sketchSnippet = `/*
  * =========================================================================================
- * MediMitra Smart IoT Medicine Dispenser - ESP32 Firmware (Hotspot + Direct Cloud Sync)
- * Hardware: ESP32 DevKit V1 (30-Pin) + External 5V 2A Supply + SG90 / MG90S Servo
+ * MediMitra Smart IoT Medicine Dispenser - ESP32 Dev Module Firmware (Stable Hotspot + TLS)
+ * Hardware: ESP32 DevKit V1 / ESP32 Dev Module + External 5V 2A Supply + SG90 / MG90S Servo
  *
- * WIRING:
- *   - Orange Wire (Signal) -> ESP32 GPIO 18 (D18)
- *   - Red Wire (+5V)       -> External 5V 2A Power Supply (+)
- *   - Brown Wire (GND)     -> Common GND (5V Supply GND + ESP32 GND + Servo Brown)
+ * WIRING (4 WIRES, NO BREADBOARD):
+ *   - Yellow or Orange Wire (Signal) -> ESP32 GPIO 18 (D18, 7th pin from top-right)
+ *   - Red Wire A (+5V Servo)         -> External 5V 2A Supply (+)
+ *   - Red Wire B (+5V ESP32)         -> External 5V 2A Supply (+) -> ESP32 VIN (unplug when USB plugged!)
+ *   - Brown / Black Wire (GND)       -> Common GND (5V Supply - + ESP32 GND + Servo Brown)
  *
- * MOBILE HOTSPOT CHECKLIST:
- *   - Android AP Band -> 2.4 GHz (NOT 5 GHz!) | iPhone -> Maximize Compatibility ON
- *   - Keep Mobile Data ON | If hardcoded Wi-Fi fails, connect phone to "MediMitra-ESP32"
- *     and open http://192.168.4.1 to pick your 2.4GHz hotspot visually!
+ * LED STATUS GUIDE:
+ *   - Red Power LED OFF               -> ESP32 has no 5V power (check VIN / USB / GND)
+ *   - Blue LED Blinking Fast (0.25s)  -> Connecting to Wi-Fi / Mobile Hotspot or MediMitra Cloud...
+ *   - Blue LED Blinking Med (0.45s)   -> Setup Portal ON: Join Wi-Fi "MediMitra-ESP32" -> 192.168.4.1
+ *   - Blue LED SOLID OFF              -> Connected to Wi-Fi AND Linked with MediMitra App (Online!)
+ *   - 1 Slow 1.2s Blue Blink          -> Medicine Dispensed! (0° -> 45° -> 0°), then OFF
  *
- * BLUE LED (GPIO 2) STATUS SIGNALS:
- *   - Fast Blink (0.25s)         -> Connecting to Wi-Fi / Hotspot...
- *   - 3 Flashes + 1.5s Glow      -> Connected! Ready for Dispense!
- *   - Tiny 60ms blip every 5s    -> Alive & Online on Wi-Fi / Hotspot
- *   - Medium Blink (0.45s)       -> Setup Portal Active ("MediMitra-ESP32" @ 192.168.4.1)
- *   - 1 Slow 1.2s Blue Blink     -> Medicine Dispensed (0° -> 25° -> 0°)
+ * REQUIRED LIBRARY (Arduino IDE Library Manager):
+ *   - ArduinoJson by Benoit Blanchon (v6 or v7)
  * =========================================================================================
  */
 
@@ -86,19 +90,21 @@ export const Esp32HardwareGuideModal: React.FC<Esp32HardwareGuideModalProps> = (
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <WebServer.h>
+#include <DNSServer.h>
 #include <Preferences.h>
 #include <ArduinoJson.h>
 
-// 1. ONLY EDIT THESE TWO LINES FOR YOUR 2.4GHz MOBILE HOTSPOT OR WI-FI:
+// 1. CODE INPUTS FOR YOUR WI-FI OR 2.4 GHz MOBILE HOTSPOT (EDIT ONLY THESE TWO LINES):
 const char* WIFI_SSID        = "${resolvedSsid}";
 const char* WIFI_PASSWORD    = "${resolvedPass}";
 
-// 2. DIRECT FIREBASE CLOUD CONFIG (ALREADY CONFIGURED)
+// 2. DIRECT FIREBASE CLOUD CONFIG (PRE-LINKED WITH YOUR MEDIMITRA WEB APP)
 const char* FIREBASE_PROJECT_ID = "medimitra-3be2c";
 const char* FIRESTORE_DB_ID     = "ai-studio-curahealthaimedi-3da36085-2b1d-4e47-a414-215a5a6f8743";
 const char* FIREBASE_API_KEY    = "AIzaSyArDAf5opYldc_-yFDwvheTKoJNRE5WTf4";
 const char* DEVICE_ID           = "ESP32_MEDIMITRA_01";
 
+// 3. SERVO HARDWARE & CALIBRATION SETTINGS
 const int SERVO_PIN          = 18;
 const int LED_STATUS_PIN     = 2;
 const int PWM_FREQ_HZ        = 50;
@@ -106,7 +112,7 @@ const int PWM_RESOLUTION     = 14;
 const int LEDC_CHANNEL       = 0;
 
 int initialAngle             = 0;
-int dispenseAngle            = 25;
+int dispenseAngle            = 45;
 int returnAngle              = 0;
 int holdDurationMs           = 300;
 int stepDelayMs              = 15;
@@ -114,13 +120,17 @@ int stepDelayMs              = 15;
 Preferences prefs;
 String activeSsid = "";
 String activePass = "";
+bool cloudAppLinked = false;
 
-unsigned long lastPollTime          = 0;
-const unsigned long POLL_INTERVAL_MS      = 2500;
-unsigned long lastHeartbeatTime     = 0;
-const unsigned long HEARTBEAT_INTERVAL_MS = 10000;
-unsigned long lastWifiBlipTime      = 0;
-const unsigned long WIFI_BLIP_INTERVAL_MS = 5000;
+// 4. TIMING INTERVALS
+unsigned long lastPollTime             = 0;
+const unsigned long POLL_INTERVAL_MS        = 2500;
+unsigned long lastHeartbeatTime        = 0;
+const unsigned long HEARTBEAT_INTERVAL_MS   = 10000;
+unsigned long lastReconnectTryTime     = 0;
+const unsigned long RECONNECT_INTERVAL_MS   = 6000;
+unsigned long lastReconnectBlinkTime   = 0;
+bool reconnectLedState                 = false;
 
 String firestoreDocPath(const String& collection, const String& docId) {
   return "projects/" + String(FIREBASE_PROJECT_ID) + "/databases/" + String(FIRESTORE_DB_ID) + "/documents/" + collection + "/" + docId;
@@ -170,39 +180,26 @@ void writeServoAngle(int angle) {
   #endif
 }
 
+void setBlueLedOff() {
+  digitalWrite(LED_STATUS_PIN, LOW);
+}
+
 void slowBlinkBlueLedOnce() {
   digitalWrite(LED_STATUS_PIN, HIGH);
   delay(1200);
   digitalWrite(LED_STATUS_PIN, LOW);
 }
 
-void blinkWifiErrorPattern() {
-  for (int i = 0; i < 2; i++) {
-    digitalWrite(LED_STATUS_PIN, HIGH); delay(120);
-    digitalWrite(LED_STATUS_PIN, LOW);  delay(120);
-  }
-  delay(800);
-}
-
-void blinkWifiConnectedSuccess() {
-  for (int i = 0; i < 3; i++) {
-    digitalWrite(LED_STATUS_PIN, HIGH); delay(120);
-    digitalWrite(LED_STATUS_PIN, LOW);  delay(120);
-  }
-  digitalWrite(LED_STATUS_PIN, HIGH); delay(1500);
-  digitalWrite(LED_STATUS_PIN, LOW);
-}
-
 bool executePhysicalDispense(int cycles, int targetAngle, int holdTime) {
-  digitalWrite(LED_STATUS_PIN, LOW);
+  setBlueLedOff();
   attachServoAtAngle(initialAngle);
-  delay(150);
+  delay(200);
   for (int c = 1; c <= cycles; c++) {
     for (int pos = initialAngle; pos <= targetAngle; pos++) { writeServoAngle(pos); delay(stepDelayMs); }
     delay(holdTime);
     for (int pos = targetAngle; pos >= returnAngle; pos--) { writeServoAngle(pos); delay(stepDelayMs); }
     writeServoAngle(returnAngle);
-    delay(250);
+    delay(350);
     if (c < cycles) delay(400);
   }
   idleServoPinLow();
@@ -212,15 +209,16 @@ bool executePhysicalDispense(int cycles, int targetAngle, int holdTime) {
 
 void loadCredentials() {
   prefs.begin("medimitra", false);
-  String savedSsid = prefs.getString("ssid", "");
-  String savedPass = prefs.getString("pass", "");
-  String lastCodeSsid = prefs.getString("codeSsid", "");
+  String savedSsid   = prefs.getString("ssid", "");
+  String savedPass   = prefs.getString("pass", "");
+  String lastCodeSig = prefs.getString("codeSig", "");
   String compiledSsid = String(WIFI_SSID);
   String compiledPass = String(WIFI_PASSWORD);
+  String currentSig   = compiledSsid + "|" + compiledPass;
   bool codeWasCustomized = compiledSsid.length() > 0 && compiledSsid != "YOUR_HOTSPOT_NAME" && compiledSsid != "YOUR_WIFI_SSID";
-  if (codeWasCustomized && compiledSsid != lastCodeSsid) {
+  if (codeWasCustomized && currentSig != lastCodeSig) {
     activeSsid = compiledSsid; activePass = compiledPass;
-    prefs.putString("ssid", activeSsid); prefs.putString("pass", activePass); prefs.putString("codeSsid", compiledSsid);
+    prefs.putString("ssid", activeSsid); prefs.putString("pass", activePass); prefs.putString("codeSig", currentSig);
   } else if (savedSsid.length() > 0) {
     activeSsid = savedSsid; activePass = savedPass;
   } else {
@@ -232,7 +230,9 @@ void loadCredentials() {
 void startHotspotSetupPortal() {
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP("MediMitra-ESP32");
-  delay(200);
+  delay(250);
+  DNSServer dnsServer;
+  dnsServer.start(53, "*", WiFi.softAPIP());
   int found = WiFi.scanNetworks();
   String optionsHtml = "";
   for (int i = 0; i < found; i++) {
@@ -241,15 +241,17 @@ void startHotspotSetupPortal() {
   }
   WebServer server(80);
   bool credentialsSaved = false;
-  server.on("/", HTTP_GET, [&]() {
-    String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'><title>MediMitra Wi-Fi</title>";
+  auto sendPortalPage = [&]() {
+    String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'><title>MediMitra Wi-Fi Setup</title>";
     html += "<style>body{font-family:sans-serif;background:#0f172a;color:#f8fafc;padding:20px;max-width:420px;margin:auto}input,select,button{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #334155;box-sizing:border-box;font-size:15px;background:#1e293b;color:#fff}button{background:#0d9488;font-weight:bold;border:none;cursor:pointer}.tip{background:#1e293b;padding:12px;border-radius:8px;font-size:13px;color:#cbd5e1;margin-bottom:14px}</style></head><body>";
-    html += "<h2>MediMitra ESP32 Setup</h2><div class='tip'><b>Hotspot Tip:</b> Use <b>2.4 GHz Band</b> (Android) or <b>Maximize Compatibility</b> (iPhone).</div><form method='POST' action='/save'>";
-    if (optionsHtml.length() > 0) html += "<label>Detected 2.4GHz Networks:</label><select onchange=\\"if(this.value)document.getElementById('s').value=this.value\\"><option value=''>-- Select Hotspot --</option>" + optionsHtml + "</select>";
-    html += "<label>Hotspot / Wi-Fi Name (SSID):</label><input id='s' name='ssid' value='" + activeSsid + "' required>";
-    html += "<label>Password:</label><input name='pass' type='password' placeholder='Hotspot password'><button type='submit'>Save & Connect</button></form></body></html>";
+    html += "<h2>MediMitra ESP32 Wi-Fi Setup</h2><div class='tip'><b>Checklist:</b> Android Hotspot -> <b>2.4 GHz Band</b> | iPhone -> <b>Maximize Compatibility ON</b> | Keep Mobile Data ON.</div><form method='POST' action='/save'>";
+    if (optionsHtml.length() > 0) html += "<label>Detected 2.4GHz Networks:</label><select onchange=\\"if(this.value)document.getElementById('s').value=this.value\\"><option value=''>-- Select Wi-Fi / Hotspot --</option>" + optionsHtml + "</select>";
+    html += "<label>Wi-Fi / Hotspot Name (SSID):</label><input id='s' name='ssid' value='" + (activeSsid == "YOUR_HOTSPOT_NAME" ? "" : activeSsid) + "' placeholder='Exact 2.4 GHz Wi-Fi name' required>";
+    html += "<label>Password:</label><input name='pass' type='password' placeholder='Enter Wi-Fi password'><button type='submit'>Save & Connect</button></form></body></html>";
     server.send(200, "text/html", html);
-  });
+  };
+  server.on("/", HTTP_GET, sendPortalPage);
+  server.onNotFound(sendPortalPage);
   server.on("/save", HTTP_POST, [&]() {
     activeSsid = server.arg("ssid"); activePass = server.arg("pass");
     prefs.begin("medimitra", false); prefs.putString("ssid", activeSsid); prefs.putString("pass", activePass); prefs.end();
@@ -258,64 +260,24 @@ void startHotspotSetupPortal() {
   });
   server.begin();
   unsigned long t0 = millis(), lastBlink = 0; bool led = false;
-  while (!credentialsSaved && (millis() - t0 < 90000)) {
+  while (!credentialsSaved && (millis() - t0 < 180000)) {
+    dnsServer.processNextRequest();
     server.handleClient();
     if (millis() - lastBlink > 450) { lastBlink = millis(); led = !led; digitalWrite(LED_STATUS_PIN, led ? HIGH : LOW); }
     delay(2);
   }
-  server.stop(); WiFi.softAPdisconnect(true); digitalWrite(LED_STATUS_PIN, LOW);
+  dnsServer.stop(); server.stop(); WiFi.softAPdisconnect(true); setBlueLedOff();
 }
 
-bool attemptStaConnect() {
-  WiFi.persistent(false);
-  WiFi.disconnect(true, true);
-  delay(200);
-  WiFi.mode(WIFI_STA);
-  WiFi.setSleep(false);
-  WiFi.setAutoReconnect(true);
-  WiFi.begin(activeSsid.c_str(), activePass.c_str());
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 30) {
-    digitalWrite(LED_STATUS_PIN, HIGH); delay(250);
-    digitalWrite(LED_STATUS_PIN, LOW);  delay(250);
-    attempts++;
-  }
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\\n✓ Wi-Fi Connected! IP: " + WiFi.localIP().toString());
-    blinkWifiConnectedSuccess();
-    return true;
-  }
-  return false;
-}
-
-void connectWiFi() {
-  loadCredentials();
-  while (!attemptStaConnect()) {
-    blinkWifiErrorPattern();
-    startHotspotSetupPortal();
-  }
-}
-
-void checkWiFiConnection() {
-  if (WiFi.status() != WL_CONNECTED) {
-    blinkWifiErrorPattern();
-    WiFi.disconnect();
-    WiFi.begin(activeSsid.c_str(), activePass.c_str());
-    delay(1500);
-    if (WiFi.status() == WL_CONNECTED) {
-      sendHeartbeat();
-      lastHeartbeatTime = millis();
-    }
-  }
-}
-
-void sendHeartbeat() {
-  if (WiFi.status() != WL_CONNECTED) return;
-  WiFiClientSecure secureClient; secureClient.setInsecure();
+bool sendHeartbeat() {
+  if (WiFi.status() != WL_CONNECTED) return false;
+  WiFiClientSecure secureClient; secureClient.setInsecure(); secureClient.setTimeout(15);
   HTTPClient http;
-  http.begin(secureClient, firestoreCommitUrl());
+  http.setConnectTimeout(12000);
+  http.setTimeout(15000);
+  http.setReuse(false);
+  if (!http.begin(secureClient, firestoreCommitUrl())) return false;
   http.addHeader("Content-Type", "application/json");
-  http.setTimeout(6000);
   #if ARDUINOJSON_VERSION_MAJOR >= 7
     JsonDocument doc;
     JsonArray writes = doc["writes"].to<JsonArray>();
@@ -361,17 +323,87 @@ void sendHeartbeat() {
     t1["setToServerValue"] = "REQUEST_TIME";
   #endif
   String body; serializeJson(doc, body);
-  http.POST(body);
+  int httpCode = http.POST(body);
   http.end();
+  if (httpCode == 200) {
+    cloudAppLinked = true;
+    setBlueLedOff(); // Stops blinking immediately once linked with MediMitra App!
+    return true;
+  }
+  return false;
+}
+
+bool attemptStaConnect() {
+  if (activeSsid.length() == 0 || activeSsid == "YOUR_HOTSPOT_NAME" || activeSsid == "YOUR_WIFI_SSID") return false;
+  WiFi.persistent(false);
+  WiFi.disconnect(true, true);
+  delay(150);
+  WiFi.mode(WIFI_STA);
+  delay(100);
+  WiFi.setHostname("MediMitra-ESP32");
+  WiFi.setSleep(false);
+  WiFi.setAutoReconnect(true);
+  WiFi.begin(activeSsid.c_str(), activePass.c_str());
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts < 36) {
+    digitalWrite(LED_STATUS_PIN, HIGH); delay(250);
+    digitalWrite(LED_STATUS_PIN, LOW);  delay(250);
+    attempts++;
+  }
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\\n✓ Wi-Fi Connected! IP: " + WiFi.localIP().toString());
+    for (int retry = 0; retry < 3; retry++) {
+      if (sendHeartbeat()) {
+        setBlueLedOff();
+        return true;
+      }
+      digitalWrite(LED_STATUS_PIN, HIGH); delay(200);
+      digitalWrite(LED_STATUS_PIN, LOW);  delay(600);
+    }
+    cloudAppLinked = false;
+    return true;
+  }
+  cloudAppLinked = false;
+  return false;
+}
+
+void connectWiFi() {
+  loadCredentials();
+  while (!attemptStaConnect()) {
+    startHotspotSetupPortal();
+  }
+}
+
+void maintainWiFiAndAppLink(unsigned long now) {
+  if (WiFi.status() != WL_CONNECTED || !cloudAppLinked) {
+    if (now - lastReconnectBlinkTime >= 250) {
+      lastReconnectBlinkTime = now;
+      reconnectLedState = !reconnectLedState;
+      digitalWrite(LED_STATUS_PIN, reconnectLedState ? HIGH : LOW);
+    }
+    if (WiFi.status() != WL_CONNECTED && now - lastReconnectTryTime >= RECONNECT_INTERVAL_MS) {
+      lastReconnectTryTime = now;
+      cloudAppLinked = false;
+      WiFi.disconnect();
+      WiFi.begin(activeSsid.c_str(), activePass.c_str());
+    } else if (WiFi.status() == WL_CONNECTED && !cloudAppLinked && now - lastHeartbeatTime >= 4000) {
+      lastHeartbeatTime = now;
+      sendHeartbeat();
+    }
+    return;
+  }
+  setBlueLedOff(); // Connected to Wi-Fi & MediMitra App -> Blue LED stays OFF
 }
 
 bool updateCommandStatusInFirestore(const String& commandId, const String& status, const String& resultMsg) {
   if (WiFi.status() != WL_CONNECTED) return false;
-  WiFiClientSecure secureClient; secureClient.setInsecure();
+  WiFiClientSecure secureClient; secureClient.setInsecure(); secureClient.setTimeout(15);
   HTTPClient http;
+  http.setConnectTimeout(12000);
+  http.setTimeout(15000);
+  http.setReuse(false);
   http.begin(secureClient, firestorePatchUrl("dispensing_commands", commandId, "updateMask.fieldPaths=status&updateMask.fieldPaths=executionResult"));
   http.addHeader("Content-Type", "application/json");
-  http.setTimeout(6000);
   #if ARDUINOJSON_VERSION_MAJOR >= 7
     JsonDocument doc;
   #else
@@ -387,11 +419,13 @@ bool updateCommandStatusInFirestore(const String& commandId, const String& statu
 
 void pollForDispenseCommand() {
   if (WiFi.status() != WL_CONNECTED) return;
-  WiFiClientSecure secureClient; secureClient.setInsecure();
+  WiFiClientSecure secureClient; secureClient.setInsecure(); secureClient.setTimeout(15);
   HTTPClient http;
+  http.setConnectTimeout(12000);
+  http.setTimeout(15000);
+  http.setReuse(false);
   http.begin(secureClient, firestoreRunQueryUrl());
   http.addHeader("Content-Type", "application/json");
-  http.setTimeout(6000);
   String queryBody = "{\\"structuredQuery\\":{\\"from\\":[{\\"collectionId\\":\\"dispensing_commands\\"}],\\"where\\":{\\"fieldFilter\\":{\\"field\\":{\\"fieldPath\\":\\"status\\"},\\"op\\":\\"EQUAL\\",\\"value\\":{\\"stringValue\\":\\"PENDING\\"}}},\\"limit\\":10}}";
   if (http.POST(queryBody) == 200) {
     String payload = http.getString();
@@ -433,21 +467,19 @@ void pollForDispenseCommand() {
 
 void setup() {
   pinMode(SERVO_PIN, OUTPUT); digitalWrite(SERVO_PIN, LOW);
-  pinMode(LED_STATUS_PIN, OUTPUT); digitalWrite(LED_STATUS_PIN, LOW);
+  pinMode(LED_STATUS_PIN, OUTPUT); setBlueLedOff();
   Serial.begin(115200); delay(800);
   connectWiFi();
-  sendHeartbeat();
+  lastHeartbeatTime = millis();
 }
 
 void loop() {
-  checkWiFiConnection();
   unsigned long now = millis();
-  if (WiFi.status() == WL_CONNECTED && now - lastWifiBlipTime >= WIFI_BLIP_INTERVAL_MS) {
-    lastWifiBlipTime = now;
-    digitalWrite(LED_STATUS_PIN, HIGH); delay(60); digitalWrite(LED_STATUS_PIN, LOW);
+  maintainWiFiAndAppLink(now);
+  if (WiFi.status() == WL_CONNECTED) {
+    if (now - lastHeartbeatTime >= HEARTBEAT_INTERVAL_MS) { lastHeartbeatTime = now; sendHeartbeat(); }
+    if (now - lastPollTime >= POLL_INTERVAL_MS) { lastPollTime = now; pollForDispenseCommand(); }
   }
-  if (now - lastHeartbeatTime >= HEARTBEAT_INTERVAL_MS) { lastHeartbeatTime = now; sendHeartbeat(); }
-  if (now - lastPollTime >= POLL_INTERVAL_MS) { lastPollTime = now; pollForDispenseCommand(); }
 }`;
 
   const handleCopySketch = () => {
@@ -499,6 +531,11 @@ void loop() {
               <>
                 <Wifi className="w-4 h-4 text-emerald-600" />
                 <span>{ui.esp32OnlineStatus}</span>
+                {deviceInfo?.wifiSsid && (
+                  <span className="font-medium text-[11px] bg-white px-2 py-0.5 rounded-md border border-emerald-200 text-emerald-700">
+                    {deviceInfo.wifiSsid}
+                  </span>
+                )}
                 {deviceInfo?.ipAddress && (
                   <span className="font-mono text-[11px] bg-white px-2 py-0.5 rounded-md border border-emerald-200 text-emerald-800">
                     {deviceInfo.ipAddress}
@@ -506,10 +543,13 @@ void loop() {
                 )}
               </>
             ) : (
-              <>
-                <WifiOff className="w-4 h-4 text-slate-400" />
-                <span>{ui.esp32OfflineStatus}</span>
-              </>
+              <div className="flex flex-wrap items-center gap-2">
+                <WifiOff className="w-4 h-4 text-rose-500" />
+                <span className="text-rose-700">{ui.esp32OfflineStatus}</span>
+                <span className="text-[11px] font-normal text-slate-500">
+                  ({lastSeenText})
+                </span>
+              </div>
             )}
           </div>
           <span className="font-mono text-[11px] text-slate-500">{DEFAULT_DEVICE_ID}</span>
@@ -649,6 +689,15 @@ void loop() {
                 </p>
               </div>
 
+              {!hotspotSsid.trim() && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Enter your 2.4 GHz Hotspot Name &amp; Password above first</strong> before copying and uploading the sketch — otherwise your ESP32 cannot join your Wi-Fi!
+                  </span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -670,14 +719,29 @@ void loop() {
                 <pre>{sketchSnippet}</pre>
               </div>
 
-              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1 text-slate-700">
-                <span className="font-semibold text-slate-900 block">{ui.flashingStepsTitle}:</span>
-                <ol className="list-decimal list-inside space-y-1 text-[11px] text-slate-600">
-                  <li>{ui.flashStep1}</li>
-                  <li>{ui.flashStep2}</li>
-                  <li>{ui.flashStep3}</li>
-                  <li>{ui.flashStep4}</li>
-                  <li>{ui.flashStep5}</li>
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2 text-slate-700">
+                <span className="font-bold text-slate-900 block">
+                  Complete Plug-In, Upload &amp; Connect Guide (ESP32 Dev Module):
+                </span>
+                <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-slate-700 leading-relaxed">
+                  <li>
+                    <b>Enter Wi-Fi / Mobile Hotspot above:</b> Type your 2.4 GHz Wi-Fi or Phone Hotspot Name &amp; Password, then click <b>{ui.copySketchBtn}</b>.
+                  </li>
+                  <li>
+                    <b>Plug In ESP32 to PC via USB:</b> Connect a data-capable Micro-USB / USB-C cable from your computer to the ESP32 Dev Module.
+                  </li>
+                  <li>
+                    <b>Arduino IDE Settings:</b> Select <b>Tools &rarr; Board &rarr; ESP32 Dev Module</b>, select your COM/USB Port, and install only <b>ArduinoJson</b> in Library Manager (no external servo library needed).
+                  </li>
+                  <li>
+                    <b>Paste &amp; Upload:</b> Paste the refreshed code into Arduino IDE and click <b>Upload</b>. If you see <i>&quot;Connecting........_____&quot;</i>, hold the <b>BOOT</b> button on the ESP32 for 2 seconds until upload starts, then release.
+                  </li>
+                  <li>
+                    <b>Unplug USB &amp; Plug In External 5V Power:</b> Unplug the USB cable from your PC, connect <b>External 5V 2A (+)</b> to Servo Red &amp; ESP32 VIN/USB, connect <b>Common GND</b> (5V GND + ESP32 GND + Servo Brown), and Servo Orange to <b>GPIO 18</b>.
+                  </li>
+                  <li>
+                    <b>Confirm Connection (Blue LED Stops Blinking!):</b> Keep your 2.4 GHz Hotspot / Wi-Fi ON with Internet active. The blue LED blinks while connecting — as soon as the ESP32 connects and syncs with this MediMitra app, the <b>blue LED stops blinking and turns OFF</b>, and the top-right badge turns green <b>Online</b>!
+                  </li>
                 </ol>
               </div>
             </div>

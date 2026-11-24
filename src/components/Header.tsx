@@ -127,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({
               disabled={!onOpenHardwareGuide}
               title={connectionTooltip}
               aria-label={connectionTooltip}
-              className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-colors whitespace-nowrap shrink-0 ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-colors whitespace-nowrap shrink-0 ${
                 onOpenHardwareGuide ? 'cursor-pointer' : 'cursor-default'
               } ${
                 isEspOnline
@@ -140,7 +140,7 @@ export const Header: React.FC<HeaderProps> = ({
               ) : (
                 <WifiOff className="w-3.5 h-3.5 text-rose-600 shrink-0" />
               )}
-              <span className="hidden sm:inline">
+              <span>
                 {isEspOnline ? ui.esp32ConnectedShort : ui.esp32OfflineShort}
               </span>
             </button>
