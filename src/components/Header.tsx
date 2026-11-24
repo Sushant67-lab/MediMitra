@@ -70,8 +70,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-teal-100/80 shadow-xs">
-      <div className="max-w-5xl mx-auto px-2.5 sm:px-6">
-        <div className="flex items-center justify-between gap-1.5 h-16">
+      <div className="max-w-5xl mx-auto px-2 sm:px-6">
+        <div className="flex items-center justify-between gap-1 sm:gap-1.5 h-16">
           {/* Brand Logo & Title */}
           <div 
             onClick={onGoHome}
@@ -95,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
             {onOpenHardwareGuide && (
               <button
                 onClick={onOpenHardwareGuide}
-                className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                className="flex items-center gap-1 px-1.5 sm:px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                 title={ui.esp32DispenserTooltip}
               >
                 <Cpu className="w-3.5 h-3.5 text-teal-700 shrink-0" />
@@ -128,7 +128,7 @@ export const Header: React.FC<HeaderProps> = ({
               disabled={!onOpenHardwareGuide}
               title={connectionTooltip}
               aria-label={connectionTooltip}
-              className={`flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold border transition-colors whitespace-nowrap shrink-0 ${
+              className={`flex items-center gap-1 px-1.5 sm:px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold border transition-colors whitespace-nowrap shrink-0 ${
                 onOpenHardwareGuide ? 'cursor-pointer' : 'cursor-default'
               } ${
                 isEspOnline

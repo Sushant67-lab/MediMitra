@@ -47,7 +47,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500/30 ${buttonStyles}`}
+        className={`flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500/30 ${buttonStyles}`}
         aria-expanded={isOpen}
         aria-haspopup="true"
         title={t.languageSelect}

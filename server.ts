@@ -72,7 +72,7 @@ app.post('/api/device/heartbeat', authenticateDevice, async (req: Request, res: 
       ipAddress: String(clientIp),
       servoPin: 18,
       servoInitialAngle: 0,
-      servoDispenseAngle: 25,
+      servoDispenseAngle: 45,
       servoHoldTimeMs: 300
     }, { merge: true });
 
@@ -160,7 +160,7 @@ app.get('/api/device/poll', authenticateDevice, async (req: Request, res: Respon
         servo: {
           gpioPin: claimedCommand.servoConfig?.gpioPin || 18,
           initialAngle: claimedCommand.servoConfig?.initialAngle ?? 0,
-          dispenseAngle: claimedCommand.servoConfig?.dispenseAngle ?? 25,
+          dispenseAngle: claimedCommand.servoConfig?.dispenseAngle ?? 45,
           returnAngle: claimedCommand.servoConfig?.returnAngle ?? 0,
           holdTimeMs: claimedCommand.servoConfig?.holdTimeMs ?? 300
         }
@@ -203,7 +203,7 @@ app.post('/api/device/ack', authenticateDevice, async (req: Request, res: Respon
     const finalStatus = status === 'COMPLETED' ? 'COMPLETED' : 'FAILED';
     const resultMsg = executionResult || (
       finalStatus === 'COMPLETED' 
-        ? `Physical servo executed ${cyclesExecuted} dispensing cycle(s) (0° -> 25° -> 0°). Tablet confirmed dispensed.` 
+        ? `Physical servo executed ${cyclesExecuted} dispensing cycle(s) (0° -> 45° -> 0°). Tablet confirmed dispensed.` 
         : `Dispensing failed: ${errorMessage || 'Hardware or sensor timeout.'}`
     );
 
@@ -263,7 +263,7 @@ app.get('/api/device/config', async (req: Request, res: Response) => {
     supportedHardware: 'ESP32 NodeMCU / DevKit V1 + SG90 Servo',
     defaultPin: 18,
     defaultInitialAngle: 0,
-    defaultDispenseAngle: 25,
+    defaultDispenseAngle: 45,
     defaultHoldTimeMs: 300,
     apiEndpoints: {
       poll: '/api/device/poll?deviceId=ESP32_MEDIMITRA_01',
