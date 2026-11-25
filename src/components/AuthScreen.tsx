@@ -6,7 +6,6 @@ import {
   ArrowLeft, 
   Mail, 
   Lock, 
-  Edit3,
   CheckCircle2, 
   AlertCircle,
   Loader2,
@@ -28,12 +27,10 @@ import { authenticateWithEmail, authenticateWithGoogle } from '../services/fireb
 
 interface AuthScreenProps {
   onLogin: (profile: UserProfile) => void;
-  onContinueAsGuest: () => void;
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({
-  onLogin,
-  onContinueAsGuest
+  onLogin
 }) => {
   const { t, language } = useLanguage();
   const ui = getAppStrings(language);
@@ -80,7 +77,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
     setIsLoading(true);
     setErrorMessage(null);
-    setFirebaseStatus(ui.savingFirebaseStatus);
+    setFirebaseStatus(
+      authMode === 'signin'
+        ? 'Verifying registered email in Firebase database...'
+        : ui.savingFirebaseStatus
+    );
 
     try {
       const user = await authenticateWithEmail(
@@ -94,7 +95,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         authMode
       );
 
-      setFirebaseStatus(`✓ ${ui.savedFirebaseStatus}`);
+      setFirebaseStatus(
+        authMode === 'signin'
+          ? '✓ Email verified in database!'
+          : `✓ ${ui.savedFirebaseStatus}`
+      );
 
       try {
         localStorage.setItem('curahealth_user_email', user.email);
@@ -148,21 +153,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     }
   };
 
-  const getCategoryLabel = (cat: AgeCategory) => {
-    switch (cat) {
-      case 'child': return t.kidLabel;
-      case 'senior': return t.seniorLabel;
-      default: return t.adultLabel;
-    }
-  };
-
   // -------------------------------------------------------------
   // REUSABLE STEP 2 AUTH COMPONENT (Used in both Mobile and Tablet/Desktop)
   // -------------------------------------------------------------
   const renderStep2Auth = () => {
-    const trimmedName = name.trim() || ui.patientWord;
-    const initialLetter = trimmedName.charAt(0).toUpperCase();
-
     return (
       <motion.div
         key="step2"
@@ -182,37 +176,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           </p>
         </div>
 
-        {/* Clinical Patient Profile Summary Strip */}
-        <div className="px-3.5 py-2.5 rounded-xl bg-teal-50/70 border border-teal-200/80 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-              {initialLetter}
-            </div>
-            <div className="min-w-0">
-              <span className="text-[10px] text-teal-700 uppercase font-bold tracking-wider block leading-tight">
-                {ui.patientProfileLabel}
-              </span>
-              <div className="text-xs text-slate-800 font-medium truncate">
-                <span className="font-semibold capitalize text-slate-950">{trimmedName}</span>
-                <span className="text-slate-400 mx-1.5">•</span>
-                <span>{getCategoryLabel(selectedCategory)}</span>
-                <span className="text-slate-400 mx-1.5">•</span>
-                <span>{selectedSex === 'female' ? t.femaleLabel : t.maleLabel}</span>
-              </div>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setStep(1)}
-            disabled={isLoading}
-            className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-teal-300 hover:bg-teal-50/50 text-slate-700 hover:text-teal-800 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50 shrink-0 shadow-2xs"
-            title={t.editPatient}
-          >
-            <Edit3 className="w-3 h-3" />
-            <span>{ui.editWord}</span>
-          </button>
-        </div>
-
         {/* Sign In vs Sign Up Segmented Control */}
         <div className="grid grid-cols-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200/70 gap-1">
           <button
@@ -228,7 +191,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => { setAuthMode('signup'); setErrorMessage(null); }}
+            onClick={() => {
+              setAuthMode('signup');
+              setErrorMessage(null);
+              if (!name.trim()) {
+                setStep(1);
+              }
+            }}
             className={`py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               authMode === 'signup'
                 ? 'bg-white text-teal-900 shadow-xs ring-1 ring-slate-200/60'
@@ -361,25 +330,32 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           <span>{t.googleSignInBtn}</span>
         </button>
 
-        {/* Footer Back & Guest Mode Controls */}
+        {/* Footer Back Control */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
           <button
             type="button"
-            onClick={() => setStep(1)}
+            onClick={() => { setStep(1); setErrorMessage(null); }}
             disabled={isLoading}
             className="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>{t.editDetails}</span>
+            <span>{t.backHomeBtn}</span>
           </button>
 
           <button
             type="button"
-            onClick={onContinueAsGuest}
+            onClick={() => {
+              const nextMode = authMode === 'signin' ? 'signup' : 'signin';
+              setAuthMode(nextMode);
+              setErrorMessage(null);
+              if (nextMode === 'signup' && !name.trim()) {
+                setStep(1);
+              }
+            }}
             disabled={isLoading}
             className="text-teal-700 hover:text-teal-900 font-semibold hover:underline cursor-pointer"
           >
-            {t.guestModeBtn}
+            {authMode === 'signin' ? t.needAccount : t.alreadyHaveAccount}
           </button>
         </div>
       </motion.div>
@@ -393,9 +369,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       {/* ============================================================= */}
       <div className="block md:hidden w-full min-h-screen bg-white flex flex-col justify-between">
         {/* Full-bleed Header */}
-        <div className="bg-gradient-to-br from-teal-700 via-teal-800 to-teal-950 text-white px-6 pt-6 pb-10 text-center space-y-2 relative overflow-hidden w-full shrink-0">
-          <div className="absolute -top-10 -right-10 w-44 h-44 bg-teal-400/15 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute -bottom-8 -left-8 w-36 h-36 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="bg-gradient-to-br from-teal-700 via-teal-800 to-teal-950 text-white px-6 pt-6 pb-10 text-center space-y-2 relative z-30 w-full shrink-0">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute -top-10 -right-10 w-44 h-44 bg-teal-400/15 rounded-full blur-2xl" />
+            <div className="absolute -bottom-8 -left-8 w-36 h-36 bg-emerald-400/10 rounded-full blur-2xl" />
+          </div>
           
           {/* Top Video Guide Icon & Language Selector on Mobile */}
           <div className="absolute top-3 left-3 z-30">
@@ -546,11 +524,26 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   <button
                     type="submit"
                     disabled={!canProceedToAuth}
+                    onClick={() => setAuthMode('signup')}
                     className="w-full mt-2 py-3.5 rounded-xl bg-teal-700 hover:bg-teal-800 disabled:bg-teal-700/45 text-white font-semibold text-xs uppercase tracking-wider shadow-md shadow-teal-700/20 disabled:shadow-none flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
                     <span>{t.continueToCheckup}</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
+
+                  <div className="pt-1 text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode('signin');
+                        setErrorMessage(null);
+                        setStep(2);
+                      }}
+                      className="text-xs font-semibold text-teal-700 hover:text-teal-900 hover:underline cursor-pointer"
+                    >
+                      {t.alreadyHaveAccount}
+                    </button>
+                  </div>
                 </motion.form>
               ) : (
                 renderStep2Auth()
@@ -770,11 +763,26 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   <button
                     type="submit"
                     disabled={!canProceedToAuth}
+                    onClick={() => setAuthMode('signup')}
                     className="w-full mt-2 py-3.5 rounded-xl bg-teal-700 hover:bg-teal-800 disabled:bg-teal-700/45 text-white font-semibold text-xs uppercase tracking-wider shadow-md shadow-teal-700/20 disabled:shadow-none flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
                     <span>{t.continueToCheckup}</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
+
+                  <div className="pt-1 text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode('signin');
+                        setErrorMessage(null);
+                        setStep(2);
+                      }}
+                      className="text-xs font-semibold text-teal-700 hover:text-teal-900 hover:underline cursor-pointer"
+                    >
+                      {t.alreadyHaveAccount}
+                    </button>
+                  </div>
                 </motion.form>
               ) : (
                 renderStep2Auth()

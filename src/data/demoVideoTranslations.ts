@@ -29,7 +29,7 @@ export interface DemoVideoLocaleBundle {
 
 export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle> = {
   en: {
-    buttonLabel: 'Watch for 2 Min',
+    buttonLabel: 'GUIDE',
     buttonSublabel: 'Patient guide + ESP32 guide',
     modalTitle: 'MediMitra Complete Guide: Patient Flow, System & ESP32 Dispenser',
     modalBadge: '2-Minute Animated Walkthrough',
@@ -101,7 +101,7 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
   },
 
   hi: {
-    buttonLabel: '2 मिनट के लिए देखें',
+    buttonLabel: 'GUIDE',
     buttonSublabel: 'मरीज गाइड + ESP32 सिस्टम',
     modalTitle: 'मेडिमित्रा पूरा गाइड: मरीज उपयोग, सिस्टम और ESP32 डिस्पेंसर',
     modalBadge: '2-मिनट एनिमेटेड वीडियो गाइड',
@@ -173,7 +173,7 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
   },
 
   hinglish: {
-    buttonLabel: 'Watch for 2 Min',
+    buttonLabel: 'GUIDE',
     buttonSublabel: 'Patient guide + ESP32 working',
     modalTitle: 'MediMitra Complete Video: Patient Guide, System & ESP32 Module',
     modalBadge: '2-Minute Animated Walkthrough',
@@ -245,7 +245,7 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
   },
 
   mr: {
-    buttonLabel: '2 मिनिटांसाठी पहा',
+    buttonLabel: 'GUIDE',
     buttonSublabel: 'रुग्ण माहिती + ESP32 कार्यप्रणाली',
     modalTitle: 'मेडिमित्रा संपूर्ण माहिती: रुग्ण वापर, सिस्टीम आणि ESP32 डिस्पेंसर',
     modalBadge: '2-मिनिटांचे ॲनिमेटेड मार्गदर्शन',
@@ -317,7 +317,7 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
   },
 
   bn: {
-    buttonLabel: '২ মিনিটের জন্য দেখুন',
+    buttonLabel: 'GUIDE',
     buttonSublabel: 'রোগীর গাইড + ESP32 সিস্টেম',
     modalTitle: 'মেডিমিত্র সম্পূর্ণ গাইড: রোগীর ব্যবহার, সিস্টেম ও ESP32 মডিউল',
     modalBadge: '২-মিনিটের অ্যানিমেটেড ভিডিও গাইড',
@@ -389,7 +389,7 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
   },
 
   ta: {
-    buttonLabel: '2 நிமிடம் பார்க்க',
+    buttonLabel: 'GUIDE',
     buttonSublabel: 'நோயாளி வழிகாட்டி + ESP32',
     modalTitle: 'மெடிமித்ரா முழு வழிகாட்டி: நோயாளி பயன்பாடு, சிஸ்டம் & ESP32',
     modalBadge: '2-நிமிட அனிமேஷன் விளக்க வீடியோ',
@@ -461,7 +461,7 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
   },
 
   te: {
-    buttonLabel: '2 నిమిషాలు చూడండి',
+    buttonLabel: 'GUIDE',
     buttonSublabel: 'రోగి గైడ్ + ESP32 విధానం',
     modalTitle: 'మెడిమిత్ర పూర్తి వీడియో: రోగి వాడుక, సిస్టమ్ & ESP32 మాడ్యూల్',
     modalBadge: '2-నిమిషాల యానిమేటెడ్ వివరణ',
@@ -533,7 +533,7 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
   },
 
   gu: {
-    buttonLabel: '2 મિનિટ માટે જુઓ',
+    buttonLabel: 'GUIDE',
     buttonSublabel: 'દર્દી માર્ગદર્શિકા + ESP32',
     modalTitle: 'મેડિમિત્રા સંપૂર્ણ માર્ગદર્શન: દર્દી ઉપયોગ, સિસ્ટમ અને ESP32 મોડ્યુલ',
     modalBadge: '2-મિનિટનો એનિમેટેડ વિડિઓ',

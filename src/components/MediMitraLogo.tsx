@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import hdLogoUrl from '../assets/images/medimitra_hd_logo_1795620816102.jpg';
 
 interface MediMitraLogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -30,16 +31,15 @@ export const MediMitraLogo: React.FC<MediMitraLogoProps> = ({
     lg: 'text-2xl'
   }[size];
 
-  const logoUrl = `${import.meta.env.BASE_URL || './'}assets/aistudio/image_8f9dd967.png`.replace(/\/\//g, '/');
-
   return (
     <div className={`flex items-center gap-2 sm:gap-2.5 select-none ${className}`}>
-      {/* Official User Healthcare Emblem */}
+      {/* High-Resolution MediMitra Emblem */}
       <div className={`relative ${iconDimensions} rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center shrink-0 shadow-xs ring-1 ring-teal-200/50 bg-white`}>
-        <img 
-          src={logoUrl} 
+        <img
+          src={hdLogoUrl}
           alt={t.brandName}
-          className="w-full h-full object-contain p-0.5 hover:scale-105 transition-transform" 
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover hover:scale-105 transition-transform"
         />
       </div>
 

@@ -37,10 +37,22 @@ const INITIAL_PROFILE: UserProfile = {
 
 function MainApp() {
   const { t } = useLanguage();
-  // Authentication State
+  // Authentication State (requires verified email session — guest mode disabled)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
-      return localStorage.getItem('curahealth_auth') === 'true';
+      const authFlag = localStorage.getItem('curahealth_auth') === 'true';
+      if (!authFlag) return false;
+      const storedEmail = (localStorage.getItem('curahealth_user_email') || '').trim().toLowerCase();
+      if (storedEmail && storedEmail.includes('@') && storedEmail !== 'patient@medimitra.local') {
+        return true;
+      }
+      const saved = localStorage.getItem('curahealth_patient_profile');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const pEmail = String(parsed?.email || '').trim().toLowerCase();
+        return Boolean(pEmail && pEmail.includes('@') && pEmail !== 'patient@medimitra.local');
+      }
+      return false;
     } catch {
       return false;
     }
@@ -146,15 +158,11 @@ function MainApp() {
     }
   };
 
-  // If user is not signed in, show simple Sign In / Sign Up screen
+  // If user is not signed in, show Sign In / Sign Up screen
   if (!isAuthenticated) {
     return (
       <AuthScreen
         onLogin={handleLogin}
-        onContinueAsGuest={() => {
-          setIsAuthenticated(true);
-          localStorage.setItem('curahealth_auth', 'true');
-        }}
       />
     );
   }

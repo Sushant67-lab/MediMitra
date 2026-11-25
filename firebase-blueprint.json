@@ -12,8 +12,13 @@
         "ageCategory": { "type": "string", "enum": ["kid", "child", "adult", "senior"] },
         "sex": { "type": "string", "enum": ["female", "male", "other"] },
         "isPregnantOrNursing": { "type": "boolean" },
+        "accountCreated": { "type": "boolean" },
+        "authProvider": { "type": "string", "enum": ["email", "google"] },
+        "passwordHash": { "type": "string", "maxLength": 128 },
+        "passwordSalt": { "type": "string", "maxLength": 64 },
         "createdAt": { "type": "string" },
-        "updatedAt": { "type": "string" }
+        "updatedAt": { "type": "string" },
+        "lastLoginAt": { "type": "string" }
       },
       "required": ["id", "email", "name"]
     },
