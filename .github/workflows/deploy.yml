@@ -2,7 +2,7 @@ name: Deploy MediMitra to GitHub Pages
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: ["main", "main1", "master"]
   workflow_dispatch:
 
 permissions:
