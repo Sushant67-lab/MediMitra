@@ -15,6 +15,7 @@ import {
 } from '../services/dispensingService';
 import { MediMitraLogo } from './MediMitraLogo';
 import { LanguageSelector } from './LanguageSelector';
+import { ThemeToggle } from './ThemeToggle';
 import { useLanguage } from '../context/LanguageContext';
 import { getAppStrings } from '../data/appTranslations';
 
@@ -69,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
     : `${ui.esp32OfflineStatus} — ${ui.esp32DispenserTooltip}`;
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-teal-100/80 shadow-xs">
+    <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-teal-100/80 dark:border-slate-800 shadow-xs transition-colors">
       <div className="max-w-5xl mx-auto px-2 sm:px-6">
         <div className="flex items-center justify-between gap-1 sm:gap-1.5 h-16">
           {/* Brand Logo & Title */}
@@ -85,9 +86,9 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Find Doctors Button */}
             <button
               onClick={onOpenDoctors}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-700 hover:text-teal-700 hover:bg-teal-50 border border-slate-200 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-teal-700 dark:hover:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/60 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
-              <MapPin className="w-3.5 h-3.5 text-teal-600" />
+              <MapPin className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
               <span>{t.nearestDoctors}</span>
             </button>
 
@@ -95,10 +96,10 @@ export const Header: React.FC<HeaderProps> = ({
             {onOpenHardwareGuide && (
               <button
                 onClick={onOpenHardwareGuide}
-                className="flex items-center gap-1 px-1.5 sm:px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                className="flex items-center gap-1 px-1.5 sm:px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold text-teal-800 dark:text-teal-200 bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100 dark:hover:bg-teal-900/70 border border-teal-200 dark:border-teal-800/80 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                 title={ui.esp32DispenserTooltip}
               >
-                <Cpu className="w-3.5 h-3.5 text-teal-700 shrink-0" />
+                <Cpu className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400 shrink-0" />
                 <span className="md:hidden">ESP32</span>
                 <span className="hidden md:inline">{ui.esp32DispenserBtn}</span>
               </button>
@@ -107,16 +108,19 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Active User Profile Pill */}
             <button
               onClick={onOpenAuth}
-              className="hidden sm:flex items-center gap-2 pl-2 pr-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-slate-800 text-xs font-medium transition-colors cursor-pointer shrink-0"
+              className="hidden sm:flex items-center gap-2 pl-2 pr-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs font-medium transition-colors cursor-pointer shrink-0"
               title={t.editPatient}
             >
               <div className="w-6 h-6 rounded-full bg-teal-600 text-white flex items-center justify-center font-medium text-[11px]">
                 {avatarChar}
               </div>
-              <span className="font-medium text-slate-800 max-w-[70px] sm:max-w-[100px] truncate hidden sm:inline">
+              <span className="font-medium text-slate-800 dark:text-slate-100 max-w-[70px] sm:max-w-[100px] truncate hidden sm:inline">
                 {displayName}
               </span>
             </button>
+
+            {/* Theme Toggle (Light / Dark) */}
+            <ThemeToggle variant="surface" />
 
             {/* Top Right Language Selector */}
             <LanguageSelector variant="light" />
@@ -132,14 +136,14 @@ export const Header: React.FC<HeaderProps> = ({
                 onOpenHardwareGuide ? 'cursor-pointer' : 'cursor-default'
               } ${
                 isEspOnline
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                  : 'bg-rose-50/80 text-rose-700 border-rose-200 hover:bg-rose-100/80'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/80 hover:bg-emerald-100 dark:hover:bg-emerald-900/70'
+                  : 'bg-rose-50/80 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/80 hover:bg-rose-100/80 dark:hover:bg-rose-900/60'
               }`}
             >
               {isEspOnline ? (
-                <Wifi className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <Wifi className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
               ) : (
-                <WifiOff className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                <WifiOff className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
               )}
               <span className="hidden sm:inline">
                 {isEspOnline ? ui.esp32ConnectedShort : ui.esp32OfflineShort}
@@ -149,7 +153,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Sign Out / Switch */}
             <button
               onClick={onSignOut}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+              className="p-1.5 rounded-lg text-slate-400 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors cursor-pointer shrink-0"
               title={t.signOut}
             >
               <LogOut className="w-4 h-4" />

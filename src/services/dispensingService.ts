@@ -10,7 +10,8 @@ import {
   runTransaction
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { auth, db, handleFirestoreError, OperationType } from './firebase';
+import { auth, db, handleFirestoreError, OperationType, sanitizeUserId } from './firebase';
+import type { PaymentTransaction } from './paymentService';
 import { 
   DispensingCommand, 
   DispenseStatus, 
@@ -383,8 +384,28 @@ export function subscribeToDeviceStatus(
     }
   };
 
+  const fetchServerDeviceStatus = async () => {
+    if (!isActive) return;
+    try {
+      const res = await fetch(`/api/device/status/${encodeURIComponent(deviceId)}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) return;
+      const json = await res.json();
+      if (json?.device) {
+        emitDevice(json.device as DispenserDevice);
+      }
+    } catch {
+      // Non-fatal fallback
+    }
+  };
+
   fetchViaRest();
-  const restTimer = setInterval(fetchViaRest, 10000);
+  fetchServerDeviceStatus();
+  const restTimer = setInterval(() => {
+    fetchViaRest();
+    fetchServerDeviceStatus();
+  }, 8000);
 
   return () => {
     isActive = false;
@@ -447,8 +468,8 @@ export async function recordDeviceHeartbeat(
 
 /**
  * Create an authorized dispensing command in Firestore
- * - Enforces human clinical confirmation
- * - Checks and reserves stock in inventory
+ * - Strictly requires a VERIFIED, unclaimed paymentTransactionId matching medicine, quantity & amount
+ * - Atomically marks payment_transactions.dispenseClaimed = true, reserves stock, and queues command
  * - Strict servo specs: 0° -> 45° -> 0° with 300ms hold
  */
 export async function createDispensingCommand(params: {
@@ -456,20 +477,38 @@ export async function createDispensingCommand(params: {
   quantity: number;
   userId: string;
   userEmail: string;
+  paymentTransactionId: string;
+  paymentAmount: number;
   customServoConfig?: Partial<ServoConfig>;
   deviceId?: string;
 }): Promise<DispensingCommand> {
-  const { medicineName, quantity, userId, userEmail, customServoConfig } = params;
+  const {
+    medicineName,
+    quantity: rawQuantity,
+    userId,
+    userEmail,
+    paymentTransactionId,
+    paymentAmount,
+    customServoConfig
+  } = params;
+  const quantity = Math.max(1, Math.min(10, Math.floor(Number(rawQuantity) || 1)));
   const deviceId = params.deviceId || DEFAULT_DEVICE_ID;
   const medId = slugifyMedicineName(medicineName);
+  const cleanEmail = (userEmail || auth.currentUser?.email || 'patient@medimitra.local').trim().toLowerCase().slice(0, 150);
+  const safeUserId = (sanitizeUserId(cleanEmail, userId) || 'patient').slice(0, 128);
 
-  // 1. Check stock
+  if (!paymentTransactionId || !paymentTransactionId.trim()) {
+    throw new Error('Payment verification required before medicine dispensing.');
+  }
+
+  // 1. Check inventory availability first (creates default stock item if absent)
   const stock = await getMedicineInventory(medicineName);
   if (stock.availableQuantity < quantity) {
     throw new Error(`Insufficient stock: Only ${stock.availableQuantity} ${stock.unit} available in slot ${stock.slotNumber}.`);
   }
 
   const commandId = `CMD-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const now = new Date().toISOString();
 
   const servoConfig: ServoConfig = {
     ...DEFAULT_SERVO_CONFIG,
@@ -479,47 +518,78 @@ export async function createDispensingCommand(params: {
   const command: DispensingCommand = {
     commandId,
     medicineId: medId,
-    medicineName,
+    medicineName: medicineName.slice(0, 120),
     requestedQuantity: quantity,
     cycles: quantity, // 1 cycle per unit for SG90 servo
     deviceId,
-    userId,
-    userEmail: userEmail || 'patient@medimitra.local',
+    userId: safeUserId,
+    userEmail: cleanEmail,
     status: 'PENDING',
-    executionResult: 'Command queued. Waiting for ESP32 device handshake.',
+    executionResult: 'Verified payment locked. Command queued for ESP32 device handshake.',
     servoConfig,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    paymentTransactionId: paymentTransactionId.trim(),
+    paymentAmount,
+    paymentStatus: 'VERIFIED',
+    createdAt: now,
+    updatedAt: now
   };
 
-  // 2. Persist command & reserve stock atomically
+  // 2. Atomically claim verified payment, reserve stock, and queue dispensing command
   const commandDocRef = doc(db, 'dispensing_commands', commandId);
+  const paymentDocRef = doc(db, 'payment_transactions', paymentTransactionId.trim());
   const inventoryDocRef = doc(db, 'inventory', medId);
 
   try {
     await runTransaction(db, async (txn) => {
+      const txSnap = await txn.get(paymentDocRef);
+      if (!txSnap.exists()) {
+        throw new Error('Payment order not found. Please complete checkout verification first.');
+      }
+      const txData = txSnap.data() as PaymentTransaction;
+      if (txData.status !== 'VERIFIED') {
+        throw new Error(`Payment is not verified yet (current status: ${txData.status}).`);
+      }
+      if (txData.dispenseClaimed) {
+        throw new Error('This payment has already been used to dispense medicine.');
+      }
+      if (
+        txData.expectedAmountInr !== paymentAmount ||
+        txData.medicineId !== medId ||
+        txData.quantity !== quantity
+      ) {
+        throw new Error('Payment order mismatch detected. Dispensing blocked for security.');
+      }
+
       const invSnap = await txn.get(inventoryDocRef);
       if (invSnap.exists()) {
         const curData = invSnap.data() as MedicineInventory;
+        if (curData.availableQuantity < quantity) {
+          throw new Error(`Insufficient stock: Only ${curData.availableQuantity} ${curData.unit} available in slot ${curData.slotNumber}.`);
+        }
         txn.update(inventoryDocRef, {
           availableQuantity: Math.max(0, curData.availableQuantity - quantity),
           reservedQuantity: (curData.reservedQuantity || 0) + quantity,
-          updatedAt: new Date().toISOString()
+          updatedAt: now
         });
       }
+
+      txn.update(paymentDocRef, {
+        dispenseClaimed: true,
+        claimedCommandId: commandId,
+        updatedAt: now
+      });
+
       txn.set(commandDocRef, command);
     });
-  } catch {
-    try {
-      await setDoc(commandDocRef, command);
-      await updateDoc(inventoryDocRef, {
-        availableQuantity: Math.max(0, stock.availableQuantity - quantity),
-        reservedQuantity: (stock.reservedQuantity || 0) + quantity,
-        updatedAt: new Date().toISOString()
-      });
-    } catch {
-      // Fallback safely when offline or in guest mode
+  } catch (error) {
+    if (error instanceof Error) {
+      const msg = error.message.toLowerCase();
+      if (msg.includes('permission') || msg.includes('insufficient')) {
+        handleFirestoreError(error, OperationType.CREATE, `dispensing_commands/${commandId}`);
+      }
+      throw error;
     }
+    throw new Error('Could not authorize physical dispense command.');
   }
 
   return command;
@@ -533,6 +603,7 @@ export async function triggerServoTestCommand(
   deviceId: string = DEFAULT_DEVICE_ID
 ): Promise<DispensingCommand> {
   const commandId = `TEST-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const now = new Date().toISOString();
   const command: DispensingCommand = {
     commandId,
     medicineId: 'hardware_servo_test',
@@ -545,8 +616,11 @@ export async function triggerServoTestCommand(
     status: 'PENDING',
     executionResult: 'Test pulse queued. Waiting for ESP32 GPIO 18 pickup (every 2.5s).',
     servoConfig: { ...DEFAULT_SERVO_CONFIG },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    paymentTransactionId: 'HARDWARE_TEST',
+    paymentAmount: 0,
+    paymentStatus: 'HARDWARE_TEST',
+    createdAt: now,
+    updatedAt: now
   };
 
   const docPath = `dispensing_commands/${commandId}`;
@@ -560,13 +634,38 @@ export async function triggerServoTestCommand(
 }
 
 /**
- * Subscribe to real-time status updates of a dispensing command
+ * Subscribe to real-time status updates of a dispensing command (Server queue or Firestore)
  */
 export function subscribeToDispensingCommand(
   commandId: string,
   onUpdate: (command: DispensingCommand) => void,
   onError?: (err: Error) => void
 ): Unsubscribe {
+  if (commandId.startsWith('SRV-CMD-')) {
+    let active = true;
+    const pollServer = async () => {
+      if (!active) return;
+      try {
+        const res = await fetch(`/api/dispense/status/${encodeURIComponent(commandId)}`, {
+          cache: 'no-store'
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (active && json?.found && json?.command) {
+          onUpdate(json.command as DispensingCommand);
+        }
+      } catch (err: any) {
+        if (onError && err instanceof Error) onError(err);
+      }
+    };
+    void pollServer();
+    const timer = setInterval(pollServer, 1500);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }
+
   const docRef = doc(db, 'dispensing_commands', commandId);
   return onSnapshot(
     docRef, 
@@ -585,6 +684,17 @@ export function subscribeToDispensingCommand(
  * Cancel a pending dispensing command and restore inventory
  */
 export async function cancelDispensingCommand(commandId: string): Promise<void> {
+  if (commandId.startsWith('SRV-CMD-')) {
+    const res = await fetch(`/api/dispense/cancel/${encodeURIComponent(commandId)}`, {
+      method: 'POST'
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.error || 'Could not cancel command.');
+    }
+    return;
+  }
+
   const docRef = doc(db, 'dispensing_commands', commandId);
   try {
     const snap = await getDoc(docRef);
@@ -612,7 +722,7 @@ export async function cancelDispensingCommand(commandId: string): Promise<void> 
       });
     }
   } catch {
-    // Fallback cleanly in guest/offline mode
+    // Fallback cleanly in offline mode
   }
 }
 
@@ -631,16 +741,19 @@ export async function simulatePhysicalServoDispensing(
   fallbackCommand?: DispensingCommand,
   onCommandUpdate?: (updated: DispensingCommand) => void
 ): Promise<void> {
+  const isServerManaged = commandId.startsWith('SRV-CMD-');
   const docRef = doc(db, 'dispensing_commands', commandId);
   let cmd = fallbackCommand;
 
-  try {
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      cmd = snap.data() as DispensingCommand;
+  if (!isServerManaged) {
+    try {
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        cmd = snap.data() as DispensingCommand;
+      }
+    } catch {
+      // Use provided fallbackCommand
     }
-  } catch {
-    // Use provided fallbackCommand when offline/guest
   }
 
   if (!cmd) return;
@@ -653,6 +766,21 @@ export async function simulatePhysicalServoDispensing(
   const applyUpdate = async (patch: Partial<DispensingCommand>) => {
     cmd = { ...cmd!, ...patch, updatedAt: new Date().toISOString() };
     if (onCommandUpdate) onCommandUpdate(cmd);
+    if (isServerManaged) {
+      try {
+        await fetch(`/api/dispense/simulate/${encodeURIComponent(commandId)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: patch.status,
+            executionResult: patch.executionResult
+          })
+        });
+      } catch {
+        // Non-fatal fallback
+      }
+      return;
+    }
     try {
       await updateDoc(docRef, { ...patch, updatedAt: cmd.updatedAt });
     } catch {
@@ -690,20 +818,21 @@ export async function simulatePhysicalServoDispensing(
     executionResult: `SUCCESS: Physical servo executed ${cycles} cycle(s) (0° -> ${angle}° -> 0°). Product dispensed into tray.`
   });
 
-  // Finalize inventory
-  try {
-    const invRef = doc(db, 'inventory', cmd.medicineId);
-    const invSnap = await getDoc(invRef);
-    if (invSnap.exists()) {
-      const cur = invSnap.data() as MedicineInventory;
-      await updateDoc(invRef, {
-        reservedQuantity: Math.max(0, (cur.reservedQuantity || 0) - cmd.requestedQuantity),
-        dispensedQuantity: (cur.dispensedQuantity || 0) + cmd.requestedQuantity,
-        updatedAt: completedAt
-      });
+  if (!isServerManaged) {
+    try {
+      const invRef = doc(db, 'inventory', cmd.medicineId);
+      const invSnap = await getDoc(invRef);
+      if (invSnap.exists()) {
+        const cur = invSnap.data() as MedicineInventory;
+        await updateDoc(invRef, {
+          reservedQuantity: Math.max(0, (cur.reservedQuantity || 0) - cmd.requestedQuantity),
+          dispensedQuantity: (cur.dispensedQuantity || 0) + cmd.requestedQuantity,
+          updatedAt: completedAt
+        });
+      }
+    } catch {
+      // Non-fatal inventory sync
     }
-  } catch {
-    // Non-fatal inventory sync
   }
 
   if (onProgress) onProgress('Dispensing verified and complete! Servo returned to 0°.', 0);

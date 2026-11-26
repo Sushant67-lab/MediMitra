@@ -71,9 +71,9 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   }, [isOpen, align]);
 
   const buttonStyles = {
-    light: 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 shadow-2xs',
+    light: 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-100 border border-slate-200/90 dark:border-slate-700 shadow-2xs',
     dark: 'bg-teal-900/60 hover:bg-teal-900/80 text-teal-100 border border-teal-500/30 shadow-xs backdrop-blur-xs',
-    transparent: 'hover:bg-slate-100 text-slate-700 border border-transparent'
+    transparent: 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-transparent'
   }[variant];
 
   const portalTarget = typeof document !== 'undefined' ? document.body : null;
@@ -89,35 +89,35 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
         aria-haspopup="true"
         title={t.languageSelect}
       >
-        <Globe className={`w-3.5 h-3.5 shrink-0 ${variant === 'dark' ? 'text-teal-300' : 'text-teal-600'}`} />
+        <Globe className={`w-3.5 h-3.5 shrink-0 ${variant === 'dark' ? 'text-teal-300' : 'text-teal-600 dark:text-teal-400'}`} />
         <span className="sm:hidden text-[11px] font-semibold uppercase">{currentOption.code}</span>
         <span className="hidden sm:inline text-xs font-semibold">{currentOption.nativeName}</span>
-        <ChevronDown className={`w-3 h-3 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${variant === 'dark' ? 'text-teal-300' : 'text-slate-400'}`} />
+        <ChevronDown className={`w-3 h-3 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${variant === 'dark' ? 'text-teal-300' : 'text-slate-400 dark:text-slate-400'}`} />
       </button>
 
       {isOpen && portalTarget && createPortal(
         <>
           {/* Mobile Full-Visibility Language Sheet (< 640px) - Never clipped by parent overflow */}
           <div
-            className="sm:hidden fixed inset-0 z-[200] bg-slate-900/50 backdrop-blur-xs flex items-end justify-center p-3"
+            className="sm:hidden fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-xs flex items-end justify-center p-3"
             onClick={() => setIsOpen(false)}
           >
             <div
-              className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden"
+              className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
               role="menu"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/70">
                 <div className="flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-teal-600" />
-                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  <Globe className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider">
                     {ui.selectLanguageHeader} ({languages.length})
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
                   aria-label="Close language selector"
                 >
                   <X className="w-4 h-4" />
@@ -137,8 +137,8 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                       }}
                       className={`w-full text-left px-3 py-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs transition-colors cursor-pointer ${
                         isSelected
-                          ? 'bg-teal-50 border-teal-500 text-teal-900 font-semibold shadow-2xs'
-                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 font-medium'
+                          ? 'bg-teal-50 dark:bg-teal-950/70 border-teal-500 text-teal-900 dark:text-teal-200 font-semibold shadow-2xs'
+                          : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium'
                       }`}
                       role="menuitem"
                     >
@@ -147,12 +147,12 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                         <div className="flex flex-col min-w-0">
                           <span className="leading-tight truncate">{item.nativeName}</span>
                           {item.nativeName !== item.label && (
-                            <span className="text-[10px] text-slate-400 font-normal truncate">{item.label}</span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-400 font-normal truncate">{item.label}</span>
                           )}
                         </div>
                       </div>
                       {isSelected && (
-                        <Check className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                       )}
                     </button>
                   );
@@ -169,10 +169,10 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
               ...(coords.left !== undefined ? { left: `${coords.left}px` } : {}),
               ...(coords.right !== undefined ? { right: `${coords.right}px` } : {})
             }}
-            className="hidden sm:block fixed w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-[200]"
+            className="hidden sm:block fixed w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 py-1.5 z-[200]"
             role="menu"
           >
-            <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+            <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
               <span>{ui.selectLanguageHeader}</span>
             </div>
 
@@ -189,8 +189,8 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                     }}
                     className={`w-full text-left px-3.5 py-2 flex items-center justify-between text-xs transition-colors cursor-pointer ${
                       isSelected
-                        ? 'bg-teal-50 text-teal-900 font-semibold'
-                        : 'text-slate-700 hover:bg-slate-50 font-medium'
+                        ? 'bg-teal-50 dark:bg-teal-950/70 text-teal-900 dark:text-teal-200 font-semibold'
+                        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium'
                     }`}
                     role="menuitem"
                   >
@@ -204,7 +204,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                       </div>
                     </div>
                     {isSelected && (
-                      <Check className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                      <Check className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                     )}
                   </button>
                 );

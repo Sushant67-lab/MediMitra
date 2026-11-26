@@ -24,7 +24,6 @@ interface DispenseModalProps {
   medicine: OtcMedicine;
   patientProfile: UserProfile;
   onProceedToPayment: (quantity: number, servoConfig: ServoConfig) => void;
-  onOpenHardwareGuide: () => void;
 }
 
 export const DispenseModal: React.FC<DispenseModalProps> = ({
@@ -32,8 +31,7 @@ export const DispenseModal: React.FC<DispenseModalProps> = ({
   onClose,
   medicine,
   patientProfile,
-  onProceedToPayment,
-  onOpenHardwareGuide
+  onProceedToPayment
 }) => {
   const { language } = useLanguage();
   const ui = getAppStrings(language);
@@ -296,16 +294,7 @@ export const DispenseModal: React.FC<DispenseModalProps> = ({
         </div>
 
         {/* Modal Actions */}
-        <div className="p-5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={onOpenHardwareGuide}
-            className="text-xs text-teal-700 hover:text-teal-900 font-medium flex items-center gap-1 cursor-pointer"
-          >
-            <Cpu className="w-3.5 h-3.5" />
-            <span>{ui.wiringFirmwareBtn}</span>
-          </button>
-
+        <div className="p-5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-end gap-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               type="button"

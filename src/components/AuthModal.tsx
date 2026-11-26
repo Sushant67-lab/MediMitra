@@ -54,8 +54,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden transition-colors">
         {/* Header */}
         <div className="px-6 py-4 bg-gradient-to-r from-teal-700 to-teal-800 text-white flex items-center justify-between">
           <div>
@@ -73,7 +73,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <div className="p-6">
           <form onSubmit={handleSave} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                 {t.patientNameLabel} <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
@@ -84,13 +84,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={t.patientNamePlaceholder}
-                  className="w-full pl-9 pr-3 py-2.5 text-xs font-semibold rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 bg-slate-50 text-slate-900"
+                  className="w-full pl-9 pr-3 py-2.5 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-500 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                 {t.whoIsThisFor}
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -105,8 +105,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     onClick={() => setAgeCategory(c.id as AgeCategory)}
                     className={`py-2.5 text-center text-xs font-bold rounded-xl border-2 transition-all cursor-pointer ${
                       ageCategory === c.id
-                        ? 'bg-teal-50 border-teal-600 text-teal-950 shadow-xs'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-teal-50 dark:bg-teal-950/70 border-teal-600 dark:border-teal-500 text-teal-950 dark:text-white shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                     }`}
                   >
                     <span className="block text-base mb-0.5">{c.icon}</span>
@@ -117,7 +117,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                 {t.genderLabel}
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -126,8 +126,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   onClick={() => setSex('female')}
                   className={`py-2.5 text-xs font-bold rounded-xl border-2 transition-all cursor-pointer ${
                     sex === 'female'
-                      ? 'bg-teal-50 border-teal-600 text-teal-950 shadow-xs'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      ? 'bg-teal-50 dark:bg-teal-950/70 border-teal-600 dark:border-teal-500 text-teal-950 dark:text-white shadow-xs'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                   }`}
                 >
                   {t.femaleLabel}
@@ -137,8 +137,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   onClick={() => setSex('male')}
                   className={`py-2.5 text-xs font-bold rounded-xl border-2 transition-all cursor-pointer ${
                     sex === 'male'
-                      ? 'bg-teal-50 border-teal-600 text-teal-950 shadow-xs'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      ? 'bg-teal-50 dark:bg-teal-950/70 border-teal-600 dark:border-teal-500 text-teal-950 dark:text-white shadow-xs'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                   }`}
                 >
                   {t.maleLabel}
@@ -150,7 +150,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-2.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 {ui.cancelBtn}
               </button>

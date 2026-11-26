@@ -185,11 +185,7 @@ export function getQuestionIdForStep(step: number, ctx: QuestionContext): Questi
 
   switch (step) {
     case 1:
-      if (isPediatric && isMale) return 'q1_boy_stage';
-      if (isPediatric && isFemale) return 'q1_girl_stage';
-      if (isMale) return 'q1_male_stage';
-      if (isFemale) return 'q1_female_stage';
-      return 'q1_demographics';
+      return 'q1_symptom_trigger';
     case 2:
       if (isPediatric && isMale) return 'q2_boy_pediatric_weight';
       if (isPediatric && isFemale) return 'q2_girl_pediatric_weight';
@@ -430,6 +426,9 @@ export function evaluateTriage(
         otcs.push(toOtcMedicine(P.crocin500));
       } else {
         otcs.push(toOtcMedicine(P.brufen400));
+      }
+      if (idxMap['q1_symptom_trigger'] === 2) {
+        otcs.push(toOtcMedicine(P.electralOrs));
       }
       homeRemedies.push(...bundle.remedies.headache);
     }

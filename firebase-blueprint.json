@@ -46,7 +46,7 @@
       "properties": {
         "commandId": { "type": "string", "maxLength": 128 },
         "medicineId": { "type": "string", "maxLength": 64 },
-        "medicineName": { "type": "string", "maxLength": 100 },
+        "medicineName": { "type": "string", "maxLength": 120 },
         "requestedQuantity": { "type": "number" },
         "cycles": { "type": "number" },
         "deviceId": { "type": "string", "maxLength": 64 },
@@ -57,6 +57,9 @@
           "enum": ["PENDING", "PROCESSING", "COMPLETED", "FAILED", "CANCELLED", "UNKNOWN"] 
         },
         "executionResult": { "type": "string", "maxLength": 500 },
+        "paymentTransactionId": { "type": "string", "maxLength": 128 },
+        "paymentAmount": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["VERIFIED", "HARDWARE_TEST"] },
         "servoConfig": {
           "type": "object",
           "properties": {
@@ -72,7 +75,60 @@
         "completedAt": { "type": "string" },
         "updatedAt": { "type": "string" }
       },
-      "required": ["commandId", "medicineId", "medicineName", "requestedQuantity", "deviceId", "userId", "status", "createdAt"]
+      "required": ["commandId", "medicineId", "medicineName", "requestedQuantity", "deviceId", "userId", "status", "paymentTransactionId", "paymentAmount", "paymentStatus", "createdAt"]
+    },
+    "PaymentTransaction": {
+      "title": "PaymentTransaction",
+      "description": "Anti-fraud verified payment transaction authorizing a single medicine dispense",
+      "type": "object",
+      "properties": {
+        "transactionId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "medicineId": { "type": "string", "maxLength": 64 },
+        "medicineName": { "type": "string", "maxLength": 120 },
+        "quantity": { "type": "number" },
+        "unitPriceInr": { "type": "number" },
+        "expectedAmountInr": { "type": "number" },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 150 },
+        "paymentMethod": { "type": "string", "enum": ["UPI_QR", "RAZORPAY"] },
+        "status": { "type": "string", "enum": ["CREATED", "PENDING_MERCHANT_VERIFICATION", "VERIFIED", "REJECTED", "EXPIRED"] },
+        "utrNumber": { "type": "string", "minLength": 12, "maxLength": 12, "pattern": "^[0-9]{12}$" },
+        "razorpayOrderId": { "type": "string", "maxLength": 80 },
+        "razorpayPaymentId": { "type": "string", "maxLength": 80 },
+        "verifiedByEmail": { "type": "string", "maxLength": 150 },
+        "verificationNote": { "type": "string", "maxLength": 240 },
+        "dispenseClaimed": { "type": "boolean" },
+        "claimedCommandId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "expiresAt": { "type": "string", "maxLength": 64 },
+        "verifiedAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["transactionId", "medicineId", "medicineName", "quantity", "unitPriceInr", "expectedAmountInr", "userId", "userEmail", "paymentMethod", "status", "dispenseClaimed", "createdAt", "expiresAt", "updatedAt"]
+    },
+    "UtrClaim": {
+      "title": "UtrClaim",
+      "description": "Immutable unique 12-digit UPI UTR lock preventing duplicate or replayed UTR fraud",
+      "type": "object",
+      "properties": {
+        "utrNumber": { "type": "string", "minLength": 12, "maxLength": 12, "pattern": "^[0-9]{12}$" },
+        "transactionId": { "type": "string", "maxLength": 128 },
+        "expectedAmountInr": { "type": "number" },
+        "userId": { "type": "string", "maxLength": 128 },
+        "claimedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["utrNumber", "transactionId", "expectedAmountInr", "userId", "claimedAt"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized merchant/pharmacist UID permitted to verify payments",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["owner", "pharmacist"] }
+      },
+      "required": ["uid", "email", "role"]
     },
     "MedicineInventory": {
       "title": "MedicineInventory",
@@ -117,6 +173,18 @@
     "/users/{userId}/records/{recordId}": {
       "schema": "MedicalRecord",
       "description": "Health checkup history and medical assessments for a patient"
+    },
+    "/payment_transactions/{transactionId}": {
+      "schema": "PaymentTransaction",
+      "description": "Payment verification records gating physical dispensing"
+    },
+    "/utr_claims/{utr}": {
+      "schema": "UtrClaim",
+      "description": "Single-use 12-digit UPI UTR claims preventing replay attacks"
+    },
+    "/admins/{adminId}": {
+      "schema": "AdminUser",
+      "description": "Authorized store owners/pharmacists allowed to verify UPI payments"
     },
     "/dispensing_commands/{commandId}": {
       "schema": "DispensingCommand",

@@ -9,11 +9,7 @@ export interface LocalizedQuestionCopy {
 }
 
 export type QuestionId =
-  | 'q1_demographics'
-  | 'q1_boy_stage'
-  | 'q1_girl_stage'
-  | 'q1_male_stage'
-  | 'q1_female_stage'
+  | 'q1_symptom_trigger'
   | 'q2_pregnancy_check'
   | 'q2_female_cycle_check'
   | 'q2_female_wellness'
@@ -166,7 +162,7 @@ export const TRIAGE_UI_STRINGS: Record<LanguageCode, TriageUiStrings> = {
     redFlagBannerTitle: 'High Priority Indicator Flagged:',
     redFlagBannerDesc: 'One or more answers suggest emergency medical evaluation may be required.',
     redFlagBannerBtn: 'Find Emergency Doctors Now',
-    ackStep1: (opt) => `Understood. Age group set to ${opt}. Calibrating safe dosage algorithms...`,
+    ackStep1: (opt) => `Noted (${opt}). Factoring this trigger into your symptom check...`,
     ackStep2: (opt) => `Noted your health context (${opt}). Ensuring all medicine & powder checks reflect this.`,
     ackStep5: 'Clinical specifics recorded. Now screening for potential warning signs...',
     ackStep6RedFlag: '⚠️ Caution: You selected a high-priority warning sign. Emergency medical attention may be needed.',
@@ -183,7 +179,7 @@ export const TRIAGE_UI_STRINGS: Record<LanguageCode, TriageUiStrings> = {
     redFlagBannerTitle: 'उच्च प्राथमिकता चेतावनी संकेत:',
     redFlagBannerDesc: 'आपके उत्तर से लगता है कि तुरंत डॉक्टर की जांच आवश्यक हो सकती है।',
     redFlagBannerBtn: 'तुरंत नजदीकी डॉक्टर खोजें',
-    ackStep1: (opt) => `समझ गया। आयु वर्ग "${opt}" सेट किया गया है। सुरक्षित खुराक की गणना की जा रही है...`,
+    ackStep1: (opt) => `नोट किया गया (${opt})। इस कारण को आपकी लक्षण जांच में शामिल किया जा रहा है...`,
     ackStep2: (opt) => `आपकी स्वास्थ्य स्थिति (${opt}) नोट कर ली गई है। सभी दवा और पाउडर की जांच इसी के अनुसार होगी।`,
     ackStep5: 'लक्षणों की जानकारी दर्ज हो गई है। अब गंभीर चेतावनी संकेतों की जांच की जा रही है...',
     ackStep6RedFlag: '⚠️ सावधानी: आपने एक गंभीर चेतावनी संकेत चुना है। तुरंत डॉक्टर से मिलना आवश्यक हो सकता है।',
@@ -200,7 +196,7 @@ export const TRIAGE_UI_STRINGS: Record<LanguageCode, TriageUiStrings> = {
     redFlagBannerTitle: 'High Priority Warning Signal:',
     redFlagBannerDesc: 'Aapke jawab ke hisaab se turant doctor ki jaanch zaroori ho sakti hai.',
     redFlagBannerBtn: 'Turant Doctor Khojein',
-    ackStep1: (opt) => `Samajh gaya. Age group "${opt}" set ho gaya hai. Safe dosage calculate ho raha hai...`,
+    ackStep1: (opt) => `Note kar liya (${opt}). Is trigger ko aapke symptom check me dhyan rakha ja raha hai...`,
     ackStep2: (opt) => `Aapki health detail (${opt}) note kar li hai. Saari medicine aur powder checks iske hisaab se hongi.`,
     ackStep5: 'Symptoms note ho gaye hain. Ab serious warning signs check kar rahe hain...',
     ackStep6RedFlag: '⚠️ Dhyan dein: Aapne ek serious warning sign chuna hai. Turant doctor ko dikhana zaroori ho sakta hai.',
@@ -217,7 +213,7 @@ export const TRIAGE_UI_STRINGS: Record<LanguageCode, TriageUiStrings> = {
     redFlagBannerTitle: 'तातडीचा धोक्याचा इशारा:',
     redFlagBannerDesc: 'तुमच्या उत्तरांवरून तात्काळ डॉक्टरांची तपासणी आवश्यक असू शकते.',
     redFlagBannerBtn: 'जवळचे डॉक्टर शोधा',
-    ackStep1: (opt) => `समजले. वयोगट "${opt}" निश्चित केला आहे. सुरक्षित डोसची मोजणी सुरू आहे...`,
+    ackStep1: (opt) => `नोंदवले (${opt}). लक्षणांच्या तपासणीत या कारणाचा विचार केला जात आहे...`,
     ackStep2: (opt) => `तुमची आरोग्य माहिती (${opt}) नोंदवली आहे. सर्व औषधे व पावडर तपासणी यानुसार होईल.`,
     ackStep5: 'लक्षणांची नोंद झाली आहे. आता धोक्याच्या चिन्हांची तपासणी करत आहोत...',
     ackStep6RedFlag: '⚠️ सावधान: तुम्ही गंभीर धोक्याचे लक्षण निवडले आहे. तातडीने डॉक्टरांना भेटा.',
@@ -234,7 +230,7 @@ export const TRIAGE_UI_STRINGS: Record<LanguageCode, TriageUiStrings> = {
     redFlagBannerTitle: 'জরুরি সতর্কতা সংকেত:',
     redFlagBannerDesc: 'আপনার উত্তর অনুযায়ী দ্রুত চিকিৎসকের পরামর্শ নেওয়া প্রয়োজন হতে পারে।',
     redFlagBannerBtn: 'জরুরি ডাক্তার খুঁজুন',
-    ackStep1: (opt) => `বোঝা গেছে। বয়স শ্রেণি "${opt}" নির্ধারণ করা হয়েছে। নিরাপদ ডোজ হিসাব করা হচ্ছে...`,
+    ackStep1: (opt) => `নোট করা হয়েছে (${opt})। আপনার উপসর্গ যাচাইয়ে এই কারণটি বিবেচনা করা হচ্ছে...`,
     ackStep2: (opt) => `আপনার স্বাস্থ্য তথ্য (${opt}) নোট করা হয়েছে। সব ওষুধ ও পাউডার যাচাই সে অনুযায়ী হবে।`,
     ackStep5: 'লক্ষণগুলি নথিভুক্ত হয়েছে। এখন গুরুতর সতর্কতা চিহ্ন যাচাই করা হচ্ছে...',
     ackStep6RedFlag: '⚠️ সতর্কতা: আপনি একটি গুরুতর সতর্কতা লক্ষণ বেছে নিয়েছেন। দ্রুত চিকিৎসকের সাহায্য প্রয়োজন হতে পারে।',
@@ -251,7 +247,7 @@ export const TRIAGE_UI_STRINGS: Record<LanguageCode, TriageUiStrings> = {
     redFlagBannerTitle: 'அவசர எச்சரிக்கை அறிகுறி:',
     redFlagBannerDesc: 'உங்கள் பதிலின் அடிப்படையில் உடனடி மருத்துவப் பரிசோதனை தேவைப்படலாம்.',
     redFlagBannerBtn: 'அருகிலுள்ள மருத்துவரைத் தேடுங்கள்',
-    ackStep1: (opt) => `புரிந்தது. வயது பிரிவு "${opt}" அமைக்கப்பட்டது. பாதுகாப்பான மருந்து அளவு கணக்கிடப்படுகிறது...`,
+    ackStep1: (opt) => `பதிவு செய்யப்பட்டது (${opt}). இந்தக் காரணத்தை உங்கள் அறிகுறி ஆய்வில் சேர்க்கிறோம்...`,
     ackStep2: (opt) => `உங்கள் உடல்நலத் தகவல் (${opt}) பதிவு செய்யப்பட்டது. மருந்து மற்றும் பவுடர் பரிந்துரை இதன்படி இருக்கும்.`,
     ackStep5: 'அறிகுறி விவரங்கள் பதிவு செய்யப்பட்டன. அபாய அறிகுறிகள் சோதிக்கப்படுகின்றன...',
     ackStep6RedFlag: '⚠️ எச்சரிக்கை: நீங்கள் அபாய அறிகுறியைத் தேர்ந்தெடுத்துள்ளீர்கள். உடனடி மருத்துவ உதவி தேவைப்படலாம்.',
@@ -268,7 +264,7 @@ export const TRIAGE_UI_STRINGS: Record<LanguageCode, TriageUiStrings> = {
     redFlagBannerTitle: 'అత్యవసర హెచ్చరిక సూచన:',
     redFlagBannerDesc: 'మీ సమాధానాల ప్రకారం వెంటనే వైద్యుడిని సంప్రదించడం అవసరం కావచ్చు.',
     redFlagBannerBtn: 'సమీప వైద్యులను కనుగొనండి',
-    ackStep1: (opt) => `అర్థమైంది. వయస్సు వర్గం "${opt}" సెట్ చేయబడింది. సురక్షిత డోసు లెక్కించబడుతోంది...`,
+    ackStep1: (opt) => `నమోదు చేయబడింది (${opt}). ఈ అంశాన్ని మీ లక్షణాల తనిఖీలో పరిగణలోకి తీసుకుంటున్నాము...`,
     ackStep2: (opt) => `మీ ఆరోగ్య వివరాలు (${opt}) నమోదు చేయబడ్డాయి. మందులు & పౌడర్ సూచనలు దీనికి అనుగుణంగా ఉంటాయి.`,
     ackStep5: 'లక్షణాల వివరాలు నమోదయ్యాయి. ఇప్పుడు ప్రమాదకర సంకేతాలను తనిఖీ చేస్తున్నాము...',
     ackStep6RedFlag: '⚠️ జాగ్రత్త: మీరు తీవ్రమైన హెచ్చరిక లక్షణాన్ని ఎంచుకున్నారు. అత్యవసర వైద్య సహాయం అవసరం కావచ్చు.',
@@ -285,7 +281,7 @@ export const TRIAGE_UI_STRINGS: Record<LanguageCode, TriageUiStrings> = {
     redFlagBannerTitle: 'ઉચ્ચ પ્રાથમિકતા ચેતવણી સંકેત:',
     redFlagBannerDesc: 'તમારા જવાબ મુજબ તાત્કાલિક ડૉક્ટરની તપાસ જરૂરી હોઈ શકે છે.',
     redFlagBannerBtn: 'નજીકના ડૉક્ટર શોધો',
-    ackStep1: (opt) => `સમજાઈ ગયું. વય જૂથ "${opt}" સેટ થયું છે. સુરક્ષિત ડોઝની ગણતરી થઈ રહી છે...`,
+    ackStep1: (opt) => `નોંધ્યું (${opt}). તમારા લક્ષણોની તપાસમાં આ બાબતને ધ્યાનમાં લેવામાં આવી રહી છે...`,
     ackStep2: (opt) => `તમારી આરોગ્ય માહિતી (${opt}) નોંધવામાં આવી છે. દવા અને પાવડરની તપાસ આ મુજબ થશે.`,
     ackStep5: 'લક્ષણોની વિગતો નોંધાઈ ગઈ છે. હવે ગંભીર ચેતવણી સંકેતોની તપાસ થઈ રહી છે...',
     ackStep6RedFlag: '⚠️ સાવધાની: તમે ગંભીર ચેતવણી સંકેત પસંદ કર્યો છે. તાત્કાલિક તબીબી મદદ જરૂરી હોઈ શકે છે.',
@@ -299,15 +295,15 @@ export const QUESTION_TRANSLATIONS: Record<
   Record<QuestionId, LocalizedQuestionCopy>
 > = {
   en: {
-    q1_demographics: {
-      question: "First, let's verify the patient's age and life stage.",
-      subtext: 'Age category directly dictates medication safety, dosage calculations, and risk guidelines.',
-      badge: 'Demographic Baseline',
+    q1_symptom_trigger: {
+      question: 'What may have triggered these symptoms or happened just before they started?',
+      subtext: 'Identifying recent exposure, food/environment triggers, or physical strain guides safer symptom care.',
+      badge: 'Trigger & Exposure Check',
       options: [
-        'Child / Toddler (1 - 11 years)',
-        'Teenager / Adolescent (12 - 17 years)',
-        'Adult (18 - 59 years)',
-        'Senior / Older Adult (60+ years)'
+        'No obvious trigger — started on its own',
+        'Weather change, dust/pollen, or cold exposure',
+        'Outside food/water, skipped meals, or poor sleep',
+        'Contact with someone unwell, travel, or physical injury/strain'
       ]
     },
     q2_pregnancy_check: {
@@ -545,50 +541,6 @@ export const QUESTION_TRANSLATIONS: Record<
         'Rapidly worsening over the last few hours'
       ]
     },
-    q1_boy_stage: {
-      question: "Confirm the boy's childhood age stage & growth group.",
-      subtext: 'Male pediatric dosing and play-related fever/injury hydration risks change by age.',
-      badge: 'Male Child Profile',
-      options: [
-        'Toddler boy (1 - 3 years)',
-        'Young boy (4 - 7 years)',
-        'School-age boy (8 - 11 years)',
-        'Early teen boy (12 - 14 years)'
-      ]
-    },
-    q1_girl_stage: {
-      question: "Confirm the girl's childhood age stage & growth group.",
-      subtext: 'Female pediatric dosing, skin sensitivity, and hydration needs are tailored by age.',
-      badge: 'Female Child Profile',
-      options: [
-        'Toddler girl (1 - 3 years)',
-        'Young girl (4 - 7 years)',
-        'School-age girl (8 - 11 years)',
-        'Pre-teen girl (12 - 14 years)'
-      ]
-    },
-    q1_male_stage: {
-      question: 'Confirm the male age bracket & daily physical activity level.',
-      subtext: 'Calibrates adult male dosing limits and workload/cardiac considerations.',
-      badge: 'Male Patient Profile',
-      options: [
-        'Teenage male (12 - 17 years)',
-        'Young adult male (18 - 39 years)',
-        'Middle-aged male (40 - 59 years)',
-        'Senior male (60+ years)'
-      ]
-    },
-    q1_female_stage: {
-      question: 'Confirm the female age bracket & life phase.',
-      subtext: 'Ensures safe dosage and asks reproductive questions only when medically needed.',
-      badge: 'Female Patient Profile',
-      options: [
-        'Teenage female (12 - 17 years)',
-        'Adult woman (18 - 39 years)',
-        'Midlife woman (40 - 59 years)',
-        'Senior woman (60+ years)'
-      ]
-    },
     q2_boy_pediatric_weight: {
       question: "What is the boy's approximate weight & outdoor activity status?",
       subtext: 'Boy pediatric syrups (like Calpol) are calculated strictly by body weight (mg/kg).',
@@ -719,15 +671,15 @@ export const QUESTION_TRANSLATIONS: Record<
     }
   },
   hi: {
-    q1_demographics: {
-      question: 'सबसे पहले, आइए मरीज की आयु और जीवन चरण की पुष्टि करें।',
-      subtext: 'आयु वर्ग के अनुसार दवा की सुरक्षा, खुराक और जोखिम दिशानिर्देश तय होते हैं।',
-      badge: 'आयु विवरण',
+    q1_symptom_trigger: {
+      question: 'यह समस्या शुरू होने से ठीक पहले क्या संभावित कारण या स्थिति रही थी?',
+      subtext: 'मौसम, बाहर का खाना, धूल/एलर्जी, थकान या संक्रमण के संपर्क से सही देखभाल तय करने में मदद मिलती है।',
+      badge: 'लक्षण कारण जांच',
       options: [
-        'बच्चा (1 - 11 वर्ष)',
-        'किशोर (12 - 17 वर्ष)',
-        'वयस्क (18 - 59 वर्ष)',
-        'वरिष्ठ नागरिक (60+ वर्ष)'
+        'कोई स्पष्ट कारण नहीं — अपने आप शुरू हुआ',
+        'मौसम में बदलाव, धूल/पराग या ठंड लगना',
+        'बाहर का खाना/पानी, भोजन छूटना या नींद पूरी न होना',
+        'किसी बीमार व्यक्ति के संपर्क, यात्रा या शारीरिक चोट/मेहनत के बाद'
       ]
     },
     q2_pregnancy_check: {
@@ -965,50 +917,6 @@ export const QUESTION_TRANSLATIONS: Record<
         'पिछले कुछ घंटों में तेजी से बिगड़ रहा है'
       ]
     },
-    q1_boy_stage: {
-      question: 'लड़के की आयु और विकास का स्तर चुनें।',
-      subtext: 'लड़कों के लिए सुरक्षित दवा की मात्रा और खेल-कूद से पानी की कमी का स्तर उम्र के अनुसार तय होता है।',
-      badge: 'बालक (लड़का) प्रोफ़ाइल',
-      options: [
-        'छोटा बच्चा (लड़का: 1 - 3 वर्ष)',
-        'बालक (4 - 7 वर्ष)',
-        'स्कूल आयु का लड़का (8 - 11 वर्ष)',
-        'किशोर बालक (12 - 14 वर्ष)'
-      ]
-    },
-    q1_girl_stage: {
-      question: 'लड़की की आयु और विकास का स्तर चुनें।',
-      subtext: 'लड़कियों के लिए सुरक्षित दवा की मात्रा, त्वचा संवेदनशीलता और देखभाल उम्र के अनुसार तय होती है।',
-      badge: 'बालिका (लड़की) प्रोफ़ाइल',
-      options: [
-        'छोटी बच्ची (लड़की: 1 - 3 वर्ष)',
-        'बालिका (4 - 7 वर्ष)',
-        'स्कूल आयु की लड़की (8 - 11 वर्ष)',
-        'किशोर बालिका (12 - 14 वर्ष)'
-      ]
-    },
-    q1_male_stage: {
-      question: 'पुरुष की आयु वर्ग और दैनिक कार्यशैली चुनें।',
-      subtext: 'इससे वयस्क पुरुषों की दवा खुराक और शारीरिक थकान का सही आकलन होता है।',
-      badge: 'पुरुष स्वास्थ्य प्रोफ़ाइल',
-      options: [
-        'किशोर पुरुष (12 - 17 वर्ष)',
-        'युवा पुरुष (18 - 39 वर्ष)',
-        'मध्यम आयु के पुरुष (40 - 59 वर्ष)',
-        'वरिष्ठ पुरुष (60+ वर्ष)'
-      ]
-    },
-    q1_female_stage: {
-      question: 'महिला की आयु वर्ग और जीवन चरण चुनें।',
-      subtext: 'गर्भावस्था या पीरियड्स से जुड़े प्रश्न केवल जरूरत होने पर ही पूछे जाते हैं।',
-      badge: 'महिला स्वास्थ्य प्रोफ़ाइल',
-      options: [
-        'किशोरी (12 - 17 वर्ष)',
-        'वयस्क महिला (18 - 39 वर्ष)',
-        'मध्यम आयु की महिला (40 - 59 वर्ष)',
-        'वरिष्ठ महिला (60+ वर्ष)'
-      ]
-    },
     q2_boy_pediatric_weight: {
       question: 'लड़के का अनुमानित वजन कितना है?',
       subtext: 'लड़कों के लिए सिरप/ड्रॉप की मात्रा शरीर के वजन (mg/kg) के हिसाब से तय होती है।',
@@ -1139,15 +1047,15 @@ export const QUESTION_TRANSLATIONS: Record<
     }
   },
   hinglish: {
-    q1_demographics: {
-      question: 'Sabse pehle, patient ki age aur life stage confirm karte hain.',
-      subtext: 'Age ke hisaab se dawa ki safety aur sahi dosage tay hoti hai.',
-      badge: 'Age Details',
+    q1_symptom_trigger: {
+      question: 'Yeh problem shuru hone se theek pehle kya possible trigger ya wajah rahi thi?',
+      subtext: 'Mausam, bahar ka khana, dhool/allergy, thakan ya kisi bimar vyakti se contact samajhne ke liye.',
+      badge: 'Trigger & Exposure Check',
       options: [
-        'Bachcha / Child (1 - 11 saal)',
-        'Teenager (12 - 17 saal)',
-        'Adult (18 - 59 saal)',
-        'Bujurg / Senior (60+ saal)'
+        'Koi khaas wajah nahi — apne aap shuru hua',
+        'Mausam badalna, dhool/pollen ya thand lagna',
+        'Bahar ka khana/paani, khana miss hona ya kam neend',
+        'Bimar vyakti ke contact, safar ya chot/bhaari mehnat ke baad'
       ]
     },
     q2_pregnancy_check: {
@@ -1385,50 +1293,6 @@ export const QUESTION_TRANSLATIONS: Record<
         'Pichle kuch ghanton me tezi se badh raha hai'
       ]
     },
-    q1_boy_stage: {
-      question: 'Ladke (boy) ki age group aur growth stage confirm karein.',
-      subtext: 'Boys ke liye syrup dose aur outdoor play se hone wali paani ki kami age par depend karti hai.',
-      badge: 'Male Child Profile',
-      options: [
-        'Chhota bachcha / Toddler boy (1 - 3 years)',
-        'Chhota ladka / Young boy (4 - 7 years)',
-        'School-age ladka (8 - 11 years)',
-        'Teen ladka (12 - 14 years)'
-      ]
-    },
-    q1_girl_stage: {
-      question: 'Ladki (girl) ki age group aur growth stage confirm karein.',
-      subtext: 'Girls ke liye safe dose, skin sensitivity aur hydration age ke hisaab se set hota hai.',
-      badge: 'Female Child Profile',
-      options: [
-        'Chhoti bachchi / Toddler girl (1 - 3 years)',
-        'Chhoti ladki / Young girl (4 - 7 years)',
-        'School-age ladki (8 - 11 years)',
-        'Pre-teen ladki (12 - 14 years)'
-      ]
-    },
-    q1_male_stage: {
-      question: 'Male patient ki age stage aur daily routine confirm karein.',
-      subtext: 'Isse adult male medicine dosage aur physical exertion ka sahi andaza milta hai.',
-      badge: 'Male Profile',
-      options: [
-        'Teenage ladka (12 - 17 years)',
-        'Young adult male (18 - 39 years)',
-        'Middle-aged male (40 - 59 years)',
-        'Senior male (60+ years)'
-      ]
-    },
-    q1_female_stage: {
-      question: 'Female patient ki age stage aur life phase confirm karein.',
-      subtext: 'Pregnancy ya periods wale sawal sirf zaroorat padne par hi pooche jaate hain.',
-      badge: 'Female Profile',
-      options: [
-        'Teenage girl (12 - 17 years)',
-        'Adult woman (18 - 39 years)',
-        'Midlife woman (40 - 59 years)',
-        'Senior woman (60+ years)'
-      ]
-    },
     q2_boy_pediatric_weight: {
       question: 'Ladke ka approximate weight kitna hai?',
       subtext: 'Boys ke liye syrup ki dose hamesha weight (mg/kg) ke hisaab se di jaati hai.',
@@ -1559,11 +1423,11 @@ export const QUESTION_TRANSLATIONS: Record<
     }
   },
   mr: {
-    q1_demographics: {
-      question: 'प्रथम रुग्णाचे वय आणि वयोगट निश्चित करूया.',
-      subtext: 'वयोगटानुसार औषधांची सुरक्षितता आणि योग्य डोस ठरवला जातो.',
-      badge: 'वय तपशील',
-      options: ['लहान मूल (1 - 11 वर्षे)', 'किशोर (12 - 17 वर्षे)', 'प्रौढ (18 - 59 वर्षे)', 'ज्येष्ठ नागरिक (60+ वर्षे)']
+    q1_symptom_trigger: {
+      question: 'हा त्रास सुरू होण्यापूर्वी नेमके कोणते संभाव्य कारण किंवा घटना घडली होती?',
+      subtext: 'हवामान बदल, बाहेरचे अन्न, धूळ किंवा आजारी व्यक्तीचा संपर्क समजून घेण्यासाठी.',
+      badge: 'लक्षण कारण तपासणी',
+      options: ['कोणतेही स्पष्ट कारण नाही — आपोआप सुरू झाले', 'हवामान बदल, धूळ किंवा गारवा लागणे', 'बाहेरचे अन्न/पाणी, जेवण चुकणे किंवा अपुरी झोप', 'आजारी व्यक्तीचा संपर्क, प्रवास किंवा शारीरिक दुखापत/श्रम']
     },
     q2_pregnancy_check: {
       question: 'तुम्ही सध्या गर्भवती आहात, गर्भधारणेचा विचार करत आहात किंवा स्तनपान देत आहात का?',
@@ -1685,30 +1549,6 @@ export const QUESTION_TRANSLATIONS: Record<
       badge: 'लक्षणांची दिशा',
       options: ['हळूहळू बरे वाटत आहे किंवा सौम्य आहे', 'जसे होते तसेच स्थिर आहे', 'हळूहळू अस्वस्थता वाढत आहे', 'मागील काही तासांत वेगाने वाढत आहे']
     },
-    q1_boy_stage: {
-      question: 'मुलाचा (लहान मुलगा) वयोगट निश्चित करा.',
-      subtext: 'मुलांच्या औषधाचे प्रमाण आणि खेळामुळे होणारी पाण्याची कमतरता वयानुसार बदलते.',
-      badge: 'मुलगा (बालक) माहिती',
-      options: ['लहान बाळ / मुलगा (1 - 3 वर्षे)', 'मुलगा (4 - 7 वर्षे)', 'शाळकरी मुलगा (8 - 11 वर्षे)', 'किशोरवयीन मुलगा (12 - 14 वर्षे)']
-    },
-    q1_girl_stage: {
-      question: 'मुलीचा (लहान मुलगी) वयोगट निश्चित करा.',
-      subtext: 'मुलींसाठी औषधाचे सुरक्षित प्रमाण व संवेदनशीलता वयानुसार ठरवली जाते.',
-      badge: 'मुलगी (बालिका) माहिती',
-      options: ['लहान बाळ / मुलगी (1 - 3 वर्षे)', 'मुलगी (4 - 7 वर्षे)', 'शाळकरी मुलगी (8 - 11 वर्षे)', 'किशोरवयीन मुलगी (12 - 14 वर्षे)']
-    },
-    q1_male_stage: {
-      question: 'पुरुष रुग्णाचा वयोगट आणि दैनंदिन कामाचे स्वरूप निवडा.',
-      subtext: 'प्रौढ पुरुषांसाठी योग्य डोस व शारीरिक श्रमाचा अंदाज घेण्यासाठी.',
-      badge: 'पुरुष आरोग्य माहिती',
-      options: ['किशोर मुलगा (12 - 17 वर्षे)', 'तरुण पुरुष (18 - 39 वर्षे)', 'मध्यमवयीन पुरुष (40 - 59 वर्षे)', 'ज्येष्ठ पुरुष (60+ वर्षे)']
-    },
-    q1_female_stage: {
-      question: 'महिला रुग्णाचा वयोगट निश्चित करा.',
-      subtext: 'गर्भधारणा किंवा मासिक पाळीचे प्रश्न केवळ आवश्यकता असल्यासच विचारले जातात.',
-      badge: 'महिला आरोग्य माहिती',
-      options: ['किशोरवयीन मुलगी (12 - 17 वर्षे)', 'प्रौढ महिला (18 - 39 वर्षे)', 'मध्यमवयीन महिला (40 - 59 वर्षे)', 'ज्येष्ठ महिला (60+ वर्षे)']
-    },
     q2_boy_pediatric_weight: {
       question: 'मुलाचे अंदाजे वजन किती आहे?',
       subtext: 'मुलांच्या औषधांचा डोस शरीराच्या वजनानुसार (mg/kg) दिला जातो.',
@@ -1777,11 +1617,11 @@ export const QUESTION_TRANSLATIONS: Record<
     }
   },
   bn: {
-    q1_demographics: {
-      question: 'প্রথমে রোগীর বয়স এবং পর্যায় নিশ্চিত করা যাক।',
-      subtext: 'বয়স অনুযায়ী ওষুধের নিরাপত্তা ও সঠিক মাত্রা নির্ধারণ করা হয়।',
-      badge: 'বয়সের তথ্য',
-      options: ['শিশু (1 - 11 বছর)', 'কিশোর (12 - 17 বছর)', 'প্রাপ্তবয়স্ক (18 - 59 বছর)', 'বয়োজ্যেষ্ঠ (60+ বছর)']
+    q1_symptom_trigger: {
+      question: 'এই উপসর্গ শুরু হওয়ার ঠিক আগে সম্ভাব্য কী কারণ বা ঘটনা ঘটেছিল?',
+      subtext: 'আবহাওয়া পরিবর্তন, বাইরের খাবার, ধুলো বা অসুস্থ ব্যক্তির সংস্পর্শ যাচাইয়ের জন্য।',
+      badge: 'উপসর্গের কারণ যাচাই',
+      options: ['কোনো স্পষ্ট কারণ নেই — নিজে থেকেই শুরু হয়েছে', 'আবহাওয়া বদল, ধুলোবালি বা ঠান্ডা লাগা', 'বাইরের খাবার/পানি, ঠিকমতো না খাওয়া বা ঘুম কম', 'অসুস্থ কারো সংস্পর্শ, ভ্রমণ বা আঘাত/পরিশ্রম']
     },
     q2_pregnancy_check: {
       question: 'আপনি কি বর্তমানে গর্ভবতী, গর্ভধারণের পরিকল্পনা করছেন, বা স্তন্যপান করাচ্ছেন?',
@@ -1903,30 +1743,6 @@ export const QUESTION_TRANSLATIONS: Record<
       badge: 'উপসর্গের অগ্রগতি',
       options: ['ধীরে ধীরে ভালো হচ্ছে বা হালকা আছে', 'একই রকম আছে, বাড়ছে না', 'ধীরে ধীরে অস্বস্তি বাড়ছে', 'গত কয়েক ঘণ্টায় দ্রুত খারাপ হচ্ছে']
     },
-    q1_boy_stage: {
-      question: 'ছেলে শিশুর বয়স এবং বৃদ্ধির পর্যায় নিশ্চিত করুন।',
-      subtext: 'ছেলে শিশুদের ওষুধের ডোজ এবং খেলাধুলার কারণে পানিশূন্যতার ঝুঁকি বয়স অনুযায়ী বদলায়।',
-      badge: 'ছেলে শিশু প্রোফাইল',
-      options: ['ছোট ছেলে শিশু (1 - 3 বছর)', 'বালক (4 - 7 বছর)', 'স্কুল বয়সী ছেলে (8 - 11 বছর)', 'কিশোর (12 - 14 বছর)']
-    },
-    q1_girl_stage: {
-      question: 'মেয়ে শিশুর বয়স এবং বৃদ্ধির পর্যায় নিশ্চিত করুন।',
-      subtext: 'মেয়ে শিশুদের নিরাপদ ওষুধের মাত্রা এবং ত্বকের সংবেদনশীলতা বয়স অনুযায়ী ঠিক হয়।',
-      badge: 'মেয়ে শিশু প্রোফাইল',
-      options: ['ছোট মেয়ে শিশু (1 - 3 বছর)', 'বালিকা (4 - 7 বছর)', 'স্কুল বয়সী মেয়ে (8 - 11 বছর)', 'কিশোরী (12 - 14 বছর)']
-    },
-    q1_male_stage: {
-      question: 'পুরুষ রোগীর বয়সের ধাপ এবং দৈনন্দিন কাজের ধরন নিশ্চিত করুন।',
-      subtext: 'প্রাপ্তবয়স্ক পুরুষের ওষুধের মাত্রা এবং শারীরিক পরিশ্রম যাচাইয়ের জন্য।',
-      badge: 'পুরুষ স্বাস্থ্য প্রোফাইল',
-      options: ['কিশোর (12 - 17 বছর)', 'তরুণ পুরুষ (18 - 39 বছর)', 'মধ্যবয়সী পুরুষ (40 - 59 বছর)', 'বয়োজ্যেষ্ঠ পুরুষ (60+ বছর)']
-    },
-    q1_female_stage: {
-      question: 'মহিলা রোগীর বয়সের ধাপ নিশ্চিত করুন।',
-      subtext: 'গর্ভাবস্থা বা মাসিক সংক্রান্ত প্রশ্ন শুধুমাত্র প্রয়োজন হলেই করা হয়।',
-      badge: 'মহিলা স্বাস্থ্য প্রোফাইল',
-      options: ['কিশোরী (12 - 17 বছর)', 'প্রাপ্তবয়স্ক মহিলা (18 - 39 বছর)', 'মধ্যবয়সী মহিলা (40 - 59 বছর)', 'বয়োজ্যেষ্ঠ মহিলা (60+ বছর)']
-    },
     q2_boy_pediatric_weight: {
       question: 'ছেলেটির আনুমানিক ওজন কত?',
       subtext: 'ছেলে শিশুদের সিরাপ বা ড্রপের মাত্রা শরীরের ওজন (mg/kg) অনুযায়ী ঠিক করা হয়।',
@@ -1995,11 +1811,11 @@ export const QUESTION_TRANSLATIONS: Record<
     }
   },
   ta: {
-    q1_demographics: {
-      question: 'முதலில் நோயாளியின் வயது மற்றும் நிலையை உறுதி செய்வோம்.',
-      subtext: 'வயதைப் பொறுத்து மருந்தின் பாதுகாப்பு மற்றும் அளவு தீர்மானிக்கப்படுகிறது.',
-      badge: 'வயது விவரம்',
-      options: ['குழந்தை (1 - 11 வயது)', 'இளையோர் (12 - 17 வயது)', 'பெரியவர் (18 - 59 வயது)', 'முதியவர் (60+ வயது)']
+    q1_symptom_trigger: {
+      question: 'இந்த அறிகுறிகள் தொடங்குவதற்கு முன் என்ன காரணம் அல்லது சூழ்நிலை இருந்திருக்கலாம்?',
+      subtext: 'வானிலை மாற்றம், வெளி உணவு, தூசி அல்லது நோய்வாய்ப்பட்டவர் தொடர்பு அறிய உதவுகிறது.',
+      badge: 'காரணம் & சூழ்நிலை சோதனை',
+      options: ['தெளிவான காரணம் இல்லை — தானாகவே தொடங்கியது', 'வானிலை மாற்றம், தூசி அல்லது குளிர் காற்று', 'வெளி உணவு/நீர், உணவு தவிர்த்தல் அல்லது தூக்கமின்மை', 'உடல்நலமில்லாதவர் தொடர்பு, பயணம் அல்லது காயம்/உழைப்பு']
     },
     q2_pregnancy_check: {
       question: 'நீங்கள் தற்போது கர்ப்பமாக உள்ளீர்களா அல்லது தாய்ப்பால் கொடுக்கிறீர்களா?',
@@ -2121,30 +1937,6 @@ export const QUESTION_TRANSLATIONS: Record<
       badge: 'அறிகுறி மாற்றம்',
       options: ['மெதுவாகக் குறைகிறது அல்லது லேசானது', 'மாறாமல் அப்படியே உள்ளது', 'மெதுவாக அதிகரிக்கிறது', 'கடந்த சில மணி நேரங்களில் வேகமாக மோசமாகிறது']
     },
-    q1_boy_stage: {
-      question: 'ஆண் குழந்தையின் வயதுப் பிரிவை உறுதிப்படுத்தவும்.',
-      subtext: 'சிறுவர்களின் மருந்து அளவும் விளையாட்டால் ஏற்படும் நீர்ச்சத்துக் குறைவும் வயதிற்கு ஏற்ப மாறும்.',
-      badge: 'ஆண் குழந்தை சுயவிவரம்',
-      options: ['குழந்தை சிறுவன் (1 - 3 வயது)', 'சிறுவன் (4 - 7 வயது)', 'பள்ளிச் சிறுவன் (8 - 11 வயது)', 'பதின்பருவச் சிறுவன் (12 - 14 வயது)']
-    },
-    q1_girl_stage: {
-      question: 'பெண் குழந்தையின் வயதுப் பிரிவை உறுதிப்படுத்தவும்.',
-      subtext: 'சிறுமிகளின் பாதுகாப்பான மருந்து அளவும் தோல் உணர்திறனும் வயதிற்கு ஏற்ப அமையும்.',
-      badge: 'பெண் குழந்தை சுயவிவரம்',
-      options: ['குழந்தை சிறுமி (1 - 3 வயது)', 'சிறுமி (4 - 7 வயது)', 'பள்ளிச் சிறுமி (8 - 11 வயது)', 'பதின்பருவச் சிறுமி (12 - 14 வயது)']
-    },
-    q1_male_stage: {
-      question: 'ஆண் நோயாளியின் வயதுப் பிரிவை உறுதிப்படுத்தவும்.',
-      subtext: 'பெரியவர்களுக்கான மருந்து அளவு மற்றும் உடல் உழைப்பைக் கணக்கிட உதவுகிறது.',
-      badge: 'ஆண் சுயவிவரம்',
-      options: ['பதின்பருவ ஆண் (12 - 17 வயது)', 'இளைய ஆண் (18 - 39 வயது)', 'நடுத்தர வயது ஆண் (40 - 59 வயது)', 'மூத்த ஆண் (60+ வயது)']
-    },
-    q1_female_stage: {
-      question: 'பெண் நோயாளியின் வயதுப் பிரிவை உறுதிப்படுத்தவும்.',
-      subtext: 'கர்ப்பம் அல்லது மாதவிடாய் கேள்விகள் மருத்துவத் தேவை உள்ளபோது மட்டுமே கேட்கப்படும்.',
-      badge: 'பெண் சுயவிவரம்',
-      options: ['பதின்பருவப் பெண் (12 - 17 வயது)', 'வயதுவந்த பெண் (18 - 39 வயது)', 'நடுத்தர வயது பெண் (40 - 59 வயது)', 'மூத்த பெண் (60+ வயது)']
-    },
     q2_boy_pediatric_weight: {
       question: 'சிறுவனின் தோராயமான எடை என்ன?',
       subtext: 'ஆண் குழந்தைகளுக்கான சிரப் அளவு எடையின் (mg/kg) அடிப்படையில் கணக்கிடப்படுகிறது.',
@@ -2213,11 +2005,11 @@ export const QUESTION_TRANSLATIONS: Record<
     }
   },
   te: {
-    q1_demographics: {
-      question: 'ముందుగా రోగి వయస్సు మరియు దశను నిర్ధారిద్దాం.',
-      subtext: 'వయస్సు ఆధారంగా మందుల భద్రత మరియు డోసు నిర్ణయించబడతాయి.',
-      badge: 'వయస్సు వివరాలు',
-      options: ['పిల్లలు (1 - 11 సంవత్సరాలు)', 'టీనేజర్ (12 - 17 సంవత్సరాలు)', 'పెద్దలు (18 - 59 సంవత్సరాలు)', 'వృద్ధులు (60+ సంవత్సరాలు)']
+    q1_symptom_trigger: {
+      question: 'ఈ లక్షణాలు మొదలయ్యే ముందు ఏదైనా కారణం లేదా పరిస్థితి జరిగిందా?',
+      subtext: 'వాతావరణ మార్పు, బయటి ఆహారం, దుమ్ము లేదా అనారోగ్యంతో ఉన్నవారి సంపర్కం గుర్తించడానికి.',
+      badge: 'లక్షణ కారణ తనిఖీ',
+      options: ['స్పష్టమైన కారణం లేదు — దానంతట అదే మొదలైంది', 'వాతావరణ మార్పు, దుమ్ము లేదా చల్లగాలి తగలడం', 'బయటి ఆహారం/నీరు, భోజనం మానేయడం లేదా నిద్రలేమి', 'అనారోగ్యంతో ఉన్నవారి సంపర్కం, ప్రయాణం లేదా గాయం/శ్రమ']
     },
     q2_pregnancy_check: {
       question: 'మీరు ప్రస్తుతం గర్భవతిగా ఉన్నారా లేదా తల్లిపాలు ఇస్తున్నారా?',
@@ -2339,30 +2131,6 @@ export const QUESTION_TRANSLATIONS: Record<
       badge: 'లక్షణాల పురోగతి',
       options: ['నెమ్మదిగా తగ్గుతున్నాయి లేదా తేలికగా ఉన్నాయి', 'అదే స్థితిలో ఉన్నాయి, పెరగడం లేదు', 'నెమ్మదిగా అసౌకర్యం పెరుగుతోంది', 'గత కొన్ని గంటల్లో వేగంగా తీవ్రమవుతున్నాయి']
     },
-    q1_boy_stage: {
-      question: 'అబ్బాయి (మగ శిశువు) వయస్సు దశను నిర్ధారించండి.',
-      subtext: 'బాలురకు మందు మోతాదు మరియు ఆటల వల్ల కలిగే డీహైడ్రేషన్ వయస్సుపై ఆధారపడతాయి.',
-      badge: 'బాలుడు ప్రొఫైల్',
-      options: ['చిన్న బాబు (1 - 3 ఏళ్లు)', 'బాలుడు (4 - 7 ఏళ్లు)', 'స్కూల్ వయసు అబ్బాయి (8 - 11 ఏళ్లు)', 'కిశోర బాలుడు (12 - 14 ఏళ్లు)']
-    },
-    q1_girl_stage: {
-      question: 'అమ్మాయి (ఆడ శిశువు) వయస్సు దశను నిర్ధారించండి.',
-      subtext: 'బాలికలకు సురక్షిత మందు మోతాదు మరియు చర్మ సున్నితత్వం వయస్సు ప్రకారం మారుతాయి.',
-      badge: 'బాలిక ప్రొఫైల్',
-      options: ['చిన్న పాప (1 - 3 ఏళ్లు)', 'బాలిక (4 - 7 ఏళ్లు)', 'స్కూల్ వయసు అమ్మాయి (8 - 11 ఏళ్లు)', 'కిశోర బాలిక (12 - 14 ఏళ్లు)']
-    },
-    q1_male_stage: {
-      question: 'పురుషుని వయస్సు దశ మరియు దినచర్యను నిర్ధారించండి.',
-      subtext: 'పురుషులకు సరైన మందు మోతాదు మరియు శ్రమ స్థాయిని అంచనా వేయడానికి.',
-      badge: 'పురుష ప్రొఫైల్',
-      options: ['యువ బాలుడు (12 - 17 ఏళ్లు)', 'యువ పురుషుడు (18 - 39 ఏళ్లు)', 'మధ్య వయస్కుడు (40 - 59 ఏళ్లు)', 'సీనియర్ పురుషుడు (60+ ఏళ్లు)']
-    },
-    q1_female_stage: {
-      question: 'మహిళ వయస్సు దశను నిర్ధారించండి.',
-      subtext: 'గర్భం లేదా పీరియడ్స్ ప్రశ్నలు అవసరమైనప్పుడు మాత్రమే అడగబడతాయి.',
-      badge: 'మహిళా ప్రొఫైల్',
-      options: ['కిశోర బాలిక (12 - 17 ఏళ్లు)', 'వయోజన మహిళ (18 - 39 ఏళ్లు)', 'మధ్య వయస్కురాలు (40 - 59 ఏళ్లు)', 'సీనియర్ మహిళ (60+ ఏళ్లు)']
-    },
     q2_boy_pediatric_weight: {
       question: 'అబ్బాయి సుమారు బరువు ఎంత?',
       subtext: 'బాలురకు సిరప్ మోతాదు శరీర బరువు (mg/kg) ఆధారంగా ఇస్తారు.',
@@ -2431,11 +2199,11 @@ export const QUESTION_TRANSLATIONS: Record<
     }
   },
   gu: {
-    q1_demographics: {
-      question: 'સૌ પ્રથમ દર્દીની ઉંમર અને તબક્કાની ખાતરી કરીએ.',
-      subtext: 'ઉંમર પ્રમાણે દવાની સુરક્ષા અને યોગ્ય ડોઝ નક્કી થાય છે.',
-      badge: 'ઉંમરની વિગત',
-      options: ['બાળક (1 - 11 વર્ષ)', 'કિશોર (12 - 17 વર્ષ)', 'પુખ્ત (18 - 59 વર્ષ)', 'વડીલ / સિનિયર (60+ વર્ષ)']
+    q1_symptom_trigger: {
+      question: 'આ લક્ષણો શરૂ થયા પહેલાં તરત કોઈ સંભવિત કારણ કે પરિસ્થિતિ બની હતી?',
+      subtext: 'હવામાન ફેરફાર, બહારનો ખોરાક, ધૂળ કે બીમાર વ્યક્તિના સંપર્કને સમજવા માટે.',
+      badge: 'લક્ષણ કારણ તપાસ',
+      options: ['કોઈ સ્પષ્ટ કારણ નથી — આપમેળે શરૂ થયું', 'હવામાન ફેરફાર, ધૂળ કે ઠંડી લાગવી', 'બહારનો ખોરાક/પાણી, જમવાનું ચૂકવું કે ઓછી ઊંઘ', 'બીમાર વ્યક્તિનો સંપર્ક, મુસાફરી કે ઈજા/મહેનત']
     },
     q2_pregnancy_check: {
       question: 'શું તમે હાલમાં ગર્ભવતી છો, ગર્ભધારણનું વિચારી રહ્યા છો, કે સ્તનપાન કરાવો છો?',
@@ -2556,30 +2324,6 @@ export const QUESTION_TRANSLATIONS: Record<
       subtext: 'આના આધારે મેડિમિત્રા જાતે નક્કી કરશે કે સામાન્ય દવા/પાવડર પૂરતું છે કે ડૉક્ટરની જરૂર છે.',
       badge: 'લક્ષણોની પ્રગતિ',
       options: ['ધીમે ધીમે સુધારો થઈ રહ્યો છે અથવા હળવું છે', 'પહેલા જેવું જ સ્થિર છે, વધતું નથી', 'ધીમે ધીમે તકલીફ વધી રહી છે', 'છેલ્લા કેટલાક કલાકોમાં ઝડપથી વધી રહ્યું છે']
-    },
-    q1_boy_stage: {
-      question: 'છોકરાની (બાળક) ઉંમર અને વિકાસનો તબક્કો પસંદ કરો.',
-      subtext: 'છોકરાઓ માટે દવાનો ડોઝ અને રમતગમતથી થતી પાણીની ઉણપ ઉંમર મુજબ બદલાય છે.',
-      badge: 'છોકરાની પ્રોફાઇલ',
-      options: ['નાનું બાળક / છોકરો (1 - 3 વર્ષ)', 'છોકરો (4 - 7 વર્ષ)', 'શાળાએ જતો છોકરો (8 - 11 વર્ષ)', 'કિશોર છોકરો (12 - 14 વર્ષ)']
-    },
-    q1_girl_stage: {
-      question: 'છોકરીની (બાળકી) ઉંમર અને વિકાસનો તબક્કો પસંદ કરો.',
-      subtext: 'છોકરીઓ માટે સુરક્ષિત દવાનો ડોઝ અને ત્વચાની સંવેદનશીલતા ઉંમર મુજબ નક્કી થાય છે.',
-      badge: 'છોકરીની પ્રોફાઇલ',
-      options: ['નાની બાળકી / છોકરી (1 - 3 વર્ષ)', 'છોકરી (4 - 7 વર્ષ)', 'શાળાએ જતી છોકરી (8 - 11 વર્ષ)', 'કિશોરી છોકરી (12 - 14 વર્ષ)']
-    },
-    q1_male_stage: {
-      question: 'પુરુષ દર્દીનો ઉંમર વર્ગ અને દૈનિક પ્રવૃત્તિ પસંદ કરો.',
-      subtext: 'પુરુષો માટે યોગ્ય દવાની માત્રા અને શારીરિક શ્રમ સમજવા માટે.',
-      badge: 'પુરુષ પ્રોફાઇલ',
-      options: ['કિશોર છોકરો (12 - 17 વર્ષ)', 'યુવાન પુરુષ (18 - 39 વર્ષ)', 'મધ્યમ વયના પુરુષ (40 - 59 વર્ષ)', 'વરિષ્ઠ પુરુષ (60+ વર્ષ)']
-    },
-    q1_female_stage: {
-      question: 'મહિલા દર્દીનો ઉંમર વર્ગ પસંદ કરો.',
-      subtext: 'ગર્ભાવસ્થા કે માસિક અંગેના પ્રશ્નો માત્ર જરૂર હોય ત્યારે જ પૂછવામાં આવે છે.',
-      badge: 'મહિલા પ્રોફાઇલ',
-      options: ['કિશોરી (12 - 17 વર્ષ)', 'પુખ્ત મહિલા (18 - 39 વર્ષ)', 'મધ્યમ વયની મહિલા (40 - 59 વર્ષ)', 'વરિષ્ઠ મહિલા (60+ વર્ષ)']
     },
     q2_boy_pediatric_weight: {
       question: 'છોકરાનું અંદાજિત વજન કેટલું છે?',

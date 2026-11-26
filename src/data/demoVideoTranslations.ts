@@ -57,9 +57,9 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
         durationSec: 20,
         chapterTitle: '02. Selecting Symptoms & Smart Q&A',
         shortLabel: 'Smart Questions',
-        subtitle: 'Select any health issue. Questions adapt separately for Male, Female, Male-Child, and Female-Child.',
-        voiceover: 'Next, pick your health issue, such as fever, cold, or stomach upset. MediMitra asks ten quick questions tailored separately for boys, girls, men, and women. Pregnancy or period checks are asked only when the symptom truly needs them.',
-        highlights: ['Male vs Female Flow', 'Boy vs Girl Pediatric Checks', 'Contextual Safety Questions']
+        subtitle: 'Select any health issue. Questions adapt to symptoms, allergies, triggers, and age group.',
+        voiceover: 'Next, pick your health issue, such as fever, cold, or stomach upset. MediMitra asks ten quick questions tailored separately for boys, girls, men, and women, checking symptom triggers, drug allergies, and safe dosing limits.',
+        highlights: ['Age & Trigger Checks', 'Boy vs Girl Pediatric Care', 'Allergy & Dose Safety']
       },
       {
         id: 'system_evaluation',
@@ -129,9 +129,9 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
         durationSec: 20,
         chapterTitle: '02. समस्या चुनना और स्मार्ट प्रश्न',
         shortLabel: 'स्मार्ट प्रश्न',
-        subtitle: 'अपनी तकलीफ चुनें। लड़का, लड़की, पुरुष और महिला के लिए अलग-अलग प्रश्न पूछे जाते हैं।',
-        voiceover: 'इसके बाद बुखार, जुकाम या पेट दर्द जैसी अपनी समस्या चुनें। मेडिमित्रा लड़के, लड़की, पुरुष और महिला के अनुसार दस आसान प्रश्न पूछता है। महिलाओं से गर्भावस्था या पीरियड्स के सवाल केवल जरूरत होने पर ही पूछे जाते हैं।',
-        highlights: ['पुरुष व महिला अलग जांच', 'लड़का व लड़की अलग प्रश्न', 'केवल जरूरी होने पर विशेष जांच']
+        subtitle: 'अपनी तकलीफ चुनें। प्रश्न उम्र वर्ग, एलर्जी और लक्षणों की गंभीरता के अनुसार बदलते हैं।',
+        voiceover: 'इसके बाद बुखार, जुकाम या पेट दर्द जैसी अपनी समस्या चुनें। मेडिमित्रा उम्र, लक्षण के कारण और दवा की एलर्जी के अनुसार दस आसान प्रश्न पूछता है ताकि हर मरीज को सही और सुरक्षित सलाह मिले।',
+        highlights: ['उम्र व लक्षण जांच', 'लड़का व लड़की सुरक्षित देखभाल', 'एलर्जी व खुराक सुरक्षा']
       },
       {
         id: 'system_evaluation',
@@ -201,9 +201,9 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
         durationSec: 20,
         chapterTitle: '02. Problem Selection & Smart Q&A',
         shortLabel: 'Smart Sawal',
-        subtitle: 'Symptom chunein. Ladke, ladki, male aur female ke liye alag-alag sahi sawal pooche jaate hain.',
-        voiceover: 'Ab patient bukhar, zukam ya pet dard jaisi apni takleef chunta hai. MediMitra ladke, ladki, purush aur mahila ke hisaab se das smart sawal poochta hai. Mahilaon se periods ya pregnancy ke sawal sirf zaroorat padne par hi pooche jaate hain.',
-        highlights: ['Male vs Female Alag Flow', 'Boy vs Girl Pediatric Checks', 'Sirf Zaroorat Par Cycle Check']
+        subtitle: 'Symptom chunein. Sawal age group, allergy aur dard ki severity ke hisaab se adapt hote hain.',
+        voiceover: 'Ab patient bukhar, zukam ya pet dard jaisi apni takleef chunta hai. MediMitra age group, symptom triggers aur dawa ki allergy ke hisaab se das smart sawal poochta hai taaki safe care mile.',
+        highlights: ['Age & Trigger Checks', 'Boy vs Girl Pediatric Care', 'Allergy aur Safe Dose']
       },
       {
         id: 'system_evaluation',
@@ -273,9 +273,9 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
         durationSec: 20,
         chapterTitle: '02. आजार निवड व अचूक प्रश्नोत्तरे',
         shortLabel: 'स्मार्ट प्रश्न',
-        subtitle: 'तुमचा त्रास निवडा. मुलगा, मुलगी, पुरुष आणि महिलांसाठी वेगवेगळे अचूक प्रश्न विचारले जातात.',
-        voiceover: 'पुढे ताप, सर्दी किंवा पोटदुखी यासारखी समस्या निवडा. मेडिमित्रा मुलगा, मुलगी, पुरुष आणि महिलांनुसार दहा सोपे प्रश्न विचारतो. महिलांना गर्भधारणा किंवा मासिक पाळीचे प्रश्न केवळ आवश्यकता असेल तेव्हाच विचारले जातात.',
-        highlights: ['पुरुष व महिला वेगळे प्रश्न', 'मुलगा व मुलगी वेगळी तपासणी', 'आवश्यकतेनुसारच विशेष प्रश्न']
+        subtitle: 'तुमचा त्रास निवडा. वयोगट, लक्षणांचे कारण आणि ॲलर्जीनुसार अचूक प्रश्न विचारले जातात.',
+        voiceover: 'पुढे ताप, सर्दी किंवा पोटदुखी यासारखी समस्या निवडा. मेडिमित्रा रुग्णाचा वयोगट, लक्षणांची कारणे आणि औषधांची ॲलर्जी तपासून दहा सोपे व सुरक्षित प्रश्न विचारतो.',
+        highlights: ['वयोगट व लक्षण तपासणी', 'मुलगा व मुलगी बालरोग काळजी', 'ॲलर्जी व डोस सुरक्षा']
       },
       {
         id: 'system_evaluation',
@@ -345,9 +345,9 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
         durationSec: 20,
         chapterTitle: '০২. সমস্যা বাছাই ও স্মার্ট প্রশ্নোত্তর',
         shortLabel: 'স্মার্ট প্রশ্ন',
-        subtitle: 'উপসর্গ বাছাই করুন। ছেলে, মেয়ে, পুরুষ ও মহিলার জন্য আলাদা আলাদা প্রাসঙ্গিক প্রশ্ন আসে।',
-        voiceover: 'এরপর জ্বর, সর্দি বা পেটের সমস্যার মতো উপসর্গ বেছে নিন। মেডিমিত্র ছেলে শিশু, মেয়ে শিশু, পুরুষ ও মহিলার জন্য আলাদা দশটি সহজ প্রশ্ন করে। গর্ভাবস্থা বা মাসিক সংক্রান্ত প্রশ্ন কেবল প্রয়োজন হলেই জিজ্ঞাসা করা হয়।',
-        highlights: ['পুরুষ ও মহিলার আলাদা ধাপ', 'ছেলে ও মেয়ে শিশুর যত্ন', 'প্রয়োজন অনুযায়ী বিশেষ প্রশ্ন']
+        subtitle: 'উপসর্গ বাছাই করুন। বয়স, কারণ এবং ওষুধের অ্যালার্জি অনুযায়ী প্রাসঙ্গিক প্রশ্ন আসে।',
+        voiceover: 'এরপর জ্বর, সর্দি বা পেটের সমস্যার মতো উপসর্গ বেছে নিন। মেডিমিত্র রোগীর বয়স, উপসর্গের কারণ এবং অ্যালার্জি যাচাই করে দশটি সহজ ও নিরাপদ প্রশ্ন জিজ্ঞাসা করে।',
+        highlights: ['বয়স ও লক্ষণ যাচাই', 'শিশু ও প্রাপ্তবয়স্ক যত্ন', 'অ্যালার্জি ও ডোজ নিরাপত্তা']
       },
       {
         id: 'system_evaluation',
@@ -417,9 +417,9 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
         durationSec: 20,
         chapterTitle: '02. அறிகுறி தேர்வு & ஸ்மார்ட் கேள்விகள்',
         shortLabel: 'ஸ்மார்ட் கேள்விகள்',
-        subtitle: 'பிரச்சனையைத் தேர்ந்தெடுக்கவும். சிறுவன், சிறுமி, ஆண், பெண் ஆகியோருக்கு ஏற்ப கேள்விகள் மாறும்.',
-        voiceover: 'அடுத்து காய்ச்சல், சளி அல்லது வயிற்று வலி போன்ற பிரச்சனையைத் தேர்ந்தெடுக்கவும். ஆண், பெண், சிறுவன் மற்றும் சிறுமிக்கு ஏற்ப பத்து எளிய கேள்விகள் கேட்கப்படும். கர்ப்பம் அல்லது மாதவிடாய் கேள்விகள் தேவையான போது மட்டுமே கேட்கப்படும்.',
-        highlights: ['ஆண் / பெண் தனிப்பயன் கேள்விகள்', 'சிறுவன் / சிறுமி தனி கவனம்', 'தேவையான போது மட்டுமே சிறப்பு கேள்வி']
+        subtitle: 'பிரச்சனையைத் தேர்ந்தெடுக்கவும். வயது, காரணம் மற்றும் ஒவ்வாமைக்கு ஏற்ப கேள்விகள் மாறும்.',
+        voiceover: 'அடுத்து காய்ச்சல், சளி அல்லது வயிற்று வலி போன்ற பிரச்சனையைத் தேர்ந்தெடுக்கவும். வயதுப் பிரிவு, அறிகுறி காரணங்கள் மற்றும் மருந்து ஒவ்வாமைக்கு ஏற்ப பத்து எளிய கேள்விகள் கேட்கப்படும்.',
+        highlights: ['வயது & அறிகுறி ஆய்வு', 'குழந்தை பாதுகாப்பான அளவு', 'ஒவ்வாமை & அளவு பாதுகாப்பு']
       },
       {
         id: 'system_evaluation',
@@ -489,9 +489,9 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
         durationSec: 20,
         chapterTitle: '02. సమస్య ఎంపిక & స్మార్ట్ ప్రశ్నలు',
         shortLabel: 'స్మార్ట్ ప్రశ్నలు',
-        subtitle: 'సమస్యను ఎంచుకోండి. అబ్బాయి, అమ్మాయి, పురుషుడు మరియు మహిళకు వేర్వేరు ప్రశ్నలు వస్తాయి.',
-        voiceover: 'తర్వాత జ్వరం, జలుబు లేదా కడుపు నొప్పి వంటి సమస్యను ఎంచుకోండి. మెడిమిత్ర అబ్బాయి, అమ్మాయి, పురుషుడు మరియు మహిళకు అనుగుణంగా పది ప్రశ్నలు అడుగుతుంది. గర్భధారణ లేదా పీరియడ్స్ ప్రశ్నలు అవసరమైనప్పుడు మాత్రమే అడుగుతుంది.',
-        highlights: ['స్త్రీ పురుషులకు వేర్వేరు ప్రశ్నలు', 'బాలుడు vs బాలిక శ్రద్ధ', 'అవసరమైనప్పుడే ప్రత్యేక ప్రశ్నలు']
+        subtitle: 'సమస్యను ఎంచుకోండి. వయస్సు, లక్షణాల తీవ్రత మరియు అలర్జీలకు తగ్గ ప్రశ్నలు వస్తాయి.',
+        voiceover: 'తర్వాత జ్వరం, జలుబు లేదా కడుపు నొప్పి వంటి సమస్యను ఎంచుకోండి. మెడిమిత్ర వయస్సు వర్గం, లక్షణాల కారణం మరియు మందుల అలర్జీకి అనుగుణంగా పది సులభమైన ప్రశ్నలు అడుగుతుంది.',
+        highlights: ['వయస్సు & లక్షణాల తనిఖీ', 'పిల్లల మోతాదు శ్రద్ధ', 'అలర్జీ & సురక్షిత మోతాదు']
       },
       {
         id: 'system_evaluation',
@@ -561,9 +561,9 @@ export const DEMO_VIDEO_TRANSLATIONS: Record<LanguageCode, DemoVideoLocaleBundle
         durationSec: 20,
         chapterTitle: '02. સમસ્યાની પસંદગી અને સ્માર્ટ પ્રશ્નો',
         shortLabel: 'સ્માર્ટ પ્રશ્નો',
-        subtitle: 'તકલીફ પસંદ કરો. છોકરો, છોકરી, પુરુષ અને મહિલા માટે અલગ અલગ યોગ્ય પ્રશ્નો પૂછાય છે.',
-        voiceover: 'ત્યારબાદ તાવ, શરદી કે પેટની તકલીફ જેવી સમસ્યા પસંદ કરો. મેડિમિત્રા છોકરા, છોકરી, પુરુષ અને મહિલા મુજબ દસ સરળ પ્રશ્નો પૂછે છે. મહિલાઓ માટે ગર્ભાવસ્થા કે માસિકના પ્રશ્નો માત્ર જરૂર હોય ત્યારે જ પૂછાય છે.',
-        highlights: ['પુરુષ અને મહિલા અલગ પ્રશ્નો', 'છોકરો વિ. છોકરી કાળજી', 'જરૂરિયાત મુજબ વિશેષ તપાસ']
+        subtitle: 'તકલીફ પસંદ કરો. ઉંમર વર્ગ, લક્ષણોના કારણ અને એલર્જી મુજબ યોગ્ય પ્રશ્નો પૂછાય છે.',
+        voiceover: 'ત્યારબાદ તાવ, શરદી કે પેટની તકલીફ જેવી સમસ્યા પસંદ કરો. મેડિમિત્રા ઉંમર વર્ગ, લક્ષણોનું કારણ અને દવાની એલર્જી મુજબ દસ સરળ અને સુરક્ષિત પ્રશ્નો પૂછે છે.',
+        highlights: ['ઉંમર અને લક્ષણ તપાસ', 'બાળકો માટે સુરક્ષિત કાળજી', 'એલર્જી અને ડોઝ સુરક્ષા']
       },
       {
         id: 'system_evaluation',

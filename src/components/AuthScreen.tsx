@@ -19,6 +19,7 @@ import {
 import { UserProfile, AgeCategory, BiologicalSex } from '../types/medical';
 import { MediMitraLogo } from './MediMitraLogo';
 import { LanguageSelector } from './LanguageSelector';
+import { ThemeToggle } from './ThemeToggle';
 import { AppDemoVideoModal } from './AppDemoVideoModal';
 import { useLanguage } from '../context/LanguageContext';
 import { getAppStrings } from '../data/appTranslations';
@@ -167,24 +168,24 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         className="space-y-4"
       >
         {/* Clean Header */}
-        <div className="border-b border-slate-100 pb-3">
-          <h2 className="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
+        <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+          <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             {authMode === 'signin' ? t.authStepTitle : t.createAccountBtn}
           </h2>
-          <p className="text-xs text-slate-500 font-normal mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
             {t.authStepSubtitle}
           </p>
         </div>
 
         {/* Sign In vs Sign Up Segmented Control */}
-        <div className="grid grid-cols-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200/70 gap-1">
+        <div className="grid grid-cols-2 bg-slate-100/90 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/70 dark:border-slate-700 gap-1">
           <button
             type="button"
             onClick={() => { setAuthMode('signin'); setErrorMessage(null); }}
             className={`py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               authMode === 'signin'
-                ? 'bg-white text-teal-900 shadow-xs ring-1 ring-slate-200/60'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-900 text-teal-900 dark:text-teal-300 shadow-xs ring-1 ring-slate-200/60 dark:ring-slate-700'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             {ui.signInTab}
@@ -200,8 +201,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             }}
             className={`py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               authMode === 'signup'
-                ? 'bg-white text-teal-900 shadow-xs ring-1 ring-slate-200/60'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-900 text-teal-900 dark:text-teal-300 shadow-xs ring-1 ring-slate-200/60 dark:ring-slate-700'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             {ui.signUpTab}
@@ -210,7 +211,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
         {/* Error Banner */}
         {errorMessage && (
-          <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+          <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
             <span>{errorMessage}</span>
           </div>
@@ -218,8 +219,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
         {/* Firebase Sync Status Indicator */}
         {firebaseStatus && (
-          <div className="p-2.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs flex items-center gap-2 animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-teal-600" />
+          <div className="p-2.5 rounded-xl bg-teal-50 dark:bg-teal-950/50 border border-teal-200 dark:border-teal-800 text-teal-800 dark:text-teal-200 text-xs flex items-center gap-2 animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-teal-600 dark:text-teal-400" />
             <span className="font-medium">{firebaseStatus}</span>
           </div>
         )}
@@ -227,7 +228,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         {/* Primary Email & Password Form */}
         <form onSubmit={handleFinalAuthSubmit} className="space-y-3.5">
           <div>
-            <label className="block text-xs font-semibold text-slate-800 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
               {t.emailLabel} <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
@@ -239,17 +240,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={t.emailPlaceholder}
-                className="w-full pl-10 pr-3.5 py-2.5 text-sm font-normal rounded-xl border border-slate-300 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 bg-white text-slate-900 placeholder:text-slate-400 transition-all disabled:opacity-50"
+                className="w-full pl-10 pr-3.5 py-2.5 text-sm font-normal rounded-xl border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all disabled:opacity-50"
               />
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] text-teal-700 mt-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+            <div className="flex items-center gap-1.5 text-[11px] text-teal-700 dark:text-teal-400 mt-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
               <span>{t.emailDisclaimer}</span>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-800 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
               {t.passwordLabel} <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
@@ -261,12 +262,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t.passwordPlaceholder}
-                className="w-full pl-10 pr-10 py-2.5 text-sm font-normal rounded-xl border border-slate-300 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 bg-white text-slate-900 placeholder:text-slate-400 transition-all disabled:opacity-50"
+                className="w-full pl-10 pr-10 py-2.5 text-sm font-normal rounded-xl border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all disabled:opacity-50"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -297,9 +298,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
         {/* Divider */}
         <div className="flex items-center gap-3 py-0.5">
-          <div className="h-px bg-slate-200 flex-1"></div>
-          <span className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">{t.orContinueWith}</span>
-          <div className="h-px bg-slate-200 flex-1"></div>
+          <div className="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
+          <span className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 font-semibold">{t.orContinueWith}</span>
+          <div className="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
         </div>
 
         {/* Google 1-Click Sign-In BELOW */}
@@ -307,7 +308,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           type="button"
           onClick={handleGoogleSignIn}
           disabled={isLoading}
-          className="w-full py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 hover:border-slate-400 text-slate-800 font-semibold text-xs flex items-center justify-center gap-2.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+          className="w-full py-2.5 px-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-800 dark:text-slate-100 font-semibold text-xs flex items-center justify-center gap-2.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
         >
           <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
             <path
@@ -331,12 +332,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         </button>
 
         {/* Footer Back Control */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+        <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
           <button
             type="button"
             onClick={() => { setStep(1); setErrorMessage(null); }}
             disabled={isLoading}
-            className="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>{t.backHomeBtn}</span>
@@ -353,7 +354,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               }
             }}
             disabled={isLoading}
-            className="text-teal-700 hover:text-teal-900 font-semibold hover:underline cursor-pointer"
+            className="text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 font-semibold hover:underline cursor-pointer"
           >
             {authMode === 'signin' ? t.needAccount : t.alreadyHaveAccount}
           </button>
@@ -363,11 +364,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   };
 
   return (
-    <div className="w-full min-h-screen overflow-x-hidden bg-slate-50 flex flex-col justify-center">
+    <div className="w-full min-h-screen overflow-x-hidden bg-slate-50 dark:bg-slate-950 flex flex-col justify-center transition-colors">
       {/* ============================================================= */}
       {/* 1. MOBILE VIEW (< md / under 768px): FULL-SCREEN MODERN CARD  */}
       {/* ============================================================= */}
-      <div className="block md:hidden w-full min-h-screen bg-white flex flex-col justify-between">
+      <div className="block md:hidden w-full min-h-screen bg-white dark:bg-slate-950 flex flex-col justify-between">
         {/* Full-bleed Header */}
         <div className="bg-gradient-to-br from-teal-700 via-teal-800 to-teal-950 text-white px-6 pt-6 pb-10 text-center space-y-2 relative z-30 w-full shrink-0">
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -375,8 +376,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             <div className="absolute -bottom-8 -left-8 w-36 h-36 bg-emerald-400/10 rounded-full blur-2xl" />
           </div>
           
-          {/* Top Video Guide Icon & Language Selector on Mobile */}
-          <div className="absolute top-3 left-3 z-30">
+          {/* Top Video Guide Icon, Theme Toggle & Language Selector on Mobile */}
+          <div className="absolute top-3 left-3 z-30 flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setIsDemoVideoOpen(true)}
@@ -386,6 +387,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             >
               <PlayCircle className="w-5 h-5 text-teal-100 shrink-0" />
             </button>
+            <ThemeToggle variant="glass" />
           </div>
           <div className="absolute top-3 right-3 z-30">
             <LanguageSelector variant="light" />
@@ -405,7 +407,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         </div>
 
         {/* Mobile Form Body - Layered Sheet overlapping header */}
-        <div className="flex-1 w-full -mt-5 rounded-t-3xl bg-white px-5 pt-6 pb-5 relative z-20 shadow-[0_-10px_30px_rgba(4,47,46,0.12)] flex flex-col justify-center">
+        <div className="flex-1 w-full -mt-5 rounded-t-3xl bg-white dark:bg-slate-900 px-5 pt-6 pb-5 relative z-20 shadow-[0_-10px_30px_rgba(4,47,46,0.12)] dark:shadow-[0_-10px_30px_rgba(0,0,0,0.5)] flex flex-col justify-center">
           <div className="w-full max-w-md mx-auto">
             <AnimatePresence mode="wait">
               {step === 1 ? (
@@ -418,33 +420,33 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   onSubmit={handlePatientDetailsSubmit}
                   className="space-y-4"
                 >
-                  <div className="border-b border-slate-100 pb-3">
-                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                  <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
                       {ui.welcomeHeading}
                     </h2>
                   </div>
 
                   {/* 1. Name of the patient */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-800 mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
                       {t.patientNameLabel} <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
-                      <User className="w-4 h-4 text-teal-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <User className="w-4 h-4 text-teal-600 dark:text-teal-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
                         type="text"
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder={t.patientNamePlaceholder}
-                        className="w-full pl-10 pr-3.5 py-2.5 text-sm font-medium rounded-xl border border-slate-300 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 bg-white text-slate-900 placeholder:text-slate-400 transition-all"
+                        className="w-full pl-10 pr-3.5 py-2.5 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all"
                       />
                     </div>
                   </div>
 
                   {/* 2. Who is this for? (Kid / Adult / Old Person) */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-800 mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
                       {t.whoIsThisFor}
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -461,20 +463,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                             onClick={() => setSelectedCategory(id as AgeCategory)}
                             className={`relative p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
                               isSelected
-                                ? 'bg-teal-50/80 border-teal-600 text-teal-950 shadow-xs ring-1 ring-teal-600'
-                                : 'bg-white border-slate-200 text-slate-700 hover:border-teal-300 hover:bg-teal-50/20'
+                                ? 'bg-teal-50/80 dark:bg-teal-950/70 border-teal-600 dark:border-teal-500 text-teal-950 dark:text-white shadow-xs ring-1 ring-teal-600 dark:ring-teal-500'
+                                : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-teal-300 dark:hover:border-teal-600 hover:bg-teal-50/20 dark:hover:bg-teal-950/30'
                             }`}
                           >
                             {isSelected && (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 absolute top-1.5 right-1.5" />
+                              <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 absolute top-1.5 right-1.5" />
                             )}
                             <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-1.5 transition-colors text-xl leading-none ${
-                              isSelected ? 'bg-teal-100/80' : 'bg-slate-100/80'
+                              isSelected ? 'bg-teal-100/80 dark:bg-teal-900/70' : 'bg-slate-100/80 dark:bg-slate-700/70'
                             }`}>
                               <span role="img" aria-label={label}>{emoji}</span>
                             </div>
                             <span className="text-xs font-semibold block leading-tight">{label}</span>
-                            <span className="text-[10px] text-slate-500 font-normal block mt-0.5">{sub}</span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal block mt-0.5">{sub}</span>
                           </button>
                         );
                       })}
@@ -483,7 +485,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
                   {/* 3. Gender (Woman / Man) */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-800 mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
                       {t.genderLabel}
                     </label>
                     <div className="grid grid-cols-2 gap-2.5">
@@ -492,15 +494,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                         onClick={() => setSelectedSex('female')}
                         className={`relative p-3 rounded-xl border text-center transition-all cursor-pointer ${
                           selectedSex === 'female'
-                            ? 'bg-teal-50/80 border-teal-600 text-teal-950 shadow-xs ring-1 ring-teal-600'
-                            : 'bg-white border-slate-200 text-slate-700 hover:border-teal-300 hover:bg-teal-50/20'
+                            ? 'bg-teal-50/80 dark:bg-teal-950/70 border-teal-600 dark:border-teal-500 text-teal-950 dark:text-white shadow-xs ring-1 ring-teal-600 dark:ring-teal-500'
+                            : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-teal-300 dark:hover:border-teal-600 hover:bg-teal-50/20 dark:hover:bg-teal-950/30'
                         }`}
                       >
                         {selectedSex === 'female' && (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 absolute top-2 right-2" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 absolute top-2 right-2" />
                         )}
                         <span className="text-xs font-semibold block truncate px-2">{t.femaleLabel}</span>
-                        <span className="text-[10px] text-slate-500 font-normal block truncate mt-0.5">{t.femaleSub}</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal block truncate mt-0.5">{t.femaleSub}</span>
                       </button>
 
                       <button
@@ -508,15 +510,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                         onClick={() => setSelectedSex('male')}
                         className={`relative p-3 rounded-xl border text-center transition-all cursor-pointer ${
                           selectedSex === 'male'
-                            ? 'bg-teal-50/80 border-teal-600 text-teal-950 shadow-xs ring-1 ring-teal-600'
-                            : 'bg-white border-slate-200 text-slate-700 hover:border-teal-300 hover:bg-teal-50/20'
+                            ? 'bg-teal-50/80 dark:bg-teal-950/70 border-teal-600 dark:border-teal-500 text-teal-950 dark:text-white shadow-xs ring-1 ring-teal-600 dark:ring-teal-500'
+                            : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-teal-300 dark:hover:border-teal-600 hover:bg-teal-50/20 dark:hover:bg-teal-950/30'
                         }`}
                       >
                         {selectedSex === 'male' && (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 absolute top-2 right-2" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 absolute top-2 right-2" />
                         )}
                         <span className="text-xs font-semibold block truncate px-2">{t.maleLabel}</span>
-                        <span className="text-[10px] text-slate-500 font-normal block truncate mt-0.5">{t.maleSub}</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal block truncate mt-0.5">{t.maleSub}</span>
                       </button>
                     </div>
                   </div>
@@ -539,7 +541,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                         setErrorMessage(null);
                         setStep(2);
                       }}
-                      className="text-xs font-semibold text-teal-700 hover:text-teal-900 hover:underline cursor-pointer"
+                      className="text-xs font-semibold text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 hover:underline cursor-pointer"
                     >
                       {t.alreadyHaveAccount}
                     </button>
@@ -553,7 +555,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         </div>
 
         {/* Mobile Sub Footer */}
-        <div className="py-2.5 text-center text-[10px] text-slate-400 bg-white border-t border-slate-100 shrink-0">
+        <div className="py-2.5 text-center text-[10px] text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shrink-0">
           {ui.mobileSubFooter}
         </div>
       </div>
@@ -561,7 +563,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       {/* ========================================================================= */}
       {/* 2. TABLET & LAPTOP VIEW (>= md): FULL-SCREEN BLEED HEALTHCARE PORTAL      */}
       {/* ========================================================================= */}
-      <div className="hidden md:grid md:grid-cols-12 w-full min-h-screen bg-slate-50">
+      <div className="hidden md:grid md:grid-cols-12 w-full min-h-screen bg-slate-50 dark:bg-slate-950">
         {/* Left Column: Full-height Hero & Trust Suite (Edge-to-Edge) */}
         <div className="md:col-span-5 lg:col-span-5 bg-gradient-to-br from-teal-950 via-teal-900 to-slate-900 text-white min-h-screen p-6 md:p-8 lg:p-12 xl:p-14 flex flex-col justify-between relative overflow-hidden">
           {/* Ambient radial glow */}
@@ -634,18 +636,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         </div>
 
         {/* Right Column: Full-height Intake Suite */}
-        <div className="md:col-span-7 lg:col-span-7 min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-teal-50/70 via-slate-50 to-white flex flex-col justify-between p-5 md:p-7 lg:p-10 relative overflow-y-auto">
-          {/* Top Header Row with Language Selector */}
-          <div className="w-full flex items-center justify-between pb-2 shrink-0">
-            <div className="flex items-center gap-2 text-xs font-semibold text-teal-800">
-              <span className="w-2 h-2 rounded-full bg-teal-600" />
-              <span className="uppercase tracking-wider text-[11px]">{ui.patientCheckupDesk}</span>
-            </div>
+        <div className="md:col-span-7 lg:col-span-7 min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-teal-50/70 via-slate-50 to-white dark:from-slate-900 dark:via-slate-950 dark:to-slate-950 flex flex-col justify-between p-5 md:p-7 lg:p-10 relative overflow-y-auto transition-colors">
+          {/* Top Header Row with Theme Toggle & Language Selector */}
+          <div className="w-full flex items-center justify-end gap-2 pb-2 shrink-0">
+            <ThemeToggle variant="surface" showLabel />
             <LanguageSelector variant="light" />
           </div>
 
           {/* Form Box - Elevated Clinical Card */}
-          <div className="w-full max-w-xl mx-auto my-auto bg-white rounded-2xl shadow-xl shadow-teal-950/[0.06] border border-slate-200/80 ring-1 ring-slate-900/[0.03] p-6 md:p-8">
+          <div className="w-full max-w-xl mx-auto my-auto bg-white dark:bg-slate-900 rounded-2xl shadow-xl shadow-teal-950/[0.06] dark:shadow-black/40 border border-slate-200/80 dark:border-slate-800 ring-1 ring-slate-900/[0.03] dark:ring-white/[0.03] p-6 md:p-8 transition-colors">
             <AnimatePresence mode="wait">
               {step === 1 ? (
                 <motion.form
@@ -657,33 +656,33 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   onSubmit={handlePatientDetailsSubmit}
                   className="space-y-4 lg:space-y-5"
                 >
-                  <div className="border-b border-slate-100 pb-3.5">
-                    <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+                  <div className="border-b border-slate-100 dark:border-slate-800 pb-3.5">
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
                       {ui.welcomeHeading}
                     </h2>
                   </div>
 
                   {/* 1. Patient Name */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-800 mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
                       {t.patientNameLabel} <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
-                      <User className="w-4 h-4 text-teal-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <User className="w-4 h-4 text-teal-600 dark:text-teal-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
                         type="text"
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder={t.patientNamePlaceholder}
-                        className="w-full pl-10 pr-4 py-2.5 lg:py-3 text-sm font-medium rounded-xl border border-slate-300 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 bg-white text-slate-900 placeholder:text-slate-400 transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 lg:py-3 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all"
                       />
                     </div>
                   </div>
 
                   {/* 2. Age Category */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-800 mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
                       {t.whoIsThisFor}
                     </label>
                     <div className="grid grid-cols-3 gap-2.5">
@@ -700,20 +699,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                             onClick={() => setSelectedCategory(id as AgeCategory)}
                             className={`relative p-3 lg:p-3.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
                               isSelected
-                                ? 'bg-teal-50/80 border-teal-600 text-teal-950 shadow-sm ring-1 ring-teal-600'
-                                : 'bg-white border-slate-200 text-slate-700 hover:border-teal-300 hover:bg-teal-50/20'
+                                ? 'bg-teal-50/80 dark:bg-teal-950/70 border-teal-600 dark:border-teal-500 text-teal-950 dark:text-white shadow-sm ring-1 ring-teal-600 dark:ring-teal-500'
+                                : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-teal-300 dark:hover:border-teal-600 hover:bg-teal-50/20 dark:hover:bg-teal-950/30'
                             }`}
                           >
                             {isSelected && (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 absolute top-2 right-2" />
+                              <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 absolute top-2 right-2" />
                             )}
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-colors text-2xl leading-none ${
-                              isSelected ? 'bg-teal-100/80 shadow-xs' : 'bg-slate-100/80'
+                              isSelected ? 'bg-teal-100/80 dark:bg-teal-900/70 shadow-xs' : 'bg-slate-100/80 dark:bg-slate-700/70'
                             }`}>
                               <span role="img" aria-label={label}>{emoji}</span>
                             </div>
-                            <span className="text-xs font-bold block text-slate-900">{label}</span>
-                            <span className="text-[10px] text-teal-700 font-medium block mt-0.5">{sub}</span>
+                            <span className="text-xs font-bold block text-slate-900 dark:text-white">{label}</span>
+                            <span className="text-[10px] text-teal-700 dark:text-teal-400 font-medium block mt-0.5">{sub}</span>
                           </button>
                         );
                       })}
@@ -722,7 +721,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
                   {/* 3. Gender */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-800 mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
                       {t.genderLabel}
                     </label>
                     <div className="grid grid-cols-2 gap-3">
@@ -731,15 +730,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                         onClick={() => setSelectedSex('female')}
                         className={`relative p-3 lg:p-3.5 rounded-xl border text-center transition-all cursor-pointer ${
                           selectedSex === 'female'
-                            ? 'bg-teal-50/80 border-teal-600 text-teal-950 shadow-sm ring-1 ring-teal-600'
-                            : 'bg-white border-slate-200 text-slate-700 hover:border-teal-300 hover:bg-teal-50/20'
+                            ? 'bg-teal-50/80 dark:bg-teal-950/70 border-teal-600 dark:border-teal-500 text-teal-950 dark:text-white shadow-sm ring-1 ring-teal-600 dark:ring-teal-500'
+                            : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-teal-300 dark:hover:border-teal-600 hover:bg-teal-50/20 dark:hover:bg-teal-950/30'
                         }`}
                       >
                         {selectedSex === 'female' && (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 absolute top-2.5 right-2.5" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 absolute top-2.5 right-2.5" />
                         )}
-                        <span className="text-xs font-bold block text-slate-900 truncate px-3">{t.femaleLabel}</span>
-                        <span className="text-[10px] text-slate-500 font-normal block truncate mt-0.5">{t.femaleSub}</span>
+                        <span className="text-xs font-bold block text-slate-900 dark:text-white truncate px-3">{t.femaleLabel}</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal block truncate mt-0.5">{t.femaleSub}</span>
                       </button>
 
                       <button
@@ -747,15 +746,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                         onClick={() => setSelectedSex('male')}
                         className={`relative p-3 lg:p-3.5 rounded-xl border text-center transition-all cursor-pointer ${
                           selectedSex === 'male'
-                            ? 'bg-teal-50/80 border-teal-600 text-teal-950 shadow-sm ring-1 ring-teal-600'
-                            : 'bg-white border-slate-200 text-slate-700 hover:border-teal-300 hover:bg-teal-50/20'
+                            ? 'bg-teal-50/80 dark:bg-teal-950/70 border-teal-600 dark:border-teal-500 text-teal-950 dark:text-white shadow-sm ring-1 ring-teal-600 dark:ring-teal-500'
+                            : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-teal-300 dark:hover:border-teal-600 hover:bg-teal-50/20 dark:hover:bg-teal-950/30'
                         }`}
                       >
                         {selectedSex === 'male' && (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 absolute top-2.5 right-2.5" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 absolute top-2.5 right-2.5" />
                         )}
-                        <span className="text-xs font-bold block text-slate-900 truncate px-3">{t.maleLabel}</span>
-                        <span className="text-[10px] text-slate-500 font-normal block truncate mt-0.5">{t.maleSub}</span>
+                        <span className="text-xs font-bold block text-slate-900 dark:text-white truncate px-3">{t.maleLabel}</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal block truncate mt-0.5">{t.maleSub}</span>
                       </button>
                     </div>
                   </div>
@@ -778,7 +777,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                         setErrorMessage(null);
                         setStep(2);
                       }}
-                      className="text-xs font-semibold text-teal-700 hover:text-teal-900 hover:underline cursor-pointer"
+                      className="text-xs font-semibold text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 hover:underline cursor-pointer"
                     >
                       {t.alreadyHaveAccount}
                     </button>
@@ -791,7 +790,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           </div>
 
           {/* Reassurance footer strip to ground the bottom */}
-          <div className="w-full pt-3 text-center text-[11px] text-slate-400 border-t border-slate-200/60 flex items-center justify-center gap-2 shrink-0">
+          <div className="w-full pt-3 text-center text-[11px] text-slate-400 dark:text-slate-500 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-center gap-2 shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
             <span>{ui.desktopSubFooter}</span>
           </div>

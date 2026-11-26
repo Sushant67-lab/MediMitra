@@ -24,6 +24,7 @@ import {
   logOutFromFirebase
 } from './services/firebase';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 const INITIAL_PROFILE: UserProfile = {
   id: 'user-default',
@@ -168,7 +169,7 @@ function MainApp() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-slate-50/70 text-slate-800 flex flex-col font-sans selection:bg-teal-100 selection:text-teal-900">
+    <div className="min-h-screen overflow-x-hidden bg-slate-50/70 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans selection:bg-teal-100 selection:text-teal-900 dark:selection:bg-teal-900 dark:selection:text-teal-100 transition-colors duration-200">
       {/* Simple Header */}
       <Header
         currentProfile={currentProfile}
@@ -258,18 +259,18 @@ function MainApp() {
       />
 
       {/* Simple Footer */}
-      <footer className="border-t border-slate-200/80 bg-white py-5 mt-8 text-center text-xs text-slate-400">
+      <footer className="border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 py-5 mt-8 text-center text-xs text-slate-400 dark:text-slate-500 transition-colors">
         <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>{t.footerTagline}</span>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="text-teal-600 hover:underline cursor-pointer"
+              className="text-teal-600 dark:text-teal-400 hover:underline cursor-pointer"
             >
               {t.switchProfileBtn}
             </button>
             <span>•</span>
-            <span className="text-slate-500 font-semibold">{t.emergencyNumber}</span>
+            <span className="text-slate-500 dark:text-slate-300 font-semibold">{t.emergencyNumber}</span>
           </div>
         </div>
       </footer>
@@ -279,8 +280,10 @@ function MainApp() {
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <MainApp />
-    </LanguageProvider>
+    <ThemeProvider>
+      <LanguageProvider>
+        <MainApp />
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }

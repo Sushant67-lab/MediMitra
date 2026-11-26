@@ -1,0 +1,253 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidUtr(utr) {
+      return utr is string && utr.size() == 12 && utr.matches('^[0-9]{12}$');
+    }
+
+    function isPaymentAdmin() {
+      return isSignedIn() &&
+             request.auth.token.email_verified == true &&
+             (
+               request.auth.token.email == 'sushantabc122@gmail.com' ||
+               exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+             );
+    }
+
+    function isValidUserProfile(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.email is string && data.email.size() > 0 && data.email.size() <= 150;
+    }
+
+    function isValidNewPaymentTransaction(data, txId) {
+      return data.keys().hasAll([
+               'transactionId', 'medicineId', 'medicineName', 'quantity',
+               'unitPriceInr', 'expectedAmountInr', 'userId', 'userEmail',
+               'paymentMethod', 'status', 'dispenseClaimed', 'createdAt',
+               'expiresAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'transactionId', 'medicineId', 'medicineName', 'quantity',
+               'unitPriceInr', 'expectedAmountInr', 'userId', 'userEmail',
+               'paymentMethod', 'status', 'dispenseClaimed', 'createdAt',
+               'expiresAt', 'updatedAt'
+             ]) &&
+             data.transactionId == txId &&
+             isValidId(data.medicineId) &&
+             data.medicineName is string && data.medicineName.size() > 0 && data.medicineName.size() <= 120 &&
+             data.quantity is number && data.quantity >= 1 && data.quantity <= 10 &&
+             data.unitPriceInr is number && data.unitPriceInr >= 1 && data.unitPriceInr <= 5000 &&
+             data.expectedAmountInr is number && data.expectedAmountInr == data.unitPriceInr * data.quantity &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.userEmail is string && data.userEmail.size() > 0 && data.userEmail.size() <= 150 &&
+             data.paymentMethod in ['UPI_QR', 'RAZORPAY'] &&
+             data.status == 'CREATED' &&
+             data.dispenseClaimed == false &&
+             data.createdAt is string && data.createdAt.size() <= 64 &&
+             data.expiresAt is string && data.expiresAt.size() <= 64 &&
+             data.updatedAt is string && data.updatedAt.size() <= 64;
+    }
+
+    function isValidPaymentTransactionSubmitUtr(inData, exData) {
+      return exData.status == 'CREATED' &&
+             inData.status == 'PENDING_MERCHANT_VERIFICATION' &&
+             inData.diff(exData).affectedKeys().hasOnly(['status', 'utrNumber', 'updatedAt']) &&
+             isValidUtr(inData.utrNumber) &&
+             inData.updatedAt is string && inData.updatedAt.size() <= 64 &&
+             inData.dispenseClaimed == false &&
+             existsAfter(/databases/$(database)/documents/utr_claims/$(inData.utrNumber));
+    }
+
+    function isValidPaymentTransactionAdminDecision(inData, exData) {
+      return isPaymentAdmin() &&
+             exData.status in ['CREATED', 'PENDING_MERCHANT_VERIFICATION'] &&
+             inData.status in ['VERIFIED', 'REJECTED'] &&
+             inData.diff(exData).affectedKeys().hasOnly(['status', 'verifiedByEmail', 'verificationNote', 'verifiedAt', 'updatedAt']) &&
+             inData.verifiedByEmail is string && inData.verifiedByEmail == request.auth.token.email &&
+             inData.verificationNote is string && inData.verificationNote.size() <= 240 &&
+             inData.verifiedAt is string && inData.verifiedAt.size() <= 64 &&
+             inData.updatedAt is string && inData.updatedAt.size() <= 64 &&
+             inData.dispenseClaimed == false;
+    }
+
+    function isValidPaymentTransactionClaim(inData, exData) {
+      return exData.status == 'VERIFIED' &&
+             exData.dispenseClaimed == false &&
+             inData.dispenseClaimed == true &&
+             inData.diff(exData).affectedKeys().hasOnly(['dispenseClaimed', 'claimedCommandId', 'updatedAt']) &&
+             isValidId(inData.claimedCommandId) &&
+             inData.updatedAt is string && inData.updatedAt.size() <= 64 &&
+             existsAfter(/databases/$(database)/documents/dispensing_commands/$(inData.claimedCommandId));
+    }
+
+    function isValidUtrClaim(data, utr) {
+      return data.keys().hasAll(['utrNumber', 'transactionId', 'expectedAmountInr', 'userId', 'claimedAt']) &&
+             data.keys().hasOnly(['utrNumber', 'transactionId', 'expectedAmountInr', 'userId', 'claimedAt']) &&
+             data.utrNumber == utr &&
+             isValidId(data.transactionId) &&
+             data.expectedAmountInr is number && data.expectedAmountInr > 0 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.claimedAt is string && data.claimedAt.size() <= 64 &&
+             exists(/databases/$(database)/documents/payment_transactions/$(data.transactionId));
+    }
+
+    function isValidDispensingCommandCreate(data, cmdId) {
+      return data.keys().hasAll([
+               'commandId', 'medicineId', 'medicineName', 'requestedQuantity',
+               'cycles', 'deviceId', 'userId', 'userEmail', 'status',
+               'executionResult', 'servoConfig', 'paymentTransactionId',
+               'paymentAmount', 'paymentStatus', 'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'commandId', 'medicineId', 'medicineName', 'requestedQuantity',
+               'cycles', 'deviceId', 'userId', 'userEmail', 'status',
+               'executionResult', 'servoConfig', 'paymentTransactionId',
+               'paymentAmount', 'paymentStatus', 'createdAt', 'updatedAt'
+             ]) &&
+             data.commandId == cmdId &&
+             isValidId(data.medicineId) &&
+             data.medicineName is string && data.medicineName.size() > 0 && data.medicineName.size() <= 120 &&
+             data.requestedQuantity is number && data.requestedQuantity >= 1 && data.requestedQuantity <= 10 &&
+             data.cycles is number && data.cycles >= 1 && data.cycles <= 10 &&
+             isValidId(data.deviceId) &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.userEmail is string && data.userEmail.size() > 0 && data.userEmail.size() <= 150 &&
+             data.status == 'PENDING' &&
+             data.executionResult is string && data.executionResult.size() <= 500 &&
+             data.createdAt is string && data.createdAt.size() <= 64 &&
+             data.updatedAt is string && data.updatedAt.size() <= 64;
+    }
+
+    function isPaymentVerifiedForCommand(data, cmdId) {
+      return data.paymentStatus == 'VERIFIED' &&
+             data.paymentAmount is number && data.paymentAmount > 0 &&
+             isValidId(data.paymentTransactionId) &&
+             exists(/databases/$(database)/documents/payment_transactions/$(data.paymentTransactionId)) &&
+             get(/databases/$(database)/documents/payment_transactions/$(data.paymentTransactionId)).data.status == 'VERIFIED' &&
+             get(/databases/$(database)/documents/payment_transactions/$(data.paymentTransactionId)).data.dispenseClaimed == false &&
+             get(/databases/$(database)/documents/payment_transactions/$(data.paymentTransactionId)).data.expectedAmountInr == data.paymentAmount &&
+             get(/databases/$(database)/documents/payment_transactions/$(data.paymentTransactionId)).data.medicineId == data.medicineId &&
+             get(/databases/$(database)/documents/payment_transactions/$(data.paymentTransactionId)).data.quantity == data.requestedQuantity &&
+             getAfter(/databases/$(database)/documents/payment_transactions/$(data.paymentTransactionId)).data.dispenseClaimed == true &&
+             getAfter(/databases/$(database)/documents/payment_transactions/$(data.paymentTransactionId)).data.claimedCommandId == cmdId;
+    }
+
+    // Health check / connection test doc
+    match /test/{docId} {
+      allow get: if isValidId(docId);
+      allow list: if false;
+    }
+
+    // Authorized Store Owners / Pharmacists
+    match /admins/{adminId} {
+      allow get: if isOwner(adminId) || isPaymentAdmin();
+      allow list: if isPaymentAdmin();
+      allow create, update, delete: if isSignedIn() && request.auth.token.email_verified == true && request.auth.token.email == 'sushantabc122@gmail.com';
+    }
+
+    // Patient User Profiles
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isValidId(userId);
+      allow list: if false;
+      allow create: if isValidId(userId) && (isOwner(userId) || isValidUserProfile(incoming()));
+      allow update: if isValidId(userId) && (isOwner(userId) || isValidUserProfile(incoming()));
+      allow delete: if isOwner(userId);
+
+      // Patient Medical Checkup Records
+      match /records/{recordId} {
+        allow get, list: if isOwner(userId) || isValidId(userId);
+        allow create: if isValidId(recordId) && (isOwner(userId) || isSignedIn() || isValidId(userId));
+        allow update: if isValidId(recordId) && (isOwner(userId) || isSignedIn() || isValidId(userId));
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    // Payment Transactions (Anti-Fraud Gate for Physical Dispensing)
+    match /payment_transactions/{transactionId} {
+      allow get: if isValidId(transactionId);
+      allow list: if isPaymentAdmin();
+      allow create: if isValidId(transactionId) && isValidNewPaymentTransaction(incoming(), transactionId);
+      allow update: if isValidId(transactionId) && (
+        isValidPaymentTransactionSubmitUtr(incoming(), existing()) ||
+        isValidPaymentTransactionAdminDecision(incoming(), existing()) ||
+        isValidPaymentTransactionClaim(incoming(), existing())
+      );
+      allow delete: if false;
+    }
+
+    // Single-Use 12-digit UPI UTR Lock Collection
+    match /utr_claims/{utr} {
+      allow get: if isValidUtr(utr);
+      allow list: if false;
+      allow create: if isValidUtr(utr) && isValidUtrClaim(incoming(), utr);
+      allow update, delete: if false;
+    }
+
+    // Physical Dispensing Commands for ESP32 (Strictly Gated by Verified Payment)
+    match /dispensing_commands/{commandId} {
+      allow get: if isValidId(commandId);
+      allow list: if request.query.limit != null && request.query.limit <= 50;
+
+      allow create: if isValidId(commandId) &&
+        isValidDispensingCommandCreate(incoming(), commandId) && (
+          (commandId.matches('^TEST-.*') &&
+           incoming().medicineId == 'hardware_servo_test' &&
+           incoming().requestedQuantity == 1 &&
+           incoming().paymentTransactionId == 'HARDWARE_TEST' &&
+           incoming().paymentAmount == 0 &&
+           incoming().paymentStatus == 'HARDWARE_TEST') ||
+          (!commandId.matches('^TEST-.*') && isPaymentVerifiedForCommand(incoming(), commandId))
+        );
+
+      allow update: if isValidId(commandId) &&
+        existing().status in ['PENDING', 'PROCESSING'] &&
+        incoming().status in ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED', 'UNKNOWN'] &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'claimedAt', 'completedAt', 'updatedAt', 'executionResult', 'errorReason']);
+
+      allow delete: if false;
+    }
+
+    // Medicine Inventory
+    match /inventory/{medicineId} {
+      allow get: if isValidId(medicineId);
+      allow list: if request.query.limit == null || request.query.limit <= 100;
+      allow create, update: if isValidId(medicineId);
+      allow delete: if false;
+    }
+
+    // Device Registry & Heartbeats
+    match /devices/{deviceId} {
+      allow get: if isValidId(deviceId);
+      allow list: if false;
+      allow create, update: if isValidId(deviceId);
+      allow delete: if false;
+    }
+  }
+}

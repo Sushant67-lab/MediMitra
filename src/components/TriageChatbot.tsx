@@ -358,11 +358,11 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-4">
       {/* Top Session Bar with MediMitra Logo */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             title={t.backHomeBtn}
           >
             <ArrowLeft className="w-4 h-4" />
@@ -370,24 +370,24 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
 
           <MediMitraLogo size="sm" />
 
-          <div className="border-l border-slate-200 pl-3">
+          <div className="border-l border-slate-200 dark:border-slate-700 pl-3">
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-teal-100 text-teal-800">
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300">
                 {localizedSymptomName}
               </span>
             </div>
-            <p className="text-xs text-slate-500 font-normal mt-0.5">
-              {ui.patientLabel}: <span className="font-medium text-slate-800">{displayPatientName}</span> ({localizedAgeCat}, {currentProfile.age}{appUi.yearsShort}, {localizedSex})
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
+              {ui.patientLabel}: <span className="font-medium text-slate-800 dark:text-slate-200">{displayPatientName}</span> ({localizedAgeCat}, {currentProfile.age}{appUi.yearsShort}, {localizedSex})
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <span className="text-xs font-bold text-teal-700">
+            <span className="text-xs font-bold text-teal-700 dark:text-teal-400">
               {t.question} {Math.min(currentStep, 10)} {t.of} 10
             </span>
-            <div className="w-32 bg-slate-100 rounded-full h-2 mt-1 overflow-hidden border border-slate-200">
+            <div className="w-32 bg-slate-100 dark:bg-slate-800 rounded-full h-2 mt-1 overflow-hidden border border-slate-200 dark:border-slate-700">
               <motion.div 
                 className="bg-gradient-to-r from-teal-500 to-emerald-500 h-full rounded-full"
                 initial={{ width: 0 }}
@@ -399,7 +399,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
 
           <button
             onClick={handleRestart}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             title={t.restartBtn}
           >
             <RotateCcw className="w-4 h-4" />
@@ -412,10 +412,10 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
         <motion.div 
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 flex items-center justify-between gap-3 text-rose-900 shadow-xs"
+          className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 flex items-center justify-between gap-3 text-rose-900 dark:text-rose-200 shadow-xs"
         >
           <div className="flex items-center gap-2.5">
-            <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+            <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
             <div className="text-xs">
               <span className="font-bold">{ui.redFlagBannerTitle}</span> {ui.redFlagBannerDesc}
             </div>
@@ -430,7 +430,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
       )}
 
       {/* Elongated Chat Messages Timeline */}
-      <div className="bg-slate-50/70 rounded-3xl p-5 sm:p-8 border border-slate-200 min-h-[560px] sm:min-h-[640px] max-h-[740px] overflow-y-auto space-y-5 shadow-xs">
+      <div className="bg-slate-50/70 dark:bg-slate-900/90 rounded-3xl p-5 sm:p-8 border border-slate-200 dark:border-slate-800 min-h-[560px] sm:min-h-[640px] max-h-[740px] overflow-y-auto space-y-5 shadow-xs transition-colors">
         <AnimatePresence initial={false}>
           {chatHistory.map((msg) => {
             const isBot = msg.sender === 'bot';
@@ -451,7 +451,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
 
                 <div className={`max-w-[88%] sm:max-w-[80%] space-y-1.5 ${isBot ? 'text-left' : 'text-right'}`}>
                   {resolved.badge && (
-                    <span className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-md bg-teal-100 text-teal-900 uppercase tracking-wider mb-0.5">
+                    <span className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-md bg-teal-100 dark:bg-teal-950 text-teal-900 dark:text-teal-300 uppercase tracking-wider mb-0.5">
                       {resolved.badge}
                     </span>
                   )}
@@ -460,23 +460,23 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
                     className={`p-3.5 sm:p-4 rounded-2xl leading-relaxed shadow-xs ${
                       isBot
                         ? msg.isRedFlagWarning
-                          ? 'bg-rose-50 border border-rose-300 text-rose-950 rounded-tl-none font-semibold text-sm'
+                          ? 'bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-100 rounded-tl-none font-semibold text-sm'
                           : msg.questionId
-                          ? 'bg-white border border-slate-200/90 text-slate-900 rounded-tl-none font-semibold text-sm sm:text-base'
-                          : 'bg-white border border-slate-200/90 text-slate-800 rounded-tl-none font-normal text-xs sm:text-sm'
+                          ? 'bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-tl-none font-semibold text-sm sm:text-base'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-tl-none font-normal text-xs sm:text-sm'
                         : 'bg-teal-600 text-white rounded-tr-none font-medium text-xs sm:text-sm'
                     }`}
                   >
                     {resolved.text}
                   </div>
 
-                  <span className="text-[10px] text-slate-400 block px-1 font-normal">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 block px-1 font-normal">
                     {msg.timestamp}
                   </span>
                 </div>
 
                 {!isBot && (
-                  <div className="w-8 h-8 rounded-full bg-slate-700 text-white flex items-center justify-center shrink-0 shadow-xs font-medium text-xs mt-1">
+                  <div className="w-8 h-8 rounded-full bg-slate-700 dark:bg-slate-600 text-white flex items-center justify-center shrink-0 shadow-xs font-medium text-xs mt-1">
                     {displayPatientName.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -490,12 +490,12 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-2 text-xs text-slate-500 p-2"
+            className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 p-2"
           >
             <div className="w-7 h-7 rounded-full bg-teal-600 text-white flex items-center justify-center">
               <Stethoscope className="w-3.5 h-3.5 animate-spin" />
             </div>
-            <span className="flex items-center gap-1 font-medium text-slate-600">
+            <span className="flex items-center gap-1 font-medium text-slate-600 dark:text-slate-300">
               {ui.analyzingText}
               <span className="animate-pulse">...</span>
             </span>
@@ -511,28 +511,28 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="bg-white rounded-2xl p-4 sm:p-5 border border-teal-200 shadow-sm space-y-3"
+          className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-teal-200 dark:border-teal-800/80 shadow-sm space-y-3 transition-colors"
         >
           {/* Current Question Header - Clean Semibold and Legible */}
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/70 px-2 py-0.5 rounded-md border border-teal-200 dark:border-teal-800 uppercase tracking-wider">
                 {t.question} {currentStep} {t.of} 10
               </span>
               {currentQuestionData.badge && (
-                <span className="text-[11px] font-medium text-slate-600">
+                <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
                   • {currentQuestionData.badge}
                 </span>
               )}
             </div>
 
-            <h2 className="text-sm sm:text-base font-semibold text-slate-900 leading-snug">
+            <h2 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-snug">
               {currentQuestionData.question}
             </h2>
 
             {currentQuestionData.subtext && (
-              <p className="text-xs text-slate-500 font-normal flex items-center gap-1.5 pt-0.5">
-                <Info className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-normal flex items-center gap-1.5 pt-0.5">
+                <Info className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                 <span>{currentQuestionData.subtext}</span>
               </p>
             )}
@@ -544,10 +544,10 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
               <button
                 key={idx}
                 onClick={() => handleSelectOption(opt, idx)}
-                className="p-3 rounded-xl border border-slate-200 bg-slate-50/40 hover:border-teal-500 hover:bg-teal-50/70 text-slate-800 text-xs sm:text-sm font-medium text-left transition-all cursor-pointer flex items-center justify-between group active:scale-[0.99]"
+                className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-800/70 hover:border-teal-500 dark:hover:border-teal-500 hover:bg-teal-50/70 dark:hover:bg-teal-950/50 text-slate-800 dark:text-slate-100 text-xs sm:text-sm font-medium text-left transition-all cursor-pointer flex items-center justify-between group active:scale-[0.99]"
               >
-                <span className="group-hover:text-teal-900 text-slate-800 leading-snug">{opt}</span>
-                <span className="text-slate-400 group-hover:text-teal-700 text-sm font-mono ml-2 shrink-0">
+                <span className="group-hover:text-teal-900 dark:group-hover:text-teal-200 text-slate-800 dark:text-slate-100 leading-snug">{opt}</span>
+                <span className="text-slate-400 dark:text-slate-500 group-hover:text-teal-700 dark:group-hover:text-teal-300 text-sm font-mono ml-2 shrink-0">
                   →
                 </span>
               </button>
@@ -561,7 +561,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
               value={customInput}
               onChange={(e) => setCustomInput(e.target.value)}
               placeholder={t.customInputPlaceholder}
-              className="flex-1 px-4 py-3 text-sm font-semibold rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 bg-slate-50 text-slate-950 placeholder:text-slate-400"
+              className="flex-1 px-4 py-3 text-sm font-semibold rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-500 bg-slate-50 dark:bg-slate-800 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
             <button
               type="submit"
@@ -569,7 +569,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
               className={`px-5 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 customInput.trim()
                   ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-sm'
-                  : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
               }`}
             >
               <span>{t.sendBtn}</span>

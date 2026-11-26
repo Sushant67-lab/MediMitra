@@ -5,9 +5,13 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  FastForward,
   Globe,
+  Maximize2,
+  Minimize2,
   Pause,
   Play,
+  Rewind,
   RotateCcw,
   ShieldAlert,
   Volume2,
@@ -22,6 +26,8 @@ import {
   SUPPORTED_LANGUAGES,
   useLanguage
 } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeToggle } from './ThemeToggle';
 import { WIRING_VIDEO_TRANSLATIONS } from '../data/wiringVideoTranslations';
 
 interface Esp32WiringVideoModalProps {
@@ -31,6 +37,7 @@ interface Esp32WiringVideoModalProps {
 
 const SCENE_DURATION_SEC = 30;
 const TOTAL_DURATION_SEC = 300; // 5 minutes (10 scenes x 30s)
+const PLAYBACK_SPEEDS = [0.75, 1, 1.25, 1.5] as const;
 
 const LANGUAGE_VOICE_PRIORITY: Record<LanguageCode, string[]> = {
   en: ['en-IN', 'en-US', 'en-GB', 'en'],
@@ -124,11 +131,15 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
   onClose
 }) => {
   const { language, setLanguage } = useLanguage();
+  const { isDark } = useTheme();
   const [elapsedSec, setElapsedSec] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
 
+  const playerContainerRef = useRef<HTMLDivElement | null>(null);
   const lastFrameTimeRef = useRef<number | null>(null);
   const lastSpokenKeyRef = useRef<string | null>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
@@ -137,6 +148,8 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
   const speechSessionIdRef = useRef(0);
   const isVoiceSpeakingRef = useRef(false);
   const voiceHoldStartedAtRef = useRef<number | null>(null);
+  const playbackSpeedRef = useRef<number>(playbackSpeed);
+  playbackSpeedRef.current = playbackSpeed;
 
   const localeBundle = WIRING_VIDEO_TRANSLATIONS[language] || WIRING_VIDEO_TRANSLATIONS.en;
   const scenes = localeBundle.scenes;
@@ -154,6 +167,14 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
     voicesRef.current = voices;
   }, [voices]);
 
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
+
   const stopSpeech = useCallback(() => {
     speechSessionIdRef.current += 1;
     if (sentencePauseTimerRef.current) {
@@ -170,7 +191,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
   }, []);
 
   const speakScene = useCallback(
-    (sceneIdx: number, targetLang: LanguageCode, muted: boolean) => {
+    (sceneIdx: number, targetLang: LanguageCode, muted: boolean, speed = playbackSpeedRef.current) => {
       if (muted || typeof window === 'undefined' || !('speechSynthesis' in window)) {
         isVoiceSpeakingRef.current = false;
         return;
@@ -218,7 +239,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
         const utterance = new SpeechSynthesisUtterance(sentenceText);
         utterance.lang = bcp47;
         if (voice) utterance.voice = voice;
-        utterance.rate = 0.94;
+        utterance.rate = Math.max(0.7, Math.min(1.6, 0.94 * speed));
         utterance.pitch = 1.03;
         utterance.volume = 1;
 
@@ -265,10 +286,13 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
       setIsPlaying(true);
       lastFrameTimeRef.current = null;
       lastSpokenKeyRef.current = null;
-      speakScene(0, language, isMuted);
+      speakScene(0, language, isMuted, playbackSpeedRef.current);
     } else {
       setIsPlaying(false);
       stopSpeech();
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
     }
   }, [isOpen]);
 
@@ -276,18 +300,109 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
     return () => stopSpeech();
   }, [stopSpeech]);
 
+  const handleSeekTo = useCallback(
+    (targetSec: number) => {
+      const clamped = Math.max(0, Math.min(TOTAL_DURATION_SEC, targetSec));
+      const nextSceneIdx = Math.min(scenes.length - 1, Math.max(0, Math.floor(clamped / SCENE_DURATION_SEC)));
+      const prevSceneIdx = activeSceneIndex;
+      setElapsedSec(clamped);
+      if (nextSceneIdx !== prevSceneIdx) {
+        stopSpeech();
+        if (isPlaying && !isMuted && clamped < TOTAL_DURATION_SEC) {
+          speakScene(nextSceneIdx, language, false, playbackSpeedRef.current);
+        }
+      }
+      if (clamped >= TOTAL_DURATION_SEC) {
+        setIsPlaying(false);
+        stopSpeech();
+      }
+    },
+    [scenes.length, activeSceneIndex, stopSpeech, isPlaying, isMuted, speakScene, language]
+  );
+
+  const handleSkipBy = useCallback(
+    (deltaSec: number) => {
+      handleSeekTo(elapsedSec + deltaSec);
+    },
+    [elapsedSec, handleSeekTo]
+  );
+
+  const handleTogglePlay = useCallback(() => {
+    if (elapsedSec >= TOTAL_DURATION_SEC) {
+      stopSpeech();
+      setElapsedSec(0);
+      setIsPlaying(true);
+      speakScene(0, language, isMuted, playbackSpeedRef.current);
+      return;
+    }
+    if (isPlaying) {
+      setIsPlaying(false);
+      stopSpeech();
+    } else {
+      setIsPlaying(true);
+      lastSpokenKeyRef.current = null;
+      speakScene(activeSceneIndex, language, isMuted, playbackSpeedRef.current);
+    }
+  }, [elapsedSec, stopSpeech, speakScene, language, isMuted, isPlaying, activeSceneIndex]);
+
+  const handleToggleMute = useCallback(() => {
+    const nextMuted = !isMuted;
+    setIsMuted(nextMuted);
+    if (nextMuted) {
+      stopSpeech();
+    } else if (isPlaying) {
+      lastSpokenKeyRef.current = null;
+      speakScene(activeSceneIndex, language, false, playbackSpeedRef.current);
+    }
+  }, [isMuted, stopSpeech, isPlaying, speakScene, activeSceneIndex, language]);
+
+  const handleToggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement && playerContainerRef.current?.requestFullscreen) {
+        await playerContainerRef.current.requestFullscreen();
+      } else if (document.fullscreenElement && document.exitFullscreen) {
+        await document.exitFullscreen();
+      }
+    } catch {
+      // Fullscreen unavailable in sandboxed context
+    }
+  }, []);
+
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
+      const targetTag = (e.target as HTMLElement | null)?.tagName;
+      if (targetTag === 'INPUT' || targetTag === 'SELECT' || targetTag === 'TEXTAREA') {
+        if (e.key !== 'Escape') return;
+      }
       if (e.key === 'Escape') {
         e.stopPropagation();
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+          return;
+        }
         stopSpeech();
         onClose();
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        handleTogglePlay();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handleSkipBy(-10);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleSkipBy(10);
+      } else if (e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        handleToggleMute();
+      } else if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        handleToggleFullscreen();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, onClose, stopSpeech]);
+  }, [isOpen, onClose, stopSpeech, handleTogglePlay, handleSkipBy, handleToggleMute, handleToggleFullscreen]);
 
   useEffect(() => {
     if (!isOpen || !isPlaying) {
@@ -299,7 +414,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
     let rafId = 0;
     const tick = (now: number) => {
       if (lastFrameTimeRef.current !== null) {
-        const dtSec = Math.min(0.1, (now - lastFrameTimeRef.current) / 1000);
+        const dtSec = Math.min(0.1, (now - lastFrameTimeRef.current) / 1000) * playbackSpeedRef.current;
         setElapsedSec((prev) => {
           const currentSceneIdx = Math.min(
             scenes.length - 1,
@@ -340,33 +455,15 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
     if (!isOpen || !isPlaying || isMuted) return;
     const key = `${activeSceneIndex}:${language}`;
     if (lastSpokenKeyRef.current !== key) {
-      speakScene(activeSceneIndex, language, isMuted);
+      speakScene(activeSceneIndex, language, isMuted, playbackSpeedRef.current);
     }
   }, [isOpen, isPlaying, isMuted, activeSceneIndex, language, speakScene]);
-
-  const handleTogglePlay = () => {
-    if (elapsedSec >= TOTAL_DURATION_SEC) {
-      stopSpeech();
-      setElapsedSec(0);
-      setIsPlaying(true);
-      speakScene(0, language, isMuted);
-      return;
-    }
-    if (isPlaying) {
-      setIsPlaying(false);
-      stopSpeech();
-    } else {
-      setIsPlaying(true);
-      lastSpokenKeyRef.current = null;
-      speakScene(activeSceneIndex, language, isMuted);
-    }
-  };
 
   const handleReplay = () => {
     stopSpeech();
     setElapsedSec(0);
     setIsPlaying(true);
-    speakScene(0, language, isMuted);
+    speakScene(0, language, isMuted, playbackSpeed);
   };
 
   const handleJumpToScene = (index: number) => {
@@ -374,17 +471,16 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
     stopSpeech();
     setElapsedSec(clampedIndex * SCENE_DURATION_SEC);
     setIsPlaying(true);
-    speakScene(clampedIndex, language, isMuted);
+    speakScene(clampedIndex, language, isMuted, playbackSpeed);
   };
 
-  const handleToggleMute = () => {
-    const nextMuted = !isMuted;
-    setIsMuted(nextMuted);
-    if (nextMuted) {
+  const handleCycleSpeed = () => {
+    const idx = PLAYBACK_SPEEDS.indexOf(playbackSpeed as (typeof PLAYBACK_SPEEDS)[number]);
+    const nextSpeed = PLAYBACK_SPEEDS[(idx + 1) % PLAYBACK_SPEEDS.length];
+    setPlaybackSpeed(nextSpeed);
+    if (isPlaying && !isMuted) {
       stopSpeech();
-    } else if (isPlaying) {
-      lastSpokenKeyRef.current = null;
-      speakScene(activeSceneIndex, language, false);
+      speakScene(activeSceneIndex, language, false, nextSpeed);
     }
   };
 
@@ -392,7 +488,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
     setLanguage(newLang);
     stopSpeech();
     if (isPlaying && !isMuted) {
-      speakScene(activeSceneIndex, newLang, false);
+      speakScene(activeSceneIndex, newLang, false, playbackSpeed);
     }
   };
 
@@ -401,18 +497,15 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
     [language]
   );
 
-  // Progressive wire visibility flags across the 10-step walkthrough
   const showWire1Orange = activeSceneIndex >= 2;
   const showWire2RedServo = activeSceneIndex >= 4;
   const showWire3RedVin = activeSceneIndex >= 5;
   const showWire4Ground = activeSceneIndex >= 6;
   const esp32PoweredOn = activeSceneIndex >= 8 || (activeSceneIndex === 5 && sceneProgress > 0.65);
 
-  // Scene 9 (Wi-Fi link & LED stop blinking)
   const wifiConnected = activeSceneIndex === 8 ? sceneProgress >= 0.52 : activeSceneIndex >= 9;
   const blueLedBlinkingPhase = activeSceneIndex === 8 && !wifiConnected;
 
-  // Scene 10 (Dispense test 0 -> 45 -> 0)
   const dispenseAngle = useMemo(() => {
     if (activeSceneIndex !== 9) return 0;
     if (sceneProgress < 0.25) return 0;
@@ -428,44 +521,87 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[60] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
+      className={`fixed inset-0 z-[60] backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto transition-colors ${
+        isDark ? 'bg-slate-950/90' : 'bg-slate-900/60'
+      }`}
       role="dialog"
       aria-modal="true"
       aria-label={localeBundle.modalTitle}
     >
-      <div className="w-full max-w-5xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col my-auto">
+      <div
+        ref={playerContainerRef}
+        className={`w-full ${
+          isFullscreen ? 'max-w-none h-full rounded-none border-0' : 'max-w-5xl rounded-2xl border my-auto'
+        } shadow-2xl overflow-hidden flex flex-col transition-colors ${
+          isDark
+            ? 'bg-slate-900 border-slate-700/80 text-white'
+            : 'bg-white border-slate-200 text-slate-900'
+        }`}
+      >
         {/* Top Modal Header */}
-        <div className="px-4 py-3 sm:px-5 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div
+          className={`px-4 py-3 sm:px-5 border-b flex flex-wrap items-center justify-between gap-3 ${
+            isDark
+              ? 'bg-slate-950 border-slate-800'
+              : 'bg-slate-50 border-slate-200'
+          }`}
+        >
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-400/35 flex items-center justify-center shrink-0">
-              <Zap className="w-4 h-4 text-amber-300" />
+            <div
+              className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${
+                isDark
+                  ? 'bg-amber-500/15 border-amber-400/35'
+                  : 'bg-amber-50 border-amber-200'
+              }`}
+            >
+              <Zap className={`w-4 h-4 ${isDark ? 'text-amber-300' : 'text-amber-600'}`} />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-sm sm:text-base font-bold text-white truncate">
+                <h2 className={`text-sm sm:text-base font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   {localeBundle.modalTitle}
                 </h2>
-                <span className="hidden md:inline-flex px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap shrink-0">
+                <span
+                  className={`hidden md:inline-flex px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider whitespace-nowrap shrink-0 ${
+                    isDark
+                      ? 'bg-emerald-500/15 border-emerald-400/30 text-emerald-300'
+                      : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  }`}
+                >
                   {localeBundle.noBreadboardBadge}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 truncate">
+              <p className={`text-[11px] truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 {localeBundle.voiceNotice}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <label className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
-              <Globe className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+            <ThemeToggle variant="video" showLabel />
+
+            <label
+              className={`flex items-center gap-1.5 border rounded-xl px-2.5 py-1.5 text-xs ${
+                isDark
+                  ? 'bg-slate-800 border-slate-700 text-slate-200'
+                  : 'bg-white border-slate-300 text-slate-800'
+              }`}
+            >
+              <Globe className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
               <select
                 value={language}
                 onChange={(e) => handleLanguageChange(e.target.value as LanguageCode)}
                 aria-label={localeBundle.voiceLanguageLabel}
-                className="bg-transparent text-white font-semibold text-xs focus:outline-none cursor-pointer"
+                className={`bg-transparent font-semibold text-xs focus:outline-none cursor-pointer ${
+                  isDark ? 'text-white' : 'text-slate-900'
+                }`}
               >
                 {SUPPORTED_LANGUAGES.map((lang) => (
-                  <option key={lang.code} value={lang.code} className="bg-slate-900 text-white">
+                  <option
+                    key={lang.code}
+                    value={lang.code}
+                    className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}
+                  >
                     {lang.nativeName}
                   </option>
                 ))}
@@ -479,7 +615,11 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                 onClose();
               }}
               aria-label={localeBundle.closeBtn}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer shrink-0"
+              className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
+                isDark
+                  ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
+                  : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-600 hover:text-slate-900'
+              }`}
             >
               <X className="w-4 h-4" />
             </button>
@@ -487,34 +627,61 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
         </div>
 
         {/* 16:9 Animated Wiring Stage */}
-        <div className="relative w-full aspect-video min-h-[300px] sm:min-h-[410px] bg-gradient-to-br from-slate-950 via-slate-900 to-teal-950/60 overflow-hidden select-none">
-          {/* Top-left Chapter HUD & Top-right Clock */}
+        <div
+          onClick={handleTogglePlay}
+          title={isPlaying ? localeBundle.pauseBtn : localeBundle.playBtn}
+          className={`relative w-full ${
+            isFullscreen ? 'flex-1 min-h-0' : 'aspect-video min-h-[300px] sm:min-h-[410px]'
+          } overflow-hidden select-none cursor-pointer transition-colors ${
+            isDark
+              ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-teal-950/60'
+              : 'bg-gradient-to-br from-slate-50 via-white to-teal-50/75'
+          }`}
+        >
+          {/* Top-left Chapter HUD & Language Tag (Clock moved down to bottom control deck) */}
           <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between gap-2 pointer-events-none">
-            <div className="px-3 py-1.5 rounded-lg bg-slate-950/85 border border-teal-500/40 flex items-center gap-2 min-w-0">
-              <span className="text-[11px] font-mono font-bold text-teal-300 tabular-nums shrink-0">
+            <div
+              className={`px-3 py-1.5 rounded-lg border flex items-center gap-2 min-w-0 ${
+                isDark
+                  ? 'bg-slate-950/85 border-teal-500/40'
+                  : 'bg-white/95 border-teal-300/80 shadow-xs'
+              }`}
+            >
+              <span className={`text-[11px] font-mono font-bold tabular-nums shrink-0 ${isDark ? 'text-teal-300' : 'text-teal-700'}`}>
                 {String(activeSceneIndex + 1).padStart(2, '0')}/{scenes.length}
               </span>
-              <span className="text-xs font-semibold text-white truncate">
+              <span className={`text-xs font-semibold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {activeScene.chapterTitle}
               </span>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="hidden sm:inline-flex px-2.5 py-1 rounded-lg bg-slate-950/85 border border-slate-700 text-[11px] font-medium text-teal-200">
-                {currentLangOption.nativeName}
-              </span>
-              <span className="px-2.5 py-1 rounded-lg bg-slate-950/90 border border-slate-700 font-mono text-xs font-bold text-white tabular-nums">
-                {formatClock(elapsedSec)} / {localeBundle.totalDurationLabel}
-              </span>
-            </div>
+            <span
+              className={`hidden sm:inline-flex px-2.5 py-1 rounded-lg border text-[11px] font-medium shrink-0 ${
+                isDark
+                  ? 'bg-slate-950/85 border-slate-700 text-teal-200'
+                  : 'bg-white/95 border-slate-300 text-teal-800 shadow-xs'
+              }`}
+            >
+              {currentLangOption.nativeName}
+            </span>
           </div>
 
           {/* Main Visual Stage */}
           <div className="relative z-10 w-full h-full pt-12 pb-20 px-3 sm:px-6 flex flex-col justify-center">
             {/* Key Tip Ribbon */}
-            <div className="mb-2 mx-auto max-w-3xl w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-400/30 text-[11px] text-amber-200">
+            <div
+              className={`mb-2 mx-auto max-w-3xl w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl border text-[11px] ${
+                isDark
+                  ? 'bg-amber-500/10 border-amber-400/30 text-amber-200'
+                  : 'bg-amber-50 border-amber-300 text-amber-900 shadow-2xs'
+              }`}
+            >
               <span className="font-semibold truncate">{activeScene.keyTip}</span>
-              <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono text-emerald-300 shrink-0">
+              <span
+                className={`hidden sm:inline-flex items-center gap-1 text-[10px] font-mono shrink-0 ${
+                  isDark ? 'text-emerald-300' : 'text-emerald-700 font-bold'
+                }`}
+              >
                 <Ban className="w-3 h-3" />
                 NO BREADBOARD
               </span>
@@ -524,24 +691,52 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
             {activeSceneIndex === 0 && (
               <div className="w-full max-w-3xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
                 {[
-                  { num: '01', name: 'ESP32 DevKit V1', sub: '30-Pin naked board', color: 'border-sky-400/50 bg-sky-950/40' },
-                  { num: '02', name: 'SG90 Servo', sub: '3-Pin plug attached', color: 'border-teal-400/50 bg-teal-950/40' },
-                  { num: '03', name: '5V 2A DC Supply', sub: '+ 2-Pin screw adapter', color: 'border-rose-400/50 bg-rose-950/40' },
-                  { num: '04', name: '4 Jumper Wires', sub: 'Orange, 2x Red, Black', color: 'border-amber-400/50 bg-amber-950/40' }
+                  {
+                    num: '01',
+                    name: 'ESP32 DevKit V1',
+                    sub: '30-Pin naked board',
+                    darkCard: 'border-sky-400/50 bg-sky-950/40',
+                    lightCard: 'border-sky-300 bg-sky-50'
+                  },
+                  {
+                    num: '02',
+                    name: 'SG90 Servo',
+                    sub: '3-Pin plug attached',
+                    darkCard: 'border-teal-400/50 bg-teal-950/40',
+                    lightCard: 'border-teal-300 bg-teal-50'
+                  },
+                  {
+                    num: '03',
+                    name: '5V 2A DC Supply',
+                    sub: '+ 2-Pin screw adapter',
+                    darkCard: 'border-rose-400/50 bg-rose-950/40',
+                    lightCard: 'border-rose-300 bg-rose-50'
+                  },
+                  {
+                    num: '04',
+                    name: '4 Jumper Wires',
+                    sub: 'Orange, 2x Red, Black',
+                    darkCard: 'border-amber-400/50 bg-amber-950/40',
+                    lightCard: 'border-amber-300 bg-amber-50'
+                  }
                 ].map((item, idx) => (
                   <motion.div
                     key={item.num}
                     initial={{ opacity: 0, y: 14 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.25 }}
-                    className={`p-3 rounded-2xl border ${item.color} text-white flex flex-col justify-between`}
+                    className={`p-3 rounded-2xl border flex flex-col justify-between ${
+                      isDark ? `${item.darkCard} text-white` : `${item.lightCard} text-slate-900 shadow-xs`
+                    }`}
                   >
-                    <span className="text-[10px] font-mono font-bold text-slate-400">{item.num}</span>
+                    <span className={`text-[10px] font-mono font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {item.num}
+                    </span>
                     <div className="my-2">
                       <p className="text-xs sm:text-sm font-bold leading-snug">{item.name}</p>
-                      <p className="text-[10px] text-slate-300 mt-0.5">{item.sub}</p>
+                      <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{item.sub}</p>
                     </div>
-                    <div className="flex items-center gap-1 text-[10px] font-semibold text-emerald-300">
+                    <div className={`flex items-center gap-1 text-[10px] font-semibold ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Direct Connect</span>
                     </div>
@@ -552,32 +747,27 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
 
             {/* SCENE 3: HOW TO SPLIT 5V & GND WITHOUT A BREADBOARD */}
             {activeSceneIndex === 3 && (
-              <div className="w-full max-w-3xl mx-auto bg-slate-950/80 border border-slate-700 rounded-2xl p-3 sm:p-4">
+              <div className="w-full max-w-3xl mx-auto bg-slate-950/90 border border-slate-700 rounded-2xl p-3 sm:p-4 shadow-lg">
                 <svg viewBox="0 0 760 220" className="w-full h-44 sm:h-52">
-                  {/* DC 5V Adapter Barrel Plug */}
                   <rect x="20" y="76" width="140" height="68" rx="10" fill="#1e293b" stroke="#64748b" strokeWidth="2" />
                   <text x="90" y="106" textAnchor="middle" fill="#ffffff" fontSize="13" fontWeight="bold">5V 2A Adapter</text>
                   <text x="90" y="124" textAnchor="middle" fill="#94a3b8" fontSize="10">Barrel Jack</text>
 
                   <rect x="160" y="96" width="44" height="28" rx="4" fill="#475569" />
 
-                  {/* Green 2-Pin DC Screw Terminal Block */}
                   <rect x="204" y="60" width="136" height="100" rx="8" fill="#15803d" stroke="#22c55e" strokeWidth="2.5" />
                   <text x="272" y="80" textAnchor="middle" fill="#dcfce7" fontSize="10.5" fontWeight="bold">2-PIN SCREW BLOCK</text>
 
-                  {/* + Screw Hole */}
                   <rect x="220" y="90" width="104" height="26" rx="4" fill="#166534" stroke="#86efac" strokeWidth="1" />
                   <circle cx="242" cy="103" r="8" fill="#cbd5e1" stroke="#0f172a" strokeWidth="1.5" />
                   <line x1="236" y1="103" x2="248" y2="103" stroke="#0f172a" strokeWidth="2" />
                   <text x="286" y="107" textAnchor="middle" fill="#ffffff" fontSize="12" fontWeight="bold">+ (RED)</text>
 
-                  {/* - Screw Hole */}
                   <rect x="220" y="124" width="104" height="26" rx="4" fill="#166534" stroke="#86efac" strokeWidth="1" />
                   <circle cx="242" cy="137" r="8" fill="#cbd5e1" stroke="#0f172a" strokeWidth="1.5" />
                   <line x1="236" y1="137" x2="248" y2="137" stroke="#0f172a" strokeWidth="2" />
                   <text x="286" y="141" textAnchor="middle" fill="#ffffff" fontSize="12" fontWeight="bold">- (GND)</text>
 
-                  {/* Animated TWO RED WIRES into (+) */}
                   <motion.path
                     d="M 340 100 H 465 L 515 58 H 725"
                     fill="none"
@@ -597,7 +787,6 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                     animate={{ pathLength: Math.min(1, sceneProgress * 2.2) }}
                   />
 
-                  {/* Animated TWO BLACK WIRES into (-) */}
                   <motion.path
                     d="M 340 134 H 480 L 515 142 H 725"
                     fill="none"
@@ -617,7 +806,6 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                     animate={{ pathLength: Math.min(1, Math.max(0, (sceneProgress - 0.2) * 2.2)) }}
                   />
 
-                  {/* Destination Labels */}
                   <rect x="530" y="42" width="196" height="28" rx="6" fill="#7f1d1d" stroke="#ef4444" strokeWidth="1.2" />
                   <text x="628" y="60" textAnchor="middle" fill="#fecaca" fontSize="11" fontWeight="bold">Red 1 → Servo Center Pin</text>
 
@@ -636,49 +824,80 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
             {/* SCENE 7: SAFETY RULE (LAPTOP USB vs VIN) */}
             {activeSceneIndex === 7 && (
               <div className="w-full max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="p-4 rounded-2xl bg-slate-950/90 border border-sky-500/50 text-white space-y-2.5">
+                <div
+                  className={`p-4 rounded-2xl border space-y-2.5 ${
+                    isDark
+                      ? 'bg-slate-950/90 border-sky-500/50 text-white'
+                      : 'bg-white border-sky-300 text-slate-900 shadow-lg'
+                  }`}
+                >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-sky-300 uppercase tracking-wider">Mode A · Code Upload</span>
-                    <ShieldAlert className="w-4 h-4 text-amber-400" />
+                    <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-sky-300' : 'text-sky-700'}`}>
+                      Mode A · Code Upload
+                    </span>
+                    <ShieldAlert className={`w-4 h-4 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
                   </div>
-                  <div className="p-2.5 rounded-xl bg-sky-950/60 border border-sky-500/30 flex items-center justify-between text-xs">
+                  <div
+                    className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                      isDark ? 'bg-sky-950/60 border-sky-500/30' : 'bg-sky-50 border-sky-200'
+                    }`}
+                  >
                     <span>Laptop USB Cable</span>
-                    <span className="font-mono font-bold text-emerald-300">PLUGGED IN</span>
+                    <span className={`font-mono font-bold ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>PLUGGED IN</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-500/40 flex items-center justify-between text-xs">
+                  <div
+                    className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                      isDark ? 'bg-rose-950/60 border-rose-500/40' : 'bg-rose-50 border-rose-200'
+                    }`}
+                  >
                     <span>External +5V to VIN Wire</span>
-                    <span className="font-mono font-bold text-rose-300">UNPLUGGED!</span>
+                    <span className={`font-mono font-bold ${isDark ? 'text-rose-300' : 'text-rose-700'}`}>UNPLUGGED!</span>
                   </div>
-                  <p className="text-[11px] text-slate-300">
+                  <p className={`text-[11px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                     Protects your laptop USB port from back-feeding 5V power while flashing firmware.
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950/90 border border-emerald-500/50 text-white space-y-2.5">
+                <div
+                  className={`p-4 rounded-2xl border space-y-2.5 ${
+                    isDark
+                      ? 'bg-slate-950/90 border-emerald-500/50 text-white'
+                      : 'bg-white border-emerald-300 text-slate-900 shadow-lg'
+                  }`}
+                >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Mode B · Dispenser Running</span>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                      Mode B · Dispenser Running
+                    </span>
+                    <CheckCircle2 className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
                   </div>
-                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-between text-xs">
+                  <div
+                    className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                      isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-100 border-slate-200'
+                    }`}
+                  >
                     <span>Laptop USB Cable</span>
-                    <span className="font-mono font-bold text-slate-300">REMOVED</span>
+                    <span className={`font-mono font-bold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>REMOVED</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 flex items-center justify-between text-xs">
+                  <div
+                    className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                      isDark ? 'bg-emerald-950/60 border-emerald-500/40' : 'bg-emerald-50 border-emerald-200'
+                    }`}
+                  >
                     <span>External +5V to VIN Wire</span>
-                    <span className="font-mono font-bold text-emerald-300">CONNECTED</span>
+                    <span className={`font-mono font-bold ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>CONNECTED</span>
                   </div>
-                  <p className="text-[11px] text-slate-300">
+                  <p className={`text-[11px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                     Or leave VIN off and plug a regular 5V phone charger into the ESP32 USB port.
                   </p>
                 </div>
               </div>
             )}
 
-            {/* SCENES 1, 2, 4, 5, 6, 8, 9: PROGRESSIVE LIVE BENCH SCHEMATIC ANIMATION (NO BREADBOARD!) */}
+            {/* SCENES 1, 2, 4, 5, 6, 8, 9: PROGRESSIVE LIVE BENCH SCHEMATIC */}
             {activeSceneIndex !== 0 && activeSceneIndex !== 3 && activeSceneIndex !== 7 && (
-              <div className="w-full max-w-4xl mx-auto bg-slate-950/85 border border-slate-700/90 rounded-2xl p-2 sm:p-3">
+              <div className="w-full max-w-4xl mx-auto bg-slate-950/90 border border-slate-700/90 rounded-2xl p-2 sm:p-3 shadow-lg">
                 <svg viewBox="0 0 860 310" className="w-full h-auto max-h-[250px] sm:max-h-[280px]">
-                  {/* Wire 2A: RED Servo Power (5V + -> Overhead -> Servo Red Center) */}
                   {showWire2RedServo && (
                     <motion.path
                       d="M 184 118 H 248 V 28 H 584 V 114 H 614"
@@ -692,7 +911,6 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                     />
                   )}
 
-                  {/* Wire 3: RED ESP32 Power (5V + -> VIN bottom-left pin) */}
                   {showWire3RedVin && (
                     <motion.path
                       d="M 248 118 V 238 H 322"
@@ -709,7 +927,6 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                     <circle cx="248" cy="118" r="5.5" fill="#ef4444" stroke="#ffffff" strokeWidth="1.5" />
                   )}
 
-                  {/* Wire 1: ORANGE PWM Signal (ESP32 D18 -> Servo Orange) */}
                   {showWire1Orange && (
                     <motion.path
                       d="M 484 150 H 614"
@@ -722,7 +939,6 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                     />
                   )}
 
-                  {/* Animated PWM pulse dot during Scene 10 dispense */}
                   {activeSceneIndex === 9 && sceneProgress >= 0.12 && sceneProgress <= 0.45 && (
                     <motion.circle
                       cy="150"
@@ -733,7 +949,6 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                     />
                   )}
 
-                  {/* Wire 4: BLACK/BROWN Common Ground (Supply - -> Bottom Bus -> ESP32 Right GND & Servo Brown) */}
                   {showWire4Ground && (
                     <>
                       <motion.path
@@ -760,7 +975,6 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                     </>
                   )}
 
-                  {/* LEFT: 5V 2A DC Adapter + Screw Terminal */}
                   <rect x="26" y="76" width="158" height="174" rx="12" fill="#1e293b" stroke="#475569" strokeWidth="2" />
                   <rect x="26" y="76" width="158" height="28" rx="12" fill="#0f172a" />
                   <text x="105" y="94" textAnchor="middle" fill="#ffffff" fontSize="11" fontWeight="bold">5V 2A POWER SUPPLY</text>
@@ -775,24 +989,16 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                   <text x="109" y="224" textAnchor="middle" fill="#e2e8f0" fontSize="11" fontWeight="bold">GND (-) SCREW</text>
                   <circle cx="184" cy="220" r="5.5" fill="#94a3b8" stroke="#ffffff" strokeWidth="1.5" />
 
-                  {/* CENTER: ESP32 DEVKIT V1 (30-PIN) */}
                   <rect x="312" y="48" width="182" height="214" rx="12" fill="#0f172a" stroke="#38bdf8" strokeWidth="2" />
                   <rect x="356" y="64" width="94" height="58" rx="6" fill="#64748b" stroke="#94a3b8" strokeWidth="1.5" />
                   <text x="403" y="91" textAnchor="middle" fill="#0f172a" fontSize="10" fontWeight="bold">ESP-WROOM-32</text>
                   <text x="403" y="106" textAnchor="middle" fill="#1e293b" fontSize="8.5" fontWeight="bold">Wi-Fi Module</text>
 
-                  {/* Red Power LED */}
-                  <circle
-                    cx="354"
-                    cy="206"
-                    r="5"
-                    fill={esp32PoweredOn ? '#ef4444' : '#334155'}
-                  />
+                  <circle cx="354" cy="206" r="5" fill={esp32PoweredOn ? '#ef4444' : '#334155'} />
                   <text x="354" y="194" textAnchor="middle" fill={esp32PoweredOn ? '#fca5a5' : '#64748b'} fontSize="8" fontWeight="bold">
                     PWR
                   </text>
 
-                  {/* Blue GPIO 2 Wi-Fi Status LED */}
                   <motion.circle
                     cx="448"
                     cy="206"
@@ -817,8 +1023,6 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                     {blueLedBlinkingPhase ? 'BLINKING' : wifiConnected ? 'LED OFF' : 'D2 LED'}
                   </text>
 
-                  {/* Highlighted Target Pins */}
-                  {/* D18 Right Pin 7 */}
                   <circle
                     cx="484"
                     cy="150"
@@ -830,7 +1034,6 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                   <rect x="406" y="139" width="68" height="22" rx="5" fill="#f97316" />
                   <text x="440" y="153.5" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="bold">D18 (7th)</text>
 
-                  {/* Right GND Pin 14 */}
                   <circle
                     cx="484"
                     cy="220"
@@ -842,7 +1045,6 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                   <rect x="418" y="210" width="56" height="20" rx="5" fill="#334155" stroke="#94a3b8" strokeWidth="1" />
                   <text x="446" y="223.5" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="bold">GND</text>
 
-                  {/* Bottom-Left VIN Pin 15 */}
                   <circle
                     cx="322"
                     cy="238"
@@ -854,11 +1056,9 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                   <rect x="332" y="228" width="68" height="20" rx="5" fill="#dc2626" />
                   <text x="366" y="241.5" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="bold">VIN (+5V)</text>
 
-                  {/* USB Port bottom */}
                   <rect x="383" y="252" width="40" height="14" rx="3" fill="#cbd5e1" />
                   <text x="403" y="278" textAnchor="middle" fill="#94a3b8" fontSize="9" fontWeight="bold">USB Port (Facing Down)</text>
 
-                  {/* RIGHT: SG90 SERVO + 3-PIN PLUG */}
                   <rect x="614" y="100" width="96" height="28" rx="6" fill="#7f1d1d" stroke="#ef4444" strokeWidth="1.5" />
                   <text x="662" y="118" textAnchor="middle" fill="#fecaca" fontSize="10" fontWeight="bold">RED (+5V)</text>
 
@@ -868,7 +1068,6 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                   <rect x="614" y="172" width="96" height="28" rx="6" fill="#1e293b" stroke="#94a3b8" strokeWidth="1.5" />
                   <text x="662" y="190" textAnchor="middle" fill="#e2e8f0" fontSize="10" fontWeight="bold">BROWN (GND)</text>
 
-                  {/* Servo Body + Rotating Horn */}
                   <rect x="726" y="100" width="92" height="106" rx="10" fill="#2563eb" stroke="#60a5fa" strokeWidth="2" />
                   <text x="772" y="182" textAnchor="middle" fill="#ffffff" fontSize="11" fontWeight="bold">SG90 SERVO</text>
                   <circle cx="772" cy="126" r="14" fill="#93c5fd" stroke="#1e3a8a" strokeWidth="2" />
@@ -879,7 +1078,6 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                     Angle: {String(dispenseAngle).padStart(2, '0')}°
                   </text>
 
-                  {/* Live Web App Status Overlay during Scene 9 & 10 */}
                   {(activeSceneIndex === 8 || activeSceneIndex === 9) && (
                     <g transform="translate(560, 240)">
                       <rect x="0" y="0" width="270" height="50" rx="10" fill="#0f172a" stroke={wifiConnected ? '#10b981' : '#f43f5e'} strokeWidth="1.5" />
@@ -899,7 +1097,6 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                   )}
                 </svg>
 
-                {/* Helpful Inline Status Bar for Scene 8 */}
                 {activeSceneIndex === 8 && (
                   <div className="mt-2 flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs">
                     <span className="text-slate-300">ESP32 Link State:</span>
@@ -921,34 +1118,62 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
           </div>
 
           {/* Bottom Synchronized Subtitle Scrim */}
-          <div className="absolute bottom-0 inset-x-0 z-20 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent px-4 sm:px-6 pt-5 pb-3">
-            <p className="text-center text-xs sm:text-sm font-medium text-white max-w-3xl mx-auto leading-relaxed drop-shadow">
+          <div
+            className={`absolute bottom-0 inset-x-0 z-20 px-4 sm:px-6 pt-6 pb-3 pointer-events-none ${
+              isDark
+                ? 'bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent'
+                : 'bg-gradient-to-t from-white/95 via-white/90 to-transparent'
+            }`}
+          >
+            <p
+              className={`text-center text-xs sm:text-sm font-medium max-w-3xl mx-auto leading-relaxed ${
+                isDark ? 'text-white drop-shadow' : 'text-slate-900'
+              }`}
+            >
               {activeScene.subtitle}
             </p>
           </div>
         </div>
 
-        {/* Clean Player Controls */}
-        <div className="bg-slate-950 px-4 py-3.5 sm:px-5 border-t border-slate-800 space-y-3">
-          <svg
-            viewBox="0 0 1000 8"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-            className="w-full h-2 rounded-full overflow-hidden pointer-events-none"
-          >
-            <rect x="0" y="0" width="1000" height="8" rx="4" fill="#1e293b" />
-            <rect
-              x="0"
-              y="0"
-              width={Math.max(8, totalProgressPct * 10)}
-              height="8"
-              rx="4"
-              fill="#14b8a6"
+        {/* Standard Normal Video Control Bar */}
+        <div
+          className={`px-4 py-3.5 sm:px-5 border-t space-y-3 ${
+            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
+          }`}
+        >
+          {/* Interactive Seek Slider with Chapter Markers */}
+          <div className="relative h-5 flex items-center group">
+            <div
+              className={`w-full h-1.5 group-hover:h-2 rounded-full overflow-hidden relative transition-all ${
+                isDark ? 'bg-slate-800' : 'bg-slate-300'
+              }`}
+            >
+              <div
+                className="h-full bg-teal-500 rounded-full transition-[width] duration-75"
+                style={{ width: `${totalProgressPct}%` }}
+              />
+              {scenes.slice(1).map((_, idx) => (
+                <div
+                  key={idx}
+                  style={{ left: `${(((idx + 1) * SCENE_DURATION_SEC) / TOTAL_DURATION_SEC) * 100}%` }}
+                  className={`absolute top-0 bottom-0 w-0.5 ${isDark ? 'bg-slate-950/80' : 'bg-white/90'}`}
+                />
+              ))}
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={TOTAL_DURATION_SEC}
+              step={0.1}
+              value={elapsedSec}
+              onChange={(e) => handleSeekTo(Number(e.target.value))}
+              aria-label="Seek video timeline"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             />
-          </svg>
+          </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={handleTogglePlay}
@@ -966,10 +1191,45 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
 
               <button
                 type="button"
+                onClick={() => handleSkipBy(-10)}
+                aria-label="Rewind 10 seconds"
+                title="Rewind 10s"
+                className={`px-2 py-2 rounded-xl border text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+                }`}
+              >
+                <Rewind className="w-3.5 h-3.5" />
+                <span>10s</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSkipBy(10)}
+                aria-label="Forward 10 seconds"
+                title="Forward 10s"
+                className={`px-2 py-2 rounded-xl border text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+                }`}
+              >
+                <span>10s</span>
+                <FastForward className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
                 onClick={() => handleJumpToScene(activeSceneIndex - 1)}
                 disabled={activeSceneIndex === 0}
                 aria-label="Previous step"
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
+                title="Previous step"
+                className={`p-2 rounded-xl border disabled:opacity-40 transition-colors cursor-pointer ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+                }`}
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -979,7 +1239,12 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                 onClick={() => handleJumpToScene(activeSceneIndex + 1)}
                 disabled={activeSceneIndex === scenes.length - 1}
                 aria-label="Next step"
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
+                title="Next step"
+                className={`p-2 rounded-xl border disabled:opacity-40 transition-colors cursor-pointer ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+                }`}
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -988,24 +1253,74 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                 type="button"
                 onClick={handleReplay}
                 aria-label={localeBundle.replayBtn}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
+                title={localeBundle.replayBtn}
+                className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+                }`}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
+
+              {/* Time Readout moved down into bottom control bar */}
+              <span
+                className={`px-2.5 py-1.5 rounded-xl border font-mono text-xs font-bold tabular-nums whitespace-nowrap ${
+                  isDark
+                    ? 'bg-slate-900 border-slate-700 text-slate-100'
+                    : 'bg-white border-slate-300 text-slate-800'
+                }`}
+              >
+                {formatClock(elapsedSec)} / {localeBundle.totalDurationLabel}
+              </span>
             </div>
 
-            <button
-              type="button"
-              onClick={handleToggleMute}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
-                isMuted
-                  ? 'bg-rose-950/60 border-rose-500/40 text-rose-200'
-                  : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-teal-200'
-              }`}
-            >
-              {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-              <span>{isMuted ? localeBundle.enableVoiceBtn : localeBundle.muteVoiceBtn}</span>
-            </button>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                onClick={handleCycleSpeed}
+                title="Playback speed"
+                className={`px-2.5 py-2 rounded-xl border font-mono text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-teal-300'
+                    : 'bg-white hover:bg-slate-100 border-slate-300 text-teal-800'
+                }`}
+              >
+                {playbackSpeed}x
+              </button>
+
+              <button
+                type="button"
+                onClick={handleToggleMute}
+                title="Mute / Unmute"
+                className={`px-3 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                  isMuted
+                    ? isDark
+                      ? 'bg-rose-950/60 border-rose-500/40 text-rose-200'
+                      : 'bg-rose-50 border-rose-300 text-rose-700'
+                    : isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-teal-200'
+                    : 'bg-white hover:bg-slate-100 border-slate-300 text-teal-800'
+                }`}
+              >
+                {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                <span>{isMuted ? localeBundle.enableVoiceBtn : localeBundle.muteVoiceBtn}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleToggleFullscreen}
+                aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
+                    : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700'
+                }`}
+              >
+                {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
         </div>
       </div>

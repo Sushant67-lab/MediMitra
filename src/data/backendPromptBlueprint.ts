@@ -179,13 +179,13 @@ async def start_triage_session(payload: TriageInitRequest):
         "current_step": 1,
         "total_steps": 13,
         "first_question": {
-            "id": "q1_demographics",
-            "question": "First, let's verify the patient's age and life stage.",
+            "id": "q1_symptom_trigger",
+            "question": "What may have triggered these symptoms or happened just before they started?",
             "options": [
-                "Child / Toddler (1 - 11 years)",
-                "Teenager / Adolescent (12 - 17 years)",
-                "Adult (18 - 59 years)",
-                "Senior / Older Adult (60+ years)"
+                "No obvious trigger — started on its own",
+                "Weather change, dust/pollen, or cold exposure",
+                "Outside food/water, skipped meals, or poor sleep",
+                "Contact with someone unwell, travel, or physical injury/strain"
             ]
         }
     }

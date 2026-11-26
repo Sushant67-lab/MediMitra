@@ -36,12 +36,14 @@ const char* WIFI_SSID        = "YOUR_HOTSPOT_NAME";       // Exact 2.4 GHz Mobil
 const char* WIFI_PASSWORD    = "YOUR_HOTSPOT_PASSWORD";   // Wi-Fi / Hotspot password (min 8 chars)
 
 // -----------------------------------------------------------------------------------------
-// 2. DIRECT FIREBASE CLOUD CONFIG (PRE-LINKED WITH YOUR MEDIMITRA WEB APP)
+// 2. DIRECT FIREBASE + MEDIMITRA SERVER CONFIG (PRE-LINKED WITH YOUR MEDIMITRA WEB APP)
 // -----------------------------------------------------------------------------------------
 const char* FIREBASE_PROJECT_ID = "medimitra-3be2c";
 const char* FIRESTORE_DB_ID     = "ai-studio-curahealthaimedi-3da36085-2b1d-4e47-a414-215a5a6f8743";
 const char* FIREBASE_API_KEY    = "AIzaSyArDAf5opYldc_-yFDwvheTKoJNRE5WTf4";
 const char* DEVICE_ID           = "ESP32_MEDIMITRA_01";
+const char* MEDIMITRA_SERVER_URL = "https://ais-dev-dsahabvj3okzfjmub47s5k-159031968198.asia-southeast1.run.app"; // Your MediMitra App URL
+const char* DEVICE_AUTH_TOKEN    = "mm_esp32_sec_key_2025";
 
 // -----------------------------------------------------------------------------------------
 // 3. SERVO HARDWARE & CALIBRATION SETTINGS
@@ -602,6 +604,124 @@ void pollForDispenseCommand() {
   http.end();
 }
 
+void sendServerHeartbeat() {
+  if (WiFi.status() != WL_CONNECTED || String(MEDIMITRA_SERVER_URL).length() == 0) return;
+
+  WiFiClientSecure secureClient;
+  secureClient.setInsecure();
+  secureClient.setTimeout(15);
+  HTTPClient http;
+  http.setConnectTimeout(10000);
+  http.setTimeout(12000);
+  http.setReuse(false);
+
+  String url = String(MEDIMITRA_SERVER_URL) + "/api/device/heartbeat";
+  if (!http.begin(secureClient, url)) return;
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("x-device-token", DEVICE_AUTH_TOKEN);
+
+  #if ARDUINOJSON_VERSION_MAJOR >= 7
+    JsonDocument doc;
+  #else
+    StaticJsonDocument<256> doc;
+  #endif
+  doc["deviceId"] = DEVICE_ID;
+  doc["ipAddress"] = WiFi.localIP().toString();
+  doc["wifiSsid"] = activeSsid;
+  doc["wifiRssi"] = WiFi.RSSI();
+
+  String body;
+  serializeJson(doc, body);
+  http.POST(body);
+  http.end();
+}
+
+void ackServerCommand(const String& commandId, const String& status, const String& resultMsg, int cycles) {
+  if (WiFi.status() != WL_CONNECTED || String(MEDIMITRA_SERVER_URL).length() == 0) return;
+
+  WiFiClientSecure secureClient;
+  secureClient.setInsecure();
+  secureClient.setTimeout(15);
+  HTTPClient http;
+  http.setConnectTimeout(10000);
+  http.setTimeout(12000);
+  http.setReuse(false);
+
+  String url = String(MEDIMITRA_SERVER_URL) + "/api/device/ack";
+  if (!http.begin(secureClient, url)) return;
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("x-device-token", DEVICE_AUTH_TOKEN);
+
+  #if ARDUINOJSON_VERSION_MAJOR >= 7
+    JsonDocument doc;
+  #else
+    StaticJsonDocument<512> doc;
+  #endif
+  doc["commandId"] = commandId;
+  doc["status"] = status;
+  doc["executionResult"] = resultMsg;
+  doc["cyclesExecuted"] = cycles;
+
+  String body;
+  serializeJson(doc, body);
+  http.POST(body);
+  http.end();
+}
+
+void pollServerForDispenseCommand() {
+  if (WiFi.status() != WL_CONNECTED || String(MEDIMITRA_SERVER_URL).length() == 0) return;
+
+  WiFiClientSecure secureClient;
+  secureClient.setInsecure();
+  secureClient.setTimeout(15);
+  HTTPClient http;
+  http.setConnectTimeout(10000);
+  http.setTimeout(12000);
+  http.setReuse(false);
+
+  String url = String(MEDIMITRA_SERVER_URL) + "/api/device/poll?deviceId=" + String(DEVICE_ID);
+  if (!http.begin(secureClient, url)) return;
+  http.addHeader("x-device-token", DEVICE_AUTH_TOKEN);
+
+  int httpCode = http.GET();
+  if (httpCode == 200) {
+    String payload = http.getString();
+    http.end();
+
+    #if ARDUINOJSON_VERSION_MAJOR >= 7
+      JsonDocument doc;
+    #else
+      DynamicJsonDocument doc(2048);
+    #endif
+    if (deserializeJson(doc, payload)) return;
+    if (!doc["hasCommand"].as<bool>()) return;
+
+    JsonObject cmd = doc["command"];
+    String commandId = cmd["commandId"].as<String>();
+    String medName = cmd["medicineName"].as<String>();
+    int cycles = cmd["cycles"] | 1;
+    int targetAngle = cmd["servo"]["dispenseAngle"] | dispenseAngle;
+    int targetHold = cmd["servo"]["holdTimeMs"] | holdDurationMs;
+
+    if (commandId.length() > 0) {
+      Serial.println("\n[SERVER VERIFIED] Dispense command received: " + commandId + " (" + medName + ")");
+      bool ok = executePhysicalDispense(cycles, targetAngle, targetHold);
+      if (ok) {
+        ackServerCommand(
+          commandId,
+          "COMPLETED",
+          "SUCCESS: Servo rotated 0° -> " + String(targetAngle) + "° -> 0° (" + String(cycles) + " cycle). Blue LED blinked once.",
+          cycles
+        );
+      } else {
+        ackServerCommand(commandId, "FAILED", "Hardware servo execution failed.", cycles);
+      }
+    }
+    return;
+  }
+  http.end();
+}
+
 void setup() {
   pinMode(SERVO_PIN, OUTPUT);
   digitalWrite(SERVO_PIN, LOW);
@@ -629,10 +749,12 @@ void loop() {
     if (currentMillis - lastHeartbeatTime >= HEARTBEAT_INTERVAL_MS) {
       lastHeartbeatTime = currentMillis;
       sendHeartbeat();
+      sendServerHeartbeat();
     }
 
     if (currentMillis - lastPollTime >= POLL_INTERVAL_MS) {
       lastPollTime = currentMillis;
+      pollServerForDispenseCommand();
       pollForDispenseCommand();
     }
   }

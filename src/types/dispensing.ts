@@ -28,6 +28,9 @@ export interface DispensingCommand {
   status: DispenseStatus;
   executionResult: string;
   servoConfig: ServoConfig;
+  paymentTransactionId: string;
+  paymentAmount: number;
+  paymentStatus: 'VERIFIED' | 'HARDWARE_TEST';
   createdAt: string;
   claimedAt?: string;
   completedAt?: string;

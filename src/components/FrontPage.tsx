@@ -31,7 +31,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
       title: t.symptomHeadache,
       subTitle: t.symptomHeadacheDesc,
       emoji: '🤕',
-      color: 'hover:border-purple-300 hover:bg-purple-50/50',
+      color: 'hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50/50 dark:hover:bg-purple-950/30',
       badgeBg: 'bg-purple-100 text-purple-800'
     },
     {
@@ -39,7 +39,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
       title: t.symptomFever,
       subTitle: t.symptomFeverDesc,
       emoji: '🌡️',
-      color: 'hover:border-orange-300 hover:bg-orange-50/50',
+      color: 'hover:border-orange-300 dark:hover:border-orange-600 hover:bg-orange-50/50 dark:hover:bg-orange-950/30',
       badgeBg: 'bg-orange-100 text-orange-800'
     },
     {
@@ -47,7 +47,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
       title: t.symptomRash,
       subTitle: t.symptomRashDesc,
       emoji: '🌸',
-      color: 'hover:border-rose-300 hover:bg-rose-50/50',
+      color: 'hover:border-rose-300 dark:hover:border-rose-600 hover:bg-rose-50/50 dark:hover:bg-rose-950/30',
       badgeBg: 'bg-rose-100 text-rose-800'
     },
     {
@@ -55,7 +55,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
       title: t.symptomCold,
       subTitle: t.symptomColdDesc,
       emoji: '🤧',
-      color: 'hover:border-teal-300 hover:bg-teal-50/50',
+      color: 'hover:border-teal-300 dark:hover:border-teal-600 hover:bg-teal-50/50 dark:hover:bg-teal-950/30',
       badgeBg: 'bg-teal-100 text-teal-800'
     },
     {
@@ -63,7 +63,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
       title: t.symptomStomach,
       subTitle: t.symptomStomachDesc,
       emoji: '🤢',
-      color: 'hover:border-amber-300 hover:bg-amber-50/50',
+      color: 'hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50/50 dark:hover:bg-amber-950/30',
       badgeBg: 'bg-amber-100 text-amber-800'
     },
     {
@@ -71,7 +71,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
       title: t.symptomCuts,
       subTitle: t.symptomCutsDesc,
       emoji: '🩹',
-      color: 'hover:border-sky-300 hover:bg-sky-50/50',
+      color: 'hover:border-sky-300 dark:hover:border-sky-600 hover:bg-sky-50/50 dark:hover:bg-sky-950/30',
       badgeBg: 'bg-sky-100 text-sky-800'
     },
     {
@@ -79,7 +79,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
       title: t.symptomBodyAche,
       subTitle: t.symptomBodyAcheDesc,
       emoji: '🤒',
-      color: 'hover:border-emerald-300 hover:bg-emerald-50/50',
+      color: 'hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30',
       badgeBg: 'bg-emerald-100 text-emerald-800'
     }
   ];
@@ -123,10 +123,10 @@ export const FrontPage: React.FC<FrontPageProps> = ({
           <MediMitraLogo size="md" showTagline />
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
           {t.greeting}, {currentProfile.name ? currentProfile.name.split(' ')[0] : ui.thereWord}?
         </h1>
-        <p className="text-xs sm:text-sm text-slate-600 font-normal max-w-lg mx-auto leading-relaxed">
+        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-normal max-w-lg mx-auto leading-relaxed">
           {t.frontSubtitle}
         </p>
       </motion.div>
@@ -143,7 +143,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
             value={customComplaint}
             onChange={(e) => setCustomComplaint(e.target.value)}
             placeholder={t.customSearchPlaceholder}
-            className="w-full pl-5 pr-28 py-4 text-sm font-normal rounded-2xl border border-slate-300 bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-900 placeholder:text-slate-400"
+            className="w-full pl-5 pr-28 py-4 text-sm font-normal rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-500 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors"
           />
           <button
             type="submit"
@@ -151,7 +151,7 @@ export const FrontPage: React.FC<FrontPageProps> = ({
             className={`absolute right-2.5 top-2.5 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
               customComplaint.trim()
                 ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-xs'
-                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
             }`}
           >
             <span>{t.startCheckupBtn}</span>
@@ -168,10 +168,10 @@ export const FrontPage: React.FC<FrontPageProps> = ({
         className="space-y-4"
       >
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             {t.commonIssuesTitle}
           </span>
-          <span className="text-xs text-slate-400 font-normal">{t.commonIssuesSubtitle}</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">{t.commonIssuesSubtitle}</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
@@ -181,20 +181,20 @@ export const FrontPage: React.FC<FrontPageProps> = ({
               whileHover={{ y: -2 }}
               transition={{ duration: 0.15 }}
               onClick={() => onStartTriage(prob.id)}
-              className={`p-4 sm:p-5 rounded-2xl border border-slate-200/90 bg-white shadow-xs transition-all cursor-pointer flex items-center justify-between ${prob.color}`}
+              className={`p-4 sm:p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs transition-all cursor-pointer flex items-center justify-between ${prob.color}`}
             >
               <div className="flex items-center gap-3.5">
                 <span className="text-3xl p-1">{prob.emoji}</span>
                 <div>
-                  <h3 className="font-semibold text-sm sm:text-base text-slate-900">
+                  <h3 className="font-semibold text-sm sm:text-base text-slate-900 dark:text-slate-100">
                     {prob.title}
                   </h3>
-                  <p className="text-xs text-slate-500 font-normal mt-0.5 line-clamp-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5 line-clamp-1">
                     {prob.subTitle}
                   </p>
                 </div>
               </div>
-              <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
+              <ArrowRight className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />
             </motion.div>
           ))}
         </div>
@@ -205,42 +205,42 @@ export const FrontPage: React.FC<FrontPageProps> = ({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.25 }}
-        className="p-6 rounded-3xl bg-slate-50/80 border border-slate-200/90 space-y-4"
+        className="p-6 rounded-3xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/90 dark:border-slate-800 space-y-4"
       >
         <div className="text-center space-y-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-teal-800">
+          <span className="text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-400">
             {ui.medimitraCareBadge}
           </span>
-          <h2 className="text-base font-semibold text-slate-900">{t.commonIssuesSubtitle}</h2>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t.commonIssuesSubtitle}</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
-          <div className="p-4 rounded-2xl bg-white border border-slate-200/80 space-y-2">
-            <div className="w-8 h-8 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center font-semibold text-xs">
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2">
+            <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 flex items-center justify-center font-semibold text-xs">
               1
             </div>
-            <h3 className="font-semibold text-xs text-slate-900">{t.commonIssuesTitle}</h3>
-            <p className="text-xs text-slate-500 font-normal leading-relaxed">
+            <h3 className="font-semibold text-xs text-slate-900 dark:text-slate-100">{t.commonIssuesTitle}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-normal leading-relaxed">
               {t.symptomHeadache}, {t.symptomFever}, {t.symptomCold}, {t.symptomRash}, {t.symptomStomach}.
             </p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-slate-200/80 space-y-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-semibold text-xs">
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-semibold text-xs">
               2
             </div>
-            <h3 className="font-semibold text-xs text-slate-900">{ui.step2ChatTitle}</h3>
-            <p className="text-xs text-slate-500 font-normal leading-relaxed">
+            <h3 className="font-semibold text-xs text-slate-900 dark:text-slate-100">{ui.step2ChatTitle}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-normal leading-relaxed">
               {ui.step2ChatDesc}
             </p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-slate-200/80 space-y-2">
-            <div className="w-8 h-8 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center font-semibold text-xs">
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2">
+            <div className="w-8 h-8 rounded-xl bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 flex items-center justify-center font-semibold text-xs">
               3
             </div>
-            <h3 className="font-semibold text-xs text-slate-900">{t.nearestDoctors}</h3>
-            <p className="text-xs text-slate-500 font-normal leading-relaxed">
+            <h3 className="font-semibold text-xs text-slate-900 dark:text-slate-100">{t.nearestDoctors}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-normal leading-relaxed">
               {t.needDoctorSubtitle}
             </p>
           </div>

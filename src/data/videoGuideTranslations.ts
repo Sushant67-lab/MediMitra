@@ -56,9 +56,9 @@ export const VIDEO_GUIDE_TRANSLATIONS: Record<LanguageCode, VideoGuideLocale> = 
         startSec: 18,
         durationSec: 20,
         title: '02. Smart Symptom Checkup',
-        caption: 'Tap a common issue or type symptoms. Questions adapt to Male, Female, Boy, and Girl safety rules.',
+        caption: 'Tap a common issue or type symptoms. Questions adapt to triggers, hydration, and allergy rules.',
         narration:
-          'On the home screen, tap a symptom like fever, headache, cold, or stomach upset, or type how you feel. The ten-step checkup adapts questions separately for men, women, boys, and girls, asking period or pregnancy checks only when medically needed.'
+          'On the home screen, tap a symptom like fever, headache, cold, or stomach upset, or type how you feel. The ten-step checkup adapts questions by age group, symptom triggers, hydration, and medicine allergy history.'
       },
       {
         id: 3,
@@ -128,9 +128,9 @@ export const VIDEO_GUIDE_TRANSLATIONS: Record<LanguageCode, VideoGuideLocale> = 
         startSec: 18,
         durationSec: 20,
         title: '02. स्मार्ट लक्षण जांच',
-        caption: 'लक्षण चुनें या लिखें। प्रश्न पुरुष, महिला, लड़का और लड़की के अनुसार बदलते हैं।',
+        caption: 'लक्षण चुनें या लिखें। प्रश्न आयु वर्ग, पानी की कमी और एलर्जी के अनुसार बदलते हैं।',
         narration:
-          'होम स्क्रीन पर बुखार, सिरदर्द, जुकाम या पेट दर्द चुनें या अपनी समस्या लिखें। दस चरणों की जांच पुरुष, महिला, लड़के और लड़की के हिसाब से अलग प्रश्न पूछती है, और पीरियड्स या गर्भावस्था के सवाल केवल जरूरत होने पर ही पूछे जाते हैं।'
+          'होम स्क्रीन पर बुखार, सिरदर्द, जुकाम या पेट दर्द चुनें या अपनी समस्या लिखें। दस चरणों की जांच आयु वर्ग, लक्षण के कारण और दवा एलर्जी के हिसाब से सटीक प्रश्न पूछती है।'
       },
       {
         id: 3,
@@ -200,9 +200,9 @@ export const VIDEO_GUIDE_TRANSLATIONS: Record<LanguageCode, VideoGuideLocale> = 
         startSec: 18,
         durationSec: 20,
         title: '02. Smart Health Check-up',
-        caption: 'Problem select karein ya type karein. Sawal Male, Female, Boy aur Girl ke hisaab se badalte hain.',
+        caption: 'Problem select karein ya type karein. Sawal age group, triggers aur allergy ke hisaab se badalte hain.',
         narration:
-          'Home screen par bukhar, sar dard, zukam ya pet dard chunein ya apni takleef likhein. Das sawalon ka check-up mard, aurat, ladke aur ladki ke hisaab se alag sawal poochta hai, aur periods ya pregnancy wale sawal sirf zaroorat par hi pooche jaate hain.'
+          'Home screen par bukhar, sar dard, zukam ya pet dard chunein ya apni takleef likhein. Das sawalon ka check-up age group, symptom trigger, hydration aur allergy history ke hisaab se sahi sawal poochta hai.'
       },
       {
         id: 3,
@@ -272,9 +272,9 @@ export const VIDEO_GUIDE_TRANSLATIONS: Record<LanguageCode, VideoGuideLocale> = 
         startSec: 18,
         durationSec: 20,
         title: '02. स्मार्ट लक्षण तपासणी',
-        caption: 'समस्या निवडा किंवा लिहा. प्रश्न पुरुष, महिला, मुलगा आणि मुलगी यानुसार बदलतात.',
+        caption: 'समस्या निवडा किंवा लिहा. प्रश्न वयोगट, लक्षणांचे कारण आणि अ‍ॅलर्जीनुसार बदलतात.',
         narration:
-          'मुख्य स्क्रीनवर ताप, डोकेदुखी, सर्दी किंवा पोटदुखी निवडा किंवा त्रास टाइप करा. दहा प्रश्नांची तपासणी पुरुष, महिला, मुलगा आणि मुलगी यानुसार वेगवेगळे प्रश्न विचारते आणि मासिक पाळी किंवा गर्भधारणेचे प्रश्न फक्त गरज असल्यासच विचारते.'
+          'मुख्य स्क्रीनवर ताप, डोकेदुखी, सर्दी किंवा पोटदुखी निवडा किंवा त्रास टाइप करा. दहा प्रश्नांची तपासणी वयोगट, लक्षणांची कारणे आणि औषधांची अ‍ॅलर्जी तपासून अचूक प्रश्न विचारते.'
       },
       {
         id: 3,
@@ -344,9 +344,9 @@ export const VIDEO_GUIDE_TRANSLATIONS: Record<LanguageCode, VideoGuideLocale> = 
         startSec: 18,
         durationSec: 20,
         title: '02. স্মার্ট উপসর্গ পরীক্ষা',
-        caption: 'সমস্যা বেছে নিন বা লিখুন। প্রশ্ন পুরুষ, মহিলা, ছেলে শিশু ও মেয়ে শিশু অনুযায়ী বদলায়।',
+        caption: 'সমস্যা বেছে নিন বা লিখুন। প্রশ্ন বয়স, কারণ ও ওষুধের অ্যালার্জি অনুযায়ী বদলায়।',
         narration:
-          'হোম স্ক্রিনে জ্বর, মাথাব্যথা, সর্দি বা পেটের সমস্যা বেছে নিন অথবা নিজে লিখুন। দশ ধাপের পরীক্ষায় পুরুষ, মহিলা, ছেলে ও মেয়ের জন্য আলাদা প্রশ্ন করা হয় এবং পিরিয়ড বা গর্ভাবস্থার প্রশ্ন শুধু প্রয়োজনেই করা হয়।'
+          'হোম স্ক্রিনে জ্বর, মাথাব্যথা, সর্দি বা পেটের সমস্যা বেছে নিন অথবা নিজে লিখুন। দশ ধাপের পরীক্ষায় বয়স, উপসর্গের কারণ ও অ্যালার্জি অনুযায়ী সঠিক প্রশ্ন করা হয়।'
       },
       {
         id: 3,
@@ -416,9 +416,9 @@ export const VIDEO_GUIDE_TRANSLATIONS: Record<LanguageCode, VideoGuideLocale> = 
         startSec: 18,
         durationSec: 20,
         title: '02. ஸ்மார்ட் அறிகுறி சோதனை',
-        caption: 'பிரச்சனையைத் தேர்ந்தெடுக்கவும். ஆண், பெண், சிறுவன், சிறுமிக்கேற்ப கேள்விகள் மாறும்.',
+        caption: 'பிரச்சனையைத் தேர்ந்தெடுக்கவும். வயது, காரணம் மற்றும் ஒவ்வாமைக்கேற்ப கேள்விகள் மாறும்.',
         narration:
-          'முகப்புத் திரையில் காய்ச்சல், தலைவலி, சளி அல்லது வயிற்று வலியைத் தேர்ந்தெடுக்கவும். பத்து கேள்வி சோதனை ஆண், பெண், சிறுவன் மற்றும் சிறுமிக்கு ஏற்ப வேறுபடும்; கர்ப்பம் அல்லது மாதவிடாய் கேள்விகள் தேவையானபோது மட்டுமே கேட்கப்படும்.'
+          'முகப்புத் திரையில் காய்ச்சல், தலைவலி, சளி அல்லது வயிற்று வலியைத் தேர்ந்தெடுக்கவும். பத்து கேள்வி சோதனை வயதுப் பிரிவு, அறிகுறி காரணம் மற்றும் மருந்து ஒவ்வாமைக்கு ஏற்ப சரியான கேள்விகளைக் கேட்கும்.'
       },
       {
         id: 3,
@@ -488,9 +488,9 @@ export const VIDEO_GUIDE_TRANSLATIONS: Record<LanguageCode, VideoGuideLocale> = 
         startSec: 18,
         durationSec: 20,
         title: '02. స్మార్ట్ లక్షణాల తనిఖీ',
-        caption: 'సమస్యను ఎంచుకోండి లేదా టైప్ చేయండి. ప్రశ్నలు పురుషుడు, మహిళ, బాలుడు, బాలిక ప్రకారం మారుతాయి.',
+        caption: 'సమస్యను ఎంచుకోండి లేదా టైప్ చేయండి. ప్రశ్నలు వయస్సు, కారణం మరియు అలర్జీ ప్రకారం మారుతాయి.',
         narration:
-          'హోమ్ స్క్రీన్‌పై జ్వరం, తలనొప్పి, జలుబు లేదా కడుపు నొప్పి ఎంచుకోండి. పది దశల పరీక్ష పురుషులు, మహిళలు, బాలురు మరియు బాలికలకు వేర్వేరు ప్రశ్నలు అడుగుతుంది; పీరియడ్స్ లేదా గర్భధారణ ప్రశ్నలు అవసరమైనప్పుడు మాత్రమే వస్తాయి.'
+          'హోమ్ స్క్రీన్‌పై జ్వరం, తలనొప్పి, జలుబు లేదా కడుపు నొప్పి ఎంచుకోండి. పది దశల పరీక్ష వయస్సు వర్గం, లక్షణాల కారణం మరియు మందుల అలర్జీ ఆధారంగా సరైన ప్రశ్నలు అడుగుతుంది.'
       },
       {
         id: 3,
@@ -560,9 +560,9 @@ export const VIDEO_GUIDE_TRANSLATIONS: Record<LanguageCode, VideoGuideLocale> = 
         startSec: 18,
         durationSec: 20,
         title: '02. સ્માર્ટ લક્ષણોની તપાસ',
-        caption: 'સમસ્યા પસંદ કરો કે લખો. પ્રશ્નો પુરુષ, મહિલા, છોકરો અને છોકરી મુજબ બદલાય છે.',
+        caption: 'સમસ્યા પસંદ કરો કે લખો. પ્રશ્નો ઉંમર વર્ગ, કારણ અને એલર્જી મુજબ બદલાય છે.',
         narration:
-          'હોમ સ્ક્રીન પર તાવ, માથાનો દુખાવો, શરદી કે પેટની તકલીફ પસંદ કરો. દસ તબક્કાની તપાસ પુરુષ, મહિલા, છોકરો અને છોકરી માટે અલગ પ્રશ્નો પૂછે છે અને માસિક કે ગર્ભાવસ્થાના પ્રશ્નો માત્ર જરૂર હોય ત્યારે જ પૂછાય છે.'
+          'હોમ સ્ક્રીન પર તાવ, માથાનો દુખાવો, શરદી કે પેટની તકલીફ પસંદ કરો. દસ તબક્કાની તપાસ ઉંમર વર્ગ, લક્ષણોના કારણ અને દવાની એલર્જી મુજબ યોગ્ય પ્રશ્નો પૂછે છે.'
       },
       {
         id: 3,

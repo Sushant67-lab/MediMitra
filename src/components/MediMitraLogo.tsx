@@ -34,7 +34,7 @@ export const MediMitraLogo: React.FC<MediMitraLogoProps> = ({
   return (
     <div className={`flex items-center gap-2 sm:gap-2.5 select-none ${className}`}>
       {/* High-Resolution MediMitra Emblem */}
-      <div className={`relative ${iconDimensions} rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center shrink-0 shadow-xs ring-1 ring-teal-200/50 bg-white`}>
+      <div className={`relative ${iconDimensions} rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center shrink-0 shadow-xs ring-1 ring-teal-200/50 dark:ring-teal-500/30 bg-white dark:bg-slate-800`}>
         <img
           src={hdLogoUrl}
           alt={t.brandName}
@@ -47,21 +47,21 @@ export const MediMitraLogo: React.FC<MediMitraLogoProps> = ({
       {!imageOnly && (
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-1.5 leading-tight">
-            <span className={`font-semibold tracking-tight text-slate-900 whitespace-nowrap ${textSize}`}>
+            <span className={`font-semibold tracking-tight text-slate-900 dark:text-slate-100 whitespace-nowrap ${textSize}`}>
               {t.brandName === 'MediMitra' ? (
-                <>Medi<span className="text-teal-600 font-semibold">Mitra</span></>
+                <>Medi<span className="text-teal-600 dark:text-teal-400 font-semibold">Mitra</span></>
               ) : (
                 t.brandName
               )}
             </span>
             {showBadge && (
-              <span className="text-[10px] font-medium bg-teal-50 text-teal-800 px-2 py-0.5 rounded-full border border-teal-200/70 hidden sm:inline-block">
+              <span className="text-[10px] font-medium bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-200 px-2 py-0.5 rounded-full border border-teal-200/70 dark:border-teal-800 hidden sm:inline-block">
                 {t.brandTagline}
               </span>
             )}
           </div>
           {showTagline && (
-            <p className={`text-[11px] text-slate-500 font-normal leading-tight mt-0.5 whitespace-nowrap ${
+            <p className={`text-[11px] text-slate-500 dark:text-slate-400 font-normal leading-tight mt-0.5 whitespace-nowrap ${
               size === 'sm' ? 'hidden sm:block' : ''
             }`}>
               {t.brandTagline}

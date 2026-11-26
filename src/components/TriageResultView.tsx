@@ -157,27 +157,40 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
   const [activeDispenseCommand, setActiveDispenseCommand] = useState<DispensingCommand | null>(null);
   const [dispenseQuantity, setDispenseQuantity] = useState(1);
   const [configuredServoConfig, setConfiguredServoConfig] = useState<ServoConfig | undefined>(undefined);
+  const [dispenseError, setDispenseError] = useState<string | null>(null);
 
   const handleProceedToPayment = (qty: number, sConf: ServoConfig) => {
+    setDispenseError(null);
     setDispenseQuantity(qty);
     setConfiguredServoConfig(sConf);
     setIsPaymentQrModalOpen(true);
   };
 
-  const handlePaymentSuccess = async () => {
+  const handlePaymentSuccess = async (paymentDetails: {
+    transactionId: string;
+    amount: number;
+    paymentMethod: string;
+    timestamp: string;
+    command?: DispensingCommand | null;
+  }) => {
     if (!selectedMedicineForDispense) return;
+    setDispenseError(null);
     try {
-      const command = await createDispensingCommand({
-        medicineName: selectedMedicineForDispense.name,
-        quantity: dispenseQuantity,
-        userId: currentProfile.id,
-        userEmail: currentProfile.email,
-        customServoConfig: configuredServoConfig
-      });
+      const command = paymentDetails.command
+        ? paymentDetails.command
+        : await createDispensingCommand({
+            medicineName: selectedMedicineForDispense.name,
+            quantity: dispenseQuantity,
+            userId: currentProfile.id,
+            userEmail: currentProfile.email,
+            paymentTransactionId: paymentDetails.transactionId,
+            paymentAmount: paymentDetails.amount,
+            customServoConfig: configuredServoConfig
+          });
       setActiveDispenseCommand(command);
       window.scrollTo({ top: 200, behavior: 'smooth' });
-    } catch {
-      // Fallback handled cleanly
+    } catch (err: any) {
+      setDispenseError(err?.message || 'Unable to authorize ESP32 dispense after payment verification.');
     } finally {
       setIsPaymentQrModalOpen(false);
     }
@@ -256,45 +269,45 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
       <div className="flex items-center justify-between">
         <button
           onClick={onStartNew}
-          className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-teal-700 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-teal-700 dark:hover:text-teal-400 transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>{ui.backToHome}</span>
         </button>
 
-        <div className="flex items-center gap-2 text-xs text-slate-500 font-normal">
-          <span>{ui.reportIdLabel}: <span className="font-mono text-slate-700 font-medium">{reportId}</span></span>
+        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-normal">
+          <span>{ui.reportIdLabel}: <span className="font-mono text-slate-700 dark:text-slate-200 font-medium">{reportId}</span></span>
         </div>
       </div>
 
       {/* Main Medical Report Container */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden space-y-6 p-6 sm:p-8">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden space-y-6 p-6 sm:p-8 transition-colors">
         {/* MediMitra Report Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 gap-3">
           <MediMitraLogo size="sm" showTagline />
-          <div className="text-left sm:text-right text-xs text-slate-500">
-            <span className="font-medium text-slate-700 block">{ui.checkupCompleteBadge}</span>
+          <div className="text-left sm:text-right text-xs text-slate-500 dark:text-slate-400">
+            <span className="font-medium text-slate-700 dark:text-slate-200 block">{ui.checkupCompleteBadge}</span>
             <span>{ui.dateLabel}: {displayAssessment.timestamp || ''}</span>
           </div>
         </div>
 
         {/* Patient Details Ribbon */}
-        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-700">
+        <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-700 dark:text-slate-300">
           <div>
-            {ui.patientLabel}: <span className="font-semibold text-slate-900">{localizedPatientName}</span> •{' '}
+            {ui.patientLabel}: <span className="font-semibold text-slate-900 dark:text-white">{localizedPatientName}</span> •{' '}
             <span>{localizedAgeCategory} ({currentProfile.age}{ui.yearsShort})</span> •{' '}
             <span>{localizedSex}</span>
           </div>
-          <div className="text-slate-600">
-            {ui.chiefComplaintLabel}: <span className="font-semibold text-teal-800">{localizedSymptomName}</span>
+          <div className="text-slate-600 dark:text-slate-400">
+            {ui.chiefComplaintLabel}: <span className="font-semibold text-teal-800 dark:text-teal-300">{localizedSymptomName}</span>
           </div>
         </div>
 
         {/* Check-up Status Indicator Banner */}
         <div className={`p-5 rounded-2xl border flex items-start gap-3.5 ${
           isSevere 
-            ? 'bg-rose-50/70 border-rose-200 text-rose-950'
-            : 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+            ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/80 text-rose-950 dark:text-rose-100'
+            : 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/80 text-emerald-950 dark:text-emerald-100'
         }`}>
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
             isSevere ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white'
@@ -303,36 +316,36 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
           </div>
           <div>
             <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md ${
-              isSevere ? 'bg-rose-200 text-rose-900' : 'bg-emerald-200 text-emerald-900'
+              isSevere ? 'bg-rose-200 dark:bg-rose-900/70 text-rose-900 dark:text-rose-200' : 'bg-emerald-200 dark:bg-emerald-900/70 text-emerald-900 dark:text-emerald-200'
             }`}>
               {isSevere ? ui.severeBadge : ui.mildBadge}
             </span>
-            <h1 className="text-lg sm:text-xl font-semibold mt-1 text-slate-900">
+            <h1 className="text-lg sm:text-xl font-semibold mt-1 text-slate-900 dark:text-white">
               {isSevere ? ui.severeHeadline : ui.mildHeadline}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-600 font-normal mt-1 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-normal mt-1 leading-relaxed">
               {isSevere ? ui.severeSubtext : ui.mildSubtext}
             </p>
           </div>
         </div>
 
         {/* Send Report to Email */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-teal-50/80 border border-teal-200 space-y-3">
+        <div className="p-4 sm:p-5 rounded-2xl bg-teal-50/80 dark:bg-teal-950/35 border border-teal-200 dark:border-teal-800/70 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-teal-700" />
-              <h2 className="text-xs font-semibold text-teal-950 uppercase tracking-wide">
+              <Mail className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+              <h2 className="text-xs font-semibold text-teal-950 dark:text-teal-200 uppercase tracking-wide">
                 {t.sendReportEmailTitle}
               </h2>
             </div>
-            <span className="text-[11px] text-teal-700 font-medium">{ui.digitalMedicalRecord}</span>
+            <span className="text-[11px] text-teal-700 dark:text-teal-400 font-medium">{ui.digitalMedicalRecord}</span>
           </div>
 
-          <p className="text-xs text-slate-600 font-normal">
+          <p className="text-xs text-slate-600 dark:text-slate-300 font-normal">
             {currentProfile.email ? (
               <>
                 {t.sendReportEmailSubtitle}:{' '}
-                <strong className="text-teal-900 font-semibold">{currentProfile.email}</strong>.
+                <strong className="text-teal-900 dark:text-teal-200 font-semibold">{currentProfile.email}</strong>.
               </>
             ) : (
               t.sendReportEmailSubtitle
@@ -348,7 +361,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                 value={recipientEmail}
                 onChange={(e) => setRecipientEmail(e.target.value)}
                 placeholder={ui.enterEmailPlaceholder}
-                className="w-full pl-9 pr-3 py-2.5 text-xs font-medium rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 bg-white text-slate-900"
+                className="w-full pl-9 pr-3 py-2.5 text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400"
               />
             </div>
             <button
@@ -374,18 +387,26 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
             <motion.div
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-3 rounded-xl bg-emerald-100/90 border border-emerald-300 text-emerald-950 text-xs flex items-start gap-2.5"
+              className="p-3 rounded-xl bg-emerald-100/90 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100 text-xs flex items-start gap-2.5"
             >
-              <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
               <div className="space-y-0.5">
                 <span className="font-semibold block">{ui.reportDispatchedTitle(recipientEmail)}</span>
-                <span className="text-[11px] text-emerald-800 block">
+                <span className="text-[11px] text-emerald-800 dark:text-emerald-300 block">
                   {ui.reportDispatchedSub}
                 </span>
               </div>
             </motion.div>
           )}
         </div>
+
+        {/* Dispense Authorization Error Banner */}
+        {dispenseError && (
+          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs flex items-start gap-2.5">
+            <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+            <span>{dispenseError}</span>
+          </div>
+        )}
 
         {/* Live Dispensing Status Tracker */}
         {activeDispenseCommand && (
@@ -400,17 +421,17 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
         {!isSevere && displayAssessment.recommendedOtcs.length > 0 && (
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-slate-800">
-                <Pill className="w-4 h-4 text-teal-600" />
-                <h2 className="text-sm font-semibold text-slate-900">{ui.recommendedMedsAndDispenser}</h2>
+              <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
+                <Pill className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{ui.recommendedMedsAndDispenser}</h2>
               </div>
 
               <button
                 type="button"
                 onClick={() => triggerEsp32(() => setIsHardwareGuideOpen(true))}
-                className="text-xs font-medium text-teal-700 hover:text-teal-900 flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                className="text-xs font-medium text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
               >
-                <Cpu className="w-3.5 h-3.5 text-teal-600" />
+                <Cpu className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
                 <span>{ui.esp32SchematicBtn}</span>
               </button>
             </div>
@@ -425,21 +446,21 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                 return (
                   <div 
                     key={idx}
-                    className="p-5 rounded-2xl bg-teal-50/40 border border-teal-200/70 hover:border-teal-400 transition-all space-y-3"
+                    className="p-5 rounded-2xl bg-teal-50/40 dark:bg-teal-950/30 border border-teal-200/70 dark:border-teal-800/70 hover:border-teal-400 dark:hover:border-teal-600 transition-all space-y-3"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-base text-slate-900">{otc.name}</span>
-                          <span className="text-[10px] font-semibold bg-teal-100 text-teal-800 px-2 py-0.5 rounded-md">
+                          <span className="font-bold text-base text-slate-900 dark:text-white">{otc.name}</span>
+                          <span className="text-[10px] font-semibold bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 px-2 py-0.5 rounded-md border border-transparent dark:border-teal-800">
                             {ui.verifiedOtcBadge}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5">{ui.categoryLabel}: {otc.category}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{ui.categoryLabel}: {otc.category}</p>
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                           {preferredQty} {unitLabel} • ₹{totalPrice}
                         </span>
                         <button
@@ -454,29 +475,29 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                           <Pill className="w-3.5 h-3.5" />
                           <span>{ui.dispenseShortBtn}</span>
                         </button>
-                        <span className="hidden sm:inline-block text-[11px] font-medium text-slate-500">
+                        <span className="hidden sm:inline-block text-[11px] font-medium text-slate-500 dark:text-slate-400">
                           {ui.dispenserSlot} #{idx + 1}
                         </span>
                       </div>
                     </div>
 
-                    <p className="text-xs text-slate-700 font-normal leading-relaxed">
-                      <strong className="text-slate-900">{ui.dosageGuideLabel}: </strong>{otc.dosageGuide}
+                    <p className="text-xs text-slate-700 dark:text-slate-300 font-normal leading-relaxed">
+                      <strong className="text-slate-900 dark:text-white">{ui.dosageGuideLabel}: </strong>{otc.dosageGuide}
                     </p>
 
                     {otc.childDosageNote && (
-                      <p className="text-xs text-amber-900 bg-amber-50 p-2.5 rounded-xl border border-amber-200 font-normal">
-                        <strong className="text-amber-950">{ui.pediatricNoteLabel}: </strong>{otc.childDosageNote}
+                      <p className="text-xs text-amber-900 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-xl border border-amber-200 dark:border-amber-800/70 font-normal">
+                        <strong className="text-amber-950 dark:text-amber-100">{ui.pediatricNoteLabel}: </strong>{otc.childDosageNote}
                       </p>
                     )}
 
-                    <p className="text-[11px] text-slate-500 font-normal">
-                      <strong className="text-slate-700">{ui.safetyCautionLabel}: </strong>{otc.safetyCaution}
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                      <strong className="text-slate-700 dark:text-slate-200">{ui.safetyCautionLabel}: </strong>{otc.safetyCaution}
                     </p>
 
-                    <div className="pt-3 border-t border-teal-200/60 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                      <div className="flex items-center gap-1.5 text-xs text-teal-800 font-medium">
-                        <Cpu className="w-4 h-4 text-teal-600 shrink-0" />
+                    <div className="pt-3 border-t border-teal-200/60 dark:border-teal-800/60 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-1.5 text-xs text-teal-800 dark:text-teal-300 font-medium">
+                        <Cpu className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
                         <span>{ui.connectedEsp32Text}</span>
                       </div>
 
@@ -499,16 +520,16 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
             </div>
 
             {/* Simple Home Care Measures */}
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs text-slate-700">
-              <div className="flex items-center gap-2 font-medium text-slate-800">
-                <Home className="w-4 h-4 text-emerald-600" />
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2 text-xs text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-2 font-medium text-slate-800 dark:text-slate-100">
+                <Home className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span className="font-semibold">{ui.simpleHomeTipsTitle}:</span>
               </div>
-              <ul className="list-disc list-inside space-y-1 pl-1 font-normal text-slate-600">
+              <ul className="list-disc list-inside space-y-1 pl-1 font-normal text-slate-600 dark:text-slate-300">
                 {displayAssessment.homeRemedies.length > 0
                   ? displayAssessment.homeRemedies.slice(0, 3).map((rem, rIdx) => (
                       <li key={rIdx}>
-                        <strong className="text-slate-800">{rem.title}:</strong> {rem.instructions}
+                        <strong className="text-slate-800 dark:text-slate-100">{rem.title}:</strong> {rem.instructions}
                       </li>
                     ))
                   : homeTips.map((tip, tIdx) => <li key={tIdx}>{tip}</li>)}
@@ -521,24 +542,24 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
         {isSevere && (
           <div className="space-y-3 pt-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-slate-800">
-                <Stethoscope className="w-4 h-4 text-rose-600" />
+              <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
+                <Stethoscope className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                 <div>
-                  <h2 className="text-sm font-semibold text-slate-900">
+                  <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
                     {ui.recommendedDoctorsVisitTitle}
                   </h2>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 font-normal mt-0.5">
-                    <MapPin className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
+                    <MapPin className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                     <span>
                       {ui.nearLabel}:{' '}
-                      <strong className="text-slate-700">
+                      <strong className="text-slate-700 dark:text-slate-200">
                         {isLoadingLocation ? ui.detectingLocation : detectedPlaceName || ui.localDirectoryLabel}
                       </strong>
                     </span>
                     <button
                       onClick={detectLocationAndDoctors}
                       disabled={isLoadingLocation}
-                      className="text-[11px] text-teal-600 hover:text-teal-800 font-medium ml-1 flex items-center gap-0.5 cursor-pointer"
+                      className="text-[11px] text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 font-medium ml-1 flex items-center gap-0.5 cursor-pointer"
                       title={ui.refreshGpsBtn}
                     >
                       <RefreshCw className={`w-3 h-3 ${isLoadingLocation ? 'animate-spin' : ''}`} />
@@ -549,7 +570,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
               </div>
               <button
                 onClick={onOpenDoctors}
-                className="text-xs font-semibold text-teal-700 hover:underline cursor-pointer"
+                className="text-xs font-semibold text-teal-700 dark:text-teal-400 hover:underline cursor-pointer"
               >
                 {ui.viewAllDoctorsMaps}
               </button>
@@ -559,35 +580,35 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
               {realDoctors.slice(0, 2).map((doc) => (
                 <div
                   key={doc.id}
-                  className="p-4 rounded-2xl border border-slate-200 bg-white hover:border-teal-400 transition-all flex flex-col justify-between space-y-3"
+                  className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60 hover:border-teal-400 dark:hover:border-teal-600 transition-all flex flex-col justify-between space-y-3"
                 >
                   <div>
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="font-semibold text-sm text-slate-900">{doc.name}</h3>
-                        <p className="text-xs text-teal-700 font-medium">{doc.specialty}</p>
+                        <h3 className="font-semibold text-sm text-slate-900 dark:text-white">{doc.name}</h3>
+                        <p className="text-xs text-teal-700 dark:text-teal-400 font-medium">{doc.specialty}</p>
                       </div>
-                      <span className="text-[11px] font-medium bg-amber-50 text-amber-800 px-2 py-0.5 rounded-md border border-amber-200">
+                      <span className="text-[11px] font-medium bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
                         ★ {doc.rating}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 font-normal mt-1">{doc.hospital}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1 font-normal">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-1">{doc.hospital}</p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 flex items-center gap-1 font-normal">
                       <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                       <span>{doc.distanceKm} {ui.kmAway} • {doc.address}</span>
                     </p>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                    <span className="text-xs text-slate-600 font-normal">{doc.nextAvailable}</span>
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between gap-2">
+                    <span className="text-xs text-slate-600 dark:text-slate-400 font-normal">{doc.nextAvailable}</span>
                     <div className="flex items-center gap-1.5">
                       <a
                         href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${doc.hospital}, ${doc.address}`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-2.5 py-1.5 rounded-xl border border-teal-200 hover:bg-teal-50 text-teal-700 font-medium text-xs flex items-center gap-1 transition-colors"
+                        className="px-2.5 py-1.5 rounded-xl border border-teal-200 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-950/50 text-teal-700 dark:text-teal-300 font-medium text-xs flex items-center gap-1 transition-colors"
                       >
-                        <Navigation className="w-3 h-3 text-teal-600" />
+                        <Navigation className="w-3 h-3 text-teal-600 dark:text-teal-400" />
                         <span>{ui.directionsBtn}</span>
                       </a>
                       <a
@@ -606,13 +627,13 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
         )}
 
         {/* Expandable Full Report Preview */}
-        <div className="pt-2 border-t border-slate-100">
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
           <button
             onClick={() => setShowFullReportPreview(!showFullReportPreview)}
-            className="w-full py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium flex items-center justify-between transition-colors cursor-pointer"
+            className="w-full py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center justify-between transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-teal-600" />
+              <FileText className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
               <span>{showFullReportPreview ? ui.hidePreviewBtn : ui.viewFullPreviewBtn}</span>
             </span>
             {showFullReportPreview ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
@@ -626,10 +647,10 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden mt-3"
               >
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 font-mono text-xs text-slate-700 space-y-2 leading-relaxed">
-                  <div className="text-center pb-2 border-b border-slate-200 font-sans">
-                    <span className="font-semibold text-slate-900 block text-sm">{ui.previewReportHeader}</span>
-                    <span className="text-[10px] text-slate-500">{ui.previewCaseRef} #{reportId}</span>
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 font-mono text-xs text-slate-700 dark:text-slate-300 space-y-2 leading-relaxed">
+                  <div className="text-center pb-2 border-b border-slate-200 dark:border-slate-800 font-sans">
+                    <span className="font-semibold text-slate-900 dark:text-white block text-sm">{ui.previewReportHeader}</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">{ui.previewCaseRef} #{reportId}</span>
                   </div>
                   <div><strong>{ui.patientLabel}:</strong> {localizedPatientName} ({localizedAgeCategory}, {currentProfile.age}{ui.yearsShort}, {localizedSex})</div>
                   <div><strong>{ui.previewEmailDispatched}:</strong> {recipientEmail || '-'}</div>
@@ -637,7 +658,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                   <div><strong>{ui.previewTriageLevel}:</strong> {getLocalizedSeverityLabel()}</div>
                   <div><strong>{ui.previewSummary}:</strong> {displayAssessment.clinicalSummary}</div>
                   <div><strong>{ui.previewRemedies}:</strong> {displayAssessment.recommendedOtcs.map(o => o.name).join(', ') || ui.previewPhysicianNeeded}</div>
-                  <div className="pt-2 border-t border-slate-200 text-[10px] text-slate-400 font-sans">
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800 text-[10px] text-slate-400 font-sans">
                     {ui.previewDisclaimer}
                   </div>
                 </div>
@@ -647,7 +668,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
         </div>
 
         {/* Bottom Actions */}
-        <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleDownloadPdf}
@@ -662,8 +683,8 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
               onClick={() => onSaveRecord(displayAssessment)}
               className={`text-xs font-medium px-3.5 py-2.5 rounded-xl transition-all cursor-pointer ${
                 isSaved
-                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
               }`}
             >
               {isSaved ? ui.savedBtn : ui.saveSummaryBtn}
@@ -674,14 +695,14 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
             {isSevere && (
               <button
                 onClick={onOpenDoctors}
-                className="px-4 py-2.5 rounded-xl border border-rose-600 text-rose-700 font-semibold text-xs hover:bg-rose-50 transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-rose-600 dark:border-rose-500 text-rose-700 dark:text-rose-300 font-semibold text-xs hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
               >
                 {t.nearestDoctors}
               </button>
             )}
             <button
               onClick={onStartNew}
-              className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
             >
               {t.startNewCheckupBtn}
             </button>
@@ -691,10 +712,10 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
 
       {/* Floating Sticky Dispense Action Bar for Mobile Devices */}
       {!isSevere && firstOtc && !activeDispenseCommand && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-teal-200 px-4 py-3 shadow-2xl flex items-center justify-between gap-3">
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-teal-200 dark:border-teal-800 px-4 py-3 shadow-2xl flex items-center justify-between gap-3">
           <div className="truncate">
-            <span className="text-[10px] text-teal-700 font-bold uppercase tracking-wider block">{ui.recommendedShort}</span>
-            <span className="text-xs font-bold text-slate-900 truncate block">
+            <span className="text-[10px] text-teal-700 dark:text-teal-400 font-bold uppercase tracking-wider block">{ui.recommendedShort}</span>
+            <span className="text-xs font-bold text-slate-900 dark:text-white truncate block">
               {firstOtc.name}
             </span>
           </div>
@@ -721,11 +742,10 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
           medicine={selectedMedicineForDispense}
           patientProfile={currentProfile}
           onProceedToPayment={handleProceedToPayment}
-          onOpenHardwareGuide={() => triggerEsp32(() => setIsHardwareGuideOpen(true))}
         />
       )}
 
-      {/* Payment QR Code Modal */}
+      {/* Payment Checkout Modal */}
       {selectedMedicineForDispense && (
         <PaymentQrModal
           isOpen={isPaymentQrModalOpen}
@@ -733,6 +753,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
           medicine={selectedMedicineForDispense}
           quantity={dispenseQuantity}
           patientProfile={currentProfile}
+          servoConfig={configuredServoConfig}
           onPaymentSuccess={handlePaymentSuccess}
         />
       )}
