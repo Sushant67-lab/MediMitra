@@ -54,6 +54,7 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [hasTriggeredRedFlag, setHasTriggeredRedFlag] = useState<boolean>(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const questionPanelRef = useRef<HTMLDivElement>(null);
 
   const ui = TRIAGE_UI_STRINGS[language] || TRIAGE_UI_STRINGS.en;
   const localizedSymptomName = getLocalizedSymptomName(symptom, language);
@@ -135,6 +136,22 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
       el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
     }
   }, [chatHistory, isTyping, language]);
+
+  // Automatically scroll the page smoothly to the active question card when it appears or advances
+  useEffect(() => {
+    if (isTyping || !currentQuestionData) return;
+    const timer = window.setTimeout(() => {
+      const panel = questionPanelRef.current;
+      if (!panel) return;
+      const rect = panel.getBoundingClientRect();
+      const headerOffset = 76;
+      const isFullyVisible = rect.top >= headerOffset && rect.bottom <= window.innerHeight - 8;
+      if (!isFullyVisible) {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [currentStep, isTyping, symptom, currentQuestionData?.id]);
 
   const handleSelectOption = (option: string, optionIndex?: number) => {
     if (!currentQuestionData) return;
@@ -420,10 +437,11 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
       {/* Adaptive Answer Choice Panel for the Current Question */}
       {currentQuestionData && !isTyping && (
         <motion.div
+          ref={questionPanelRef}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-teal-200 dark:border-teal-800/80 shadow-sm space-y-3 transition-colors"
+          className="scroll-mt-20 bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-teal-200 dark:border-teal-800/80 shadow-sm space-y-3 transition-colors"
         >
           {/* Current Question Header - Clean Semibold and Legible */}
           <div className="space-y-1">
