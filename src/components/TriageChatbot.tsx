@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Send, 
-  ArrowLeft, 
-  RotateCcw, 
   ShieldAlert, 
   Stethoscope,
   Info
@@ -25,7 +23,6 @@ import {
   QuestionId, 
   TRIAGE_UI_STRINGS 
 } from '../data/triageTranslations';
-import { MediMitraLogo } from './MediMitraLogo';
 import { useLanguage } from '../context/LanguageContext';
 import { getAppStrings } from '../data/appTranslations';
 
@@ -44,7 +41,6 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
   symptom,
   initialFeeling,
   userCustomNote,
-  onBack,
   onCompleteAssessment,
   onDirectDoctorReferral
 }) => {
@@ -57,18 +53,11 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
   const [customInput, setCustomInput] = useState<string>('');
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [hasTriggeredRedFlag, setHasTriggeredRedFlag] = useState<boolean>(false);
-  const chatBottomRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const ui = TRIAGE_UI_STRINGS[language] || TRIAGE_UI_STRINGS.en;
   const localizedSymptomName = getLocalizedSymptomName(symptom, language);
   const displayPatientName = currentProfile.name?.trim() || appUi.patientWord;
-  const localizedAgeCat =
-    currentProfile.ageCategory === 'child'
-      ? appUi.ageChild
-      : currentProfile.ageCategory === 'senior'
-        ? appUi.ageSenior
-        : appUi.ageAdult;
-  const localizedSex = currentProfile.sex === 'female' ? appUi.sexFemale : appUi.sexMale;
 
   const questionContext: QuestionContext = {
     ageCategory: currentProfile.ageCategory,
@@ -139,9 +128,12 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
     setChatHistory(welcomeMessages);
   }, [symptom]);
 
-  // Scroll to bottom when new messages arrive
+  // Scroll chat container internally when new messages arrive
   useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = chatContainerRef.current;
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    }
   }, [chatHistory, isTyping, language]);
 
   const handleSelectOption = (option: string, optionIndex?: number) => {
@@ -274,36 +266,6 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
     handleSelectOption(text);
   };
 
-  const handleRestart = () => {
-    setCurrentStep(1);
-    setAnswers({});
-    setAnswerIndices({});
-    setHasTriggeredRedFlag(false);
-    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const resetCtx: QuestionContext = { ...questionContext, answers: {}, answerIndices: {} };
-    const q1 = getAdaptiveQuestion(1, resetCtx, language);
-    setChatHistory([
-      {
-        id: 'msg-restart',
-        sender: 'bot',
-        metaType: 'restart',
-        text: `${ui.restartedText} ${localizedSymptomName}.`,
-        timestamp: nowTime
-      },
-      ...(q1 ? [{
-        id: 'q-1-re',
-        sender: 'bot' as const,
-        metaType: 'question' as const,
-        stepNumber: 1,
-        text: q1.question,
-        questionId: q1.id,
-        options: q1.options,
-        badge: q1.badge,
-        timestamp: nowTime
-      }] : [])
-    ]);
-  };
-
   // Resolve message text & badge dynamically in the active language so switching languages mid-chat updates everything immediately
   const resolveLocalizedMessage = (msg: ChatMessage): { text: string; badge?: string } => {
     if (msg.metaType === 'welcome') {
@@ -353,59 +315,8 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
     return { text: msg.text, badge: msg.badge };
   };
 
-  const progressPercentage = Math.min(100, Math.round(((currentStep - 1) / 10) * 100));
-
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-4">
-      {/* Top Session Bar with MediMitra Logo */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title={t.backHomeBtn}
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-
-          <MediMitraLogo size="sm" />
-
-          <div className="border-l border-slate-200 dark:border-slate-700 pl-3">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300">
-                {localizedSymptomName}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
-              {ui.patientLabel}: <span className="font-medium text-slate-800 dark:text-slate-200">{displayPatientName}</span> ({localizedAgeCat}, {currentProfile.age}{appUi.yearsShort}, {localizedSex})
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <span className="text-xs font-bold text-teal-700 dark:text-teal-400">
-              {t.question} {Math.min(currentStep, 10)} {t.of} 10
-            </span>
-            <div className="w-32 bg-slate-100 dark:bg-slate-800 rounded-full h-2 mt-1 overflow-hidden border border-slate-200 dark:border-slate-700">
-              <motion.div 
-                className="bg-gradient-to-r from-teal-500 to-emerald-500 h-full rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPercentage}%` }}
-                transition={{ duration: 0.3 }}
-              />
-            </div>
-          </div>
-
-          <button
-            onClick={handleRestart}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            title={t.restartBtn}
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
 
       {/* Red Flag Alert Banner (If user flagged a severe symptom during triage) */}
       {hasTriggeredRedFlag && (
@@ -429,8 +340,11 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
         </motion.div>
       )}
 
-      {/* Elongated Chat Messages Timeline */}
-      <div className="bg-slate-50/70 dark:bg-slate-900/90 rounded-3xl p-5 sm:p-8 border border-slate-200 dark:border-slate-800 min-h-[560px] sm:min-h-[640px] max-h-[740px] overflow-y-auto space-y-5 shadow-xs transition-colors">
+      {/* Auto-fit Chat Messages Timeline */}
+      <div
+        ref={chatContainerRef}
+        className="bg-slate-50/70 dark:bg-slate-900/90 rounded-3xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 max-h-[380px] sm:max-h-[480px] overflow-y-auto space-y-4 shadow-xs transition-colors"
+      >
         <AnimatePresence initial={false}>
           {chatHistory.map((msg) => {
             const isBot = msg.sender === 'bot';
@@ -501,8 +415,6 @@ export const TriageChatbot: React.FC<TriageChatbotProps> = ({
             </span>
           </motion.div>
         )}
-
-        <div ref={chatBottomRef} />
       </div>
 
       {/* Adaptive Answer Choice Panel for the Current Question */}
