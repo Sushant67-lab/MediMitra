@@ -34,106 +34,25 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { ThemeToggle } from './ThemeToggle';
 import { DEMO_VIDEO_TRANSLATIONS } from '../data/demoVideoTranslations';
+import {
+  chunkSpeechSmoothly,
+  estimateVoiceoverDurationSec,
+  resolveBestVoice,
+  videoAudioStudio
+} from '../utils/videoAudioEngine';
 
 interface AppDemoVideoModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const SCENE_DURATION_SEC = 20;
-const TOTAL_DURATION_SEC = 120;
 const PLAYBACK_SPEEDS = [0.75, 1, 1.25, 1.5] as const;
 
-const LANGUAGE_VOICE_PRIORITY: Record<LanguageCode, string[]> = {
-  en: ['en-IN', 'en-US', 'en-GB', 'en'],
-  hi: ['hi-IN', 'hi'],
-  hinglish: ['en-IN', 'hi-IN', 'en-GB', 'en'],
-  mr: ['mr-IN', 'hi-IN', 'mr', 'hi'],
-  bn: ['bn-IN', 'bn-BD', 'bn'],
-  ta: ['ta-IN', 'ta'],
-  te: ['te-IN', 'te'],
-  gu: ['gu-IN', 'gu']
-};
-
-function formatClock(totalSeconds: number): string {
-  const clamped = Math.max(0, Math.min(TOTAL_DURATION_SEC, Math.floor(totalSeconds)));
+function formatClock(totalSeconds: number, maxDuration: number): string {
+  const clamped = Math.max(0, Math.min(maxDuration, Math.floor(totalSeconds)));
   const mins = Math.floor(clamped / 60);
   const secs = clamped % 60;
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-}
-
-function scoreVoiceQuality(v: SpeechSynthesisVoice): number {
-  const name = `${v.name} ${v.voiceURI}`.toLowerCase();
-  let score = 0;
-
-  if (name.includes('natural')) score += 120;
-  if (name.includes('neural')) score += 110;
-  if (name.includes('online')) score += 95;
-  if (name.includes('wavenet') || name.includes('studio')) score += 90;
-  if (name.includes('enhanced') || name.includes('premium')) score += 80;
-  if (name.includes('google')) score += 70;
-
-  const pleasantNames = [
-    'neerja',
-    'swara',
-    'ananya',
-    'kavya',
-    'aria',
-    'jenny',
-    'sonia',
-    'libby',
-    'samantha',
-    'lekha',
-    'rishi',
-    'heera',
-    'prabhat',
-    'madhur',
-    'karen',
-    'daniel'
-  ];
-  if (pleasantNames.some((n) => name.includes(n))) {
-    score += 65;
-  }
-
-  if (name.includes('espeak') || name.includes('festival') || name.includes('mbrola') || name.includes('compact')) {
-    score -= 150;
-  }
-  if (!v.localService) {
-    score += 20;
-  }
-  return score;
-}
-
-function resolveBestVoice(
-  voices: SpeechSynthesisVoice[],
-  lang: LanguageCode
-): { voice: SpeechSynthesisVoice | null; bcp47: string } {
-  const priorities = LANGUAGE_VOICE_PRIORITY[lang] || ['en-IN', 'en-US'];
-  for (const tag of priorities) {
-    const lowerTag = tag.toLowerCase();
-    const prefix = lowerTag.split('-')[0];
-    const matches = voices.filter(
-      (v) =>
-        v.lang.toLowerCase() === lowerTag ||
-        v.lang.toLowerCase().startsWith(`${prefix}-`) ||
-        v.lang.toLowerCase() === prefix
-    );
-    if (matches.length > 0) {
-      const ranked = [...matches].sort((a, b) => {
-        const aExact = a.lang.toLowerCase() === lowerTag ? 25 : 0;
-        const bExact = b.lang.toLowerCase() === lowerTag ? 25 : 0;
-        return scoreVoiceQuality(b) + bExact - (scoreVoiceQuality(a) + aExact);
-      });
-      return { voice: ranked[0], bcp47: ranked[0].lang };
-    }
-  }
-  return { voice: null, bcp47: priorities[0] };
-}
-
-function splitIntoSentences(text: string): string[] {
-  const matches = text.match(/[^.!?।]+(?:[.!?।]+|$)/g);
-  if (!matches) return text.trim() ? [text.trim()] : [];
-  return matches.map((s) => s.trim()).filter(Boolean);
 }
 
 export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
@@ -148,30 +67,57 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [isVoiceCurrentlySpeaking, setIsVoiceCurrentlySpeaking] = useState(false);
+  const [needsMobileAudioTap, setNeedsMobileAudioTap] = useState(false);
 
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
   const lastFrameTimeRef = useRef<number | null>(null);
   const lastSpokenKeyRef = useRef<string | null>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
-  const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const sentencePauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeUtterancesRef = useRef<SpeechSynthesisUtterance[]>([]);
   const speechSessionIdRef = useRef(0);
   const isVoiceSpeakingRef = useRef(false);
   const voiceHoldStartedAtRef = useRef<number | null>(null);
+  const voiceFinishedAtRef = useRef<number | null>(null);
+  const speechStartConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggeredCuesRef = useRef<Set<string>>(new Set());
   const playbackSpeedRef = useRef<number>(playbackSpeed);
   playbackSpeedRef.current = playbackSpeed;
 
   const localeBundle = DEMO_VIDEO_TRANSLATIONS[language] || DEMO_VIDEO_TRANSLATIONS.en;
   const scenes = localeBundle.scenes;
 
-  const activeSceneIndex = Math.min(
-    scenes.length - 1,
-    Math.max(0, Math.floor(elapsedSec / SCENE_DURATION_SEC))
+  // Dynamic per-scene natural durations based on narration length (zero padded dead silence)
+  const sceneTimings = useMemo(() => {
+    let cursor = 0;
+    return scenes.map((sc) => {
+      const dur = estimateVoiceoverDurationSec(sc.voiceover, language);
+      const startSec = cursor;
+      const endSec = cursor + dur;
+      cursor = endSec;
+      return { startSec, endSec, durationSec: dur };
+    });
+  }, [scenes, language]);
+
+  const totalDurationSec = useMemo(
+    () => (sceneTimings.length > 0 ? sceneTimings[sceneTimings.length - 1].endSec : 60),
+    [sceneTimings]
   );
+
+  const activeSceneIndex = useMemo(() => {
+    for (let i = 0; i < sceneTimings.length; i++) {
+      if (elapsedSec < sceneTimings[i].endSec - 0.001) {
+        return i;
+      }
+    }
+    return Math.max(0, scenes.length - 1);
+  }, [elapsedSec, sceneTimings, scenes.length]);
+
+  const activeTiming = sceneTimings[activeSceneIndex] || { startSec: 0, endSec: 12, durationSec: 12 };
   const activeScene = scenes[activeSceneIndex];
-  const sceneElapsedSec = Math.max(0, elapsedSec - activeSceneIndex * SCENE_DURATION_SEC);
-  const sceneProgress = Math.min(1, sceneElapsedSec / SCENE_DURATION_SEC);
-  const totalProgressPct = Math.min(100, Math.max(0, (elapsedSec / TOTAL_DURATION_SEC) * 100));
+  const sceneElapsedSec = Math.max(0, elapsedSec - activeTiming.startSec);
+  const sceneProgress = Math.min(1, sceneElapsedSec / Math.max(1, activeTiming.durationSec));
+  const totalProgressPct = Math.min(100, Math.max(0, (elapsedSec / Math.max(1, totalDurationSec)) * 100));
 
   useEffect(() => {
     voicesRef.current = voices;
@@ -187,14 +133,17 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
 
   const stopSpeech = useCallback(() => {
     speechSessionIdRef.current += 1;
-    if (sentencePauseTimerRef.current) {
-      clearTimeout(sentencePauseTimerRef.current);
-      sentencePauseTimerRef.current = null;
+    if (speechStartConfirmTimerRef.current) {
+      clearTimeout(speechStartConfirmTimerRef.current);
+      speechStartConfirmTimerRef.current = null;
     }
     isVoiceSpeakingRef.current = false;
+    setIsVoiceCurrentlySpeaking(false);
     voiceHoldStartedAtRef.current = null;
-    activeUtteranceRef.current = null;
+    voiceFinishedAtRef.current = null;
+    activeUtterancesRef.current = [];
     lastSpokenKeyRef.current = null;
+    videoAudioStudio.setVoiceActive(false);
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
@@ -204,8 +153,12 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
     (sceneIdx: number, targetLang: LanguageCode, muted: boolean, speed = playbackSpeedRef.current) => {
       if (muted || typeof window === 'undefined' || !('speechSynthesis' in window)) {
         isVoiceSpeakingRef.current = false;
+        setIsVoiceCurrentlySpeaking(false);
+        voiceFinishedAtRef.current = null;
+        videoAudioStudio.setVoiceActive(false);
         return;
       }
+
       const bundle = DEMO_VIDEO_TRANSLATIONS[targetLang] || DEMO_VIDEO_TRANSLATIONS.en;
       const targetScene = bundle.scenes[sceneIdx];
       if (!targetScene) return;
@@ -216,15 +169,18 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
       const synth = window.speechSynthesis;
       speechSessionIdRef.current += 1;
       const sessionId = speechSessionIdRef.current;
-      if (sentencePauseTimerRef.current) {
-        clearTimeout(sentencePauseTimerRef.current);
-        sentencePauseTimerRef.current = null;
+
+      if (speechStartConfirmTimerRef.current) {
+        clearTimeout(speechStartConfirmTimerRef.current);
+        speechStartConfirmTimerRef.current = null;
       }
       synth.cancel();
 
-      const sentences = splitIntoSentences(targetScene.voiceover);
-      if (sentences.length === 0) {
+      const chunks = chunkSpeechSmoothly(targetScene.voiceover, 155);
+      if (chunks.length === 0) {
         isVoiceSpeakingRef.current = false;
+        setIsVoiceCurrentlySpeaking(false);
+        videoAudioStudio.setVoiceActive(false);
         return;
       }
 
@@ -234,48 +190,71 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
       lastSpokenKeyRef.current = key;
       isVoiceSpeakingRef.current = true;
       voiceHoldStartedAtRef.current = null;
+      voiceFinishedAtRef.current = null;
 
-      let sentenceIndex = 0;
-      const speakNextSentence = () => {
-        if (speechSessionIdRef.current !== sessionId) return;
-        if (sentenceIndex >= sentences.length) {
-          activeUtteranceRef.current = null;
+      const baseRate = targetLang === 'en' || targetLang === 'hinglish' ? 1.03 : 1.0;
+      const effectiveRate = Math.max(0.75, Math.min(1.65, baseRate * speed));
+
+      let startedAtLeastOnce = false;
+      const utterances: SpeechSynthesisUtterance[] = [];
+
+      // If browser blocks un-gestured mobile speechSynthesis, gently offer tap-to-hear
+      speechStartConfirmTimerRef.current = setTimeout(() => {
+        if (speechSessionIdRef.current === sessionId && !startedAtLeastOnce) {
           isVoiceSpeakingRef.current = false;
-          voiceHoldStartedAtRef.current = null;
-          return;
+          setIsVoiceCurrentlySpeaking(false);
+          setNeedsMobileAudioTap(true);
+          videoAudioStudio.setVoiceActive(false);
         }
+      }, 1150);
 
-        const sentenceText = sentences[sentenceIndex];
-        const utterance = new SpeechSynthesisUtterance(sentenceText);
+      chunks.forEach((chunkText, idx) => {
+        const utterance = new SpeechSynthesisUtterance(chunkText);
         utterance.lang = bcp47;
         if (voice) {
           utterance.voice = voice;
         }
-        utterance.rate = Math.max(0.7, Math.min(1.6, 0.94 * speed));
-        utterance.pitch = 1.03;
+        utterance.rate = effectiveRate;
+        utterance.pitch = 1.0;
         utterance.volume = 1;
 
-        const scheduleNext = () => {
+        utterance.onstart = () => {
           if (speechSessionIdRef.current !== sessionId) return;
-          sentenceIndex += 1;
-          if (sentenceIndex >= sentences.length) {
-            speakNextSentence();
-            return;
+          startedAtLeastOnce = true;
+          setNeedsMobileAudioTap(false);
+          setIsVoiceCurrentlySpeaking(true);
+          videoAudioStudio.setVoiceActive(true);
+          if (speechStartConfirmTimerRef.current) {
+            clearTimeout(speechStartConfirmTimerRef.current);
+            speechStartConfirmTimerRef.current = null;
           }
-          sentencePauseTimerRef.current = setTimeout(() => {
-            sentencePauseTimerRef.current = null;
-            speakNextSentence();
-          }, 220);
         };
 
-        utterance.onend = scheduleNext;
-        utterance.onerror = scheduleNext;
+        if (idx === chunks.length - 1) {
+          const finishSceneVoice = () => {
+            if (speechSessionIdRef.current !== sessionId) return;
+            isVoiceSpeakingRef.current = false;
+            setIsVoiceCurrentlySpeaking(false);
+            voiceHoldStartedAtRef.current = null;
+            voiceFinishedAtRef.current = performance.now();
+            videoAudioStudio.setVoiceActive(false);
+          };
+          utterance.onend = finishSceneVoice;
+          utterance.onerror = () => {
+            if (speechSessionIdRef.current !== sessionId) return;
+            isVoiceSpeakingRef.current = false;
+            setIsVoiceCurrentlySpeaking(false);
+            voiceHoldStartedAtRef.current = null;
+            videoAudioStudio.setVoiceActive(false);
+          };
+        }
 
-        activeUtteranceRef.current = utterance;
-        synth.speak(utterance);
-      };
+        utterances.push(utterance);
+      });
 
-      speakNextSentence();
+      activeUtterancesRef.current = utterances;
+      // Queue back-to-back directly into browser TTS queue for zero artificial pauses
+      utterances.forEach((u) => synth.speak(u));
     },
     []
   );
@@ -299,59 +278,94 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
   // Reset & start autoplay when modal opens; stop everything on close
   useEffect(() => {
     if (isOpen) {
+      triggeredCuesRef.current.clear();
       setElapsedSec(0);
       setIsPlaying(true);
+      setNeedsMobileAudioTap(false);
       lastFrameTimeRef.current = null;
       lastSpokenKeyRef.current = null;
+      videoAudioStudio.unlock();
+      videoAudioStudio.setMuted(isMuted);
+      if (!isMuted) {
+        videoAudioStudio.startAmbient();
+        videoAudioStudio.playCue('chapter');
+      }
       speakScene(0, language, isMuted, playbackSpeedRef.current);
     } else {
       setIsPlaying(false);
       stopSpeech();
+      videoAudioStudio.stopAmbient();
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
     }
-  }, [isOpen]); // intentionally only runs on modal open/close toggle
+  }, [isOpen]);
 
-  // Cancel voice on unmount
   useEffect(() => {
     return () => {
       stopSpeech();
+      videoAudioStudio.stopAmbient();
     };
   }, [stopSpeech]);
 
+  // Keep Web Audio ambient pad synced with play/mute state
+  useEffect(() => {
+    videoAudioStudio.setMuted(isMuted);
+    if (isOpen && isPlaying && !isMuted) {
+      videoAudioStudio.startAmbient();
+    } else {
+      videoAudioStudio.stopAmbient();
+    }
+  }, [isOpen, isPlaying, isMuted]);
+
   const handleSeekTo = useCallback(
     (targetSec: number) => {
-      const clamped = Math.max(0, Math.min(TOTAL_DURATION_SEC, targetSec));
-      const nextSceneIdx = Math.min(scenes.length - 1, Math.max(0, Math.floor(clamped / SCENE_DURATION_SEC)));
+      const clamped = Math.max(0, Math.min(totalDurationSec, targetSec));
+      let nextSceneIdx = Math.max(0, scenes.length - 1);
+      for (let i = 0; i < sceneTimings.length; i++) {
+        if (clamped < sceneTimings[i].endSec - 0.001) {
+          nextSceneIdx = i;
+          break;
+        }
+      }
       const prevSceneIdx = activeSceneIndex;
       setElapsedSec(clamped);
       if (nextSceneIdx !== prevSceneIdx) {
+        triggeredCuesRef.current.clear();
         stopSpeech();
-        if (isPlaying && !isMuted && clamped < TOTAL_DURATION_SEC) {
+        if (isPlaying && !isMuted && clamped < totalDurationSec) {
+          videoAudioStudio.unlock();
+          videoAudioStudio.playCue('chapter');
           speakScene(nextSceneIdx, language, false, playbackSpeedRef.current);
         }
       }
-      if (clamped >= TOTAL_DURATION_SEC) {
+      if (clamped >= totalDurationSec) {
         setIsPlaying(false);
         stopSpeech();
       }
     },
-    [scenes.length, activeSceneIndex, stopSpeech, isPlaying, isMuted, speakScene, language]
+    [totalDurationSec, scenes.length, sceneTimings, activeSceneIndex, stopSpeech, isPlaying, isMuted, speakScene, language]
   );
 
   const handleSkipBy = useCallback(
     (deltaSec: number) => {
+      videoAudioStudio.unlock();
       handleSeekTo(elapsedSec + deltaSec);
     },
     [elapsedSec, handleSeekTo]
   );
 
   const handleTogglePlay = useCallback(() => {
-    if (elapsedSec >= TOTAL_DURATION_SEC) {
+    videoAudioStudio.unlock();
+    if (elapsedSec >= totalDurationSec) {
+      triggeredCuesRef.current.clear();
       stopSpeech();
       setElapsedSec(0);
       setIsPlaying(true);
+      if (!isMuted) {
+        videoAudioStudio.startAmbient();
+        videoAudioStudio.playCue('chapter');
+      }
       speakScene(0, language, isMuted, playbackSpeedRef.current);
       return;
     }
@@ -360,17 +374,40 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
       stopSpeech();
     } else {
       setIsPlaying(true);
+      setNeedsMobileAudioTap(false);
       lastSpokenKeyRef.current = null;
+      if (!isMuted) {
+        videoAudioStudio.startAmbient();
+        videoAudioStudio.playCue('click');
+      }
       speakScene(activeSceneIndex, language, isMuted, playbackSpeedRef.current);
     }
-  }, [elapsedSec, stopSpeech, speakScene, language, isMuted, isPlaying, activeSceneIndex]);
+  }, [elapsedSec, totalDurationSec, stopSpeech, speakScene, language, isMuted, isPlaying, activeSceneIndex]);
+
+  const handleTapEnableVoice = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      videoAudioStudio.unlock();
+      setIsMuted(false);
+      videoAudioStudio.setMuted(false);
+      videoAudioStudio.startAmbient();
+      setNeedsMobileAudioTap(false);
+      lastSpokenKeyRef.current = null;
+      speakScene(activeSceneIndex, language, false, playbackSpeedRef.current);
+    },
+    [activeSceneIndex, language, speakScene]
+  );
 
   const handleToggleMute = useCallback(() => {
+    videoAudioStudio.unlock();
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
+    videoAudioStudio.setMuted(nextMuted);
     if (nextMuted) {
       stopSpeech();
+      setNeedsMobileAudioTap(false);
     } else if (isPlaying) {
+      videoAudioStudio.startAmbient();
       lastSpokenKeyRef.current = null;
       speakScene(activeSceneIndex, language, false, playbackSpeedRef.current);
     }
@@ -388,7 +425,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
     }
   }, []);
 
-  // Standard video player keyboard shortcuts
+  // Standard keyboard shortcuts
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -402,6 +439,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
           return;
         }
         stopSpeech();
+        videoAudioStudio.stopAmbient();
         onClose();
       } else if (e.key === ' ') {
         e.preventDefault();
@@ -424,7 +462,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isOpen, onClose, stopSpeech, handleTogglePlay, handleSkipBy, handleToggleMute, handleToggleFullscreen]);
 
-  // Smooth requestAnimationFrame timeline loop scaled by playbackSpeed
+  // Smooth requestAnimationFrame timeline loop synced cleanly with natural voice pacing (ZERO long pauses)
   useEffect(() => {
     if (!isOpen || !isPlaying) {
       lastFrameTimeRef.current = null;
@@ -437,19 +475,41 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
       if (lastFrameTimeRef.current !== null) {
         const dtSec = Math.min(0.1, (now - lastFrameTimeRef.current) / 1000) * playbackSpeedRef.current;
         setElapsedSec((prev) => {
-          const currentSceneIdx = Math.min(
-            scenes.length - 1,
-            Math.max(0, Math.floor(prev / SCENE_DURATION_SEC))
-          );
-          const sceneEndSec = (currentSceneIdx + 1) * SCENE_DURATION_SEC;
+          let currentIdx = sceneTimings.length - 1;
+          for (let i = 0; i < sceneTimings.length; i++) {
+            if (prev < sceneTimings[i].endSec - 0.001) {
+              currentIdx = i;
+              break;
+            }
+          }
+          const timing = sceneTimings[currentIdx];
+          if (!timing) return totalDurationSec;
+          const sceneEndSec = timing.endSec;
           const next = prev + dtSec;
 
-          if (!isMuted && isVoiceSpeakingRef.current && next >= sceneEndSec - 0.05) {
+          // If voiceover finished naturally early, take a brief 0.45s breath then advance smoothly (no 8s dead air!)
+          if (
+            !isMuted &&
+            !isVoiceSpeakingRef.current &&
+            voiceFinishedAtRef.current !== null &&
+            now - voiceFinishedAtRef.current >= 450 &&
+            sceneEndSec - prev > 0.2
+          ) {
+            voiceFinishedAtRef.current = null;
+            if (currentIdx >= sceneTimings.length - 1) {
+              setIsPlaying(false);
+              return totalDurationSec;
+            }
+            return sceneEndSec;
+          }
+
+          // If voiceover is still finishing the last sentence, hold gently so words never clip
+          if (!isMuted && isVoiceSpeakingRef.current && next >= sceneEndSec - 0.06) {
             if (voiceHoldStartedAtRef.current === null) {
               voiceHoldStartedAtRef.current = now;
             }
-            if (now - voiceHoldStartedAtRef.current < 14000) {
-              return Math.min(prev, sceneEndSec - 0.05);
+            if (now - voiceHoldStartedAtRef.current < 7500) {
+              return Math.min(prev, sceneEndSec - 0.06);
             }
             isVoiceSpeakingRef.current = false;
             voiceHoldStartedAtRef.current = null;
@@ -457,9 +517,9 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
             voiceHoldStartedAtRef.current = null;
           }
 
-          if (next >= TOTAL_DURATION_SEC) {
+          if (next >= totalDurationSec) {
             setIsPlaying(false);
-            return TOTAL_DURATION_SEC;
+            return totalDurationSec;
           }
           return next;
         });
@@ -470,34 +530,69 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [isOpen, isPlaying, isMuted, scenes.length]);
+  }, [isOpen, isPlaying, isMuted, sceneTimings, totalDurationSec]);
 
-  // Speak automatically whenever chapter index advances during playback
+  // Speak automatically + subtle chapter chime whenever chapter index advances during playback
   useEffect(() => {
     if (!isOpen || !isPlaying || isMuted) return;
     const key = `${activeSceneIndex}:${language}`;
     if (lastSpokenKeyRef.current !== key) {
+      if (activeSceneIndex > 0) {
+        videoAudioStudio.playCue('chapter');
+      }
       speakScene(activeSceneIndex, language, isMuted, playbackSpeedRef.current);
     }
   }, [isOpen, isPlaying, isMuted, activeSceneIndex, language, speakScene]);
 
+  // Trigger subtle synced UI & servo audio cues inside key animation moments
+  useEffect(() => {
+    if (!isOpen || !isPlaying || isMuted) return;
+    const fireOnce = (cueKey: string, cueType: 'click' | 'success' | 'servo' | 'alert') => {
+      if (!triggeredCuesRef.current.has(cueKey)) {
+        triggeredCuesRef.current.add(cueKey);
+        videoAudioStudio.playCue(cueType);
+      }
+    };
+
+    if (activeSceneIndex === 3 && sceneProgress >= 0.38) {
+      fireOnce('s3:online', 'success');
+    } else if (activeSceneIndex === 5 && sceneProgress >= 0.22 && sceneProgress < 0.72) {
+      fireOnce('s5:servo', 'servo');
+    } else if (activeSceneIndex === 5 && sceneProgress >= 0.90) {
+      fireOnce('s5:done', 'success');
+    }
+  }, [isOpen, isPlaying, isMuted, activeSceneIndex, sceneProgress]);
+
   const handleReplay = () => {
+    videoAudioStudio.unlock();
+    triggeredCuesRef.current.clear();
     stopSpeech();
     setElapsedSec(0);
     setIsPlaying(true);
+    if (!isMuted) {
+      videoAudioStudio.startAmbient();
+      videoAudioStudio.playCue('chapter');
+    }
     speakScene(0, language, isMuted, playbackSpeed);
   };
 
   const handleJumpToScene = (index: number) => {
+    videoAudioStudio.unlock();
     const clampedIndex = Math.max(0, Math.min(scenes.length - 1, index));
-    const targetTime = clampedIndex * SCENE_DURATION_SEC;
+    const targetTime = sceneTimings[clampedIndex]?.startSec ?? 0;
+    triggeredCuesRef.current.clear();
     stopSpeech();
     setElapsedSec(targetTime);
     setIsPlaying(true);
+    if (!isMuted) {
+      videoAudioStudio.startAmbient();
+      videoAudioStudio.playCue('chapter');
+    }
     speakScene(clampedIndex, language, isMuted, playbackSpeed);
   };
 
   const handleCycleSpeed = () => {
+    videoAudioStudio.unlock();
     const idx = PLAYBACK_SPEEDS.indexOf(playbackSpeed as (typeof PLAYBACK_SPEEDS)[number]);
     const nextSpeed = PLAYBACK_SPEEDS[(idx + 1) % PLAYBACK_SPEEDS.length];
     setPlaybackSpeed(nextSpeed);
@@ -508,6 +603,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
   };
 
   const handleLanguageChange = (newLang: LanguageCode) => {
+    videoAudioStudio.unlock();
     setLanguage(newLang);
     stopSpeech();
     if (isPlaying && !isMuted) {
@@ -548,8 +644,8 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-50 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto transition-colors ${
-        isDark ? 'bg-slate-950/85' : 'bg-slate-900/55'
+      className={`fixed inset-0 z-50 backdrop-blur-md flex items-center justify-center p-1.5 sm:p-4 overflow-y-auto transition-colors ${
+        isDark ? 'bg-slate-950/88' : 'bg-slate-900/60'
       }`}
       role="dialog"
       aria-modal="true"
@@ -558,72 +654,55 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
       <div
         ref={playerContainerRef}
         className={`w-full ${
-          isFullscreen ? 'max-w-none h-full rounded-none border-0' : 'max-w-5xl rounded-2xl border my-auto'
+          isFullscreen
+            ? 'max-w-none h-full rounded-none border-0'
+            : 'max-w-5xl max-h-[96dvh] rounded-xl sm:rounded-2xl border my-auto'
         } shadow-2xl overflow-hidden flex flex-col transition-colors ${
           isDark
             ? 'bg-slate-900 border-slate-700/80 text-white'
             : 'bg-white border-slate-200 text-slate-900'
         }`}
       >
-        {/* Top Modal Header */}
+        {/* Top Modal Header (Mobile-First Clean Single Row) */}
         <div
-          className={`px-4 py-3 sm:px-5 border-b flex flex-wrap items-center justify-between gap-3 ${
-            isDark
-              ? 'bg-slate-950/90 border-slate-800'
-              : 'bg-slate-50 border-slate-200'
+          className={`px-3 py-2.5 sm:px-5 sm:py-3 border-b flex items-center justify-between gap-2 shrink-0 ${
+            isDark ? 'bg-slate-950/90 border-slate-800' : 'bg-slate-50 border-slate-200'
           }`}
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div
-              className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${
-                isDark
-                  ? 'bg-teal-500/15 border-teal-400/30'
-                  : 'bg-teal-50 border-teal-200'
+              className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl border flex items-center justify-center shrink-0 ${
+                isDark ? 'bg-teal-500/15 border-teal-400/30' : 'bg-teal-50 border-teal-200'
               }`}
             >
               <Sparkles className={`w-4 h-4 ${isDark ? 'text-teal-300' : 'text-teal-700'}`} />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className={`text-sm sm:text-base font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  {localeBundle.modalTitle}
-                </h2>
-                <span
-                  className={`hidden md:inline-flex px-2 py-0.5 rounded-md border text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap shrink-0 ${
-                    isDark
-                      ? 'bg-teal-500/15 border-teal-400/30 text-teal-300'
-                      : 'bg-teal-50 border-teal-200 text-teal-800'
-                  }`}
-                >
-                  {localeBundle.modalBadge}
-                </span>
-              </div>
-              <p className={`text-[11px] truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <h2 className={`text-xs sm:text-base font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {localeBundle.modalTitle}
+              </h2>
+              <p className={`hidden sm:block text-[11px] truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 {localeBundle.voiceFallbackNotice}
               </p>
             </div>
           </div>
 
-          {/* Theme Toggle + Voice Language + Close */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <ThemeToggle variant="video" showLabel />
 
             <label
-              className={`flex items-center gap-1.5 border rounded-xl px-2.5 py-1.5 text-xs ${
+              className={`flex items-center gap-1 sm:gap-1.5 border rounded-xl px-2 py-1.5 text-xs ${
                 isDark
                   ? 'bg-slate-800/90 border-slate-700 text-slate-200'
                   : 'bg-white border-slate-300 text-slate-800'
               }`}
             >
               <Globe className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
-              <span className={`hidden sm:inline text-[11px] whitespace-nowrap ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {localeBundle.voiceLanguageLabel}:
-              </span>
               <select
                 value={language}
                 onChange={(e) => handleLanguageChange(e.target.value as LanguageCode)}
                 aria-label={localeBundle.voiceLanguageLabel}
-                className={`bg-transparent font-semibold text-xs focus:outline-none cursor-pointer ${
+                className={`bg-transparent font-semibold text-xs focus:outline-none cursor-pointer max-w-[82px] sm:max-w-none ${
                   isDark ? 'text-white' : 'text-slate-900'
                 }`}
               >
@@ -633,7 +712,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                     value={lang.code}
                     className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}
                   >
-                    {lang.nativeName} ({lang.label})
+                    {lang.nativeName}
                   </option>
                 ))}
               </select>
@@ -643,10 +722,11 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
               type="button"
               onClick={() => {
                 stopSpeech();
+                videoAudioStudio.stopAmbient();
                 onClose();
               }}
               aria-label={localeBundle.closeBtn}
-              className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
+              className={`min-w-[36px] min-h-[36px] p-1.5 sm:p-2 rounded-xl border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
                 isDark
                   ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
                   : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-600 hover:text-slate-900'
@@ -657,13 +737,15 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
           </div>
         </div>
 
-        {/* 16:9 Animated Video Stage */}
+        {/* Animated Video Stage (Responsive Mobile-First Height, Zero Clipping) */}
         <div
           onClick={handleTogglePlay}
           title={isPlaying ? localeBundle.pauseBtn : localeBundle.playBtn}
           className={`relative w-full ${
-            isFullscreen ? 'flex-1 min-h-0' : 'aspect-video min-h-[290px] sm:min-h-[380px]'
-          } overflow-hidden select-none cursor-pointer transition-colors ${
+            isFullscreen
+              ? 'flex-1 min-h-0'
+              : 'min-h-[305px] sm:min-h-[375px] sm:aspect-video'
+          } overflow-y-auto sm:overflow-hidden select-none cursor-pointer transition-colors ${
             isDark
               ? 'bg-gradient-to-br from-slate-950 via-teal-950/50 to-slate-950'
               : 'bg-gradient-to-br from-slate-50 via-teal-50/75 to-white'
@@ -689,13 +771,13 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
             <rect width="800" height="450" fill="url(#demoGrid)" />
           </svg>
 
-          {/* Top-left Chapter HUD & Language Tag (Time clock moved down to control deck) */}
-          <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between gap-2 pointer-events-none">
+          {/* Top Chapter HUD & Sound Wave Badge */}
+          <div className="relative sm:absolute sm:top-3 sm:left-3 sm:right-3 z-20 px-3 pt-2.5 sm:px-0 sm:pt-0 flex items-center justify-between gap-2 pointer-events-none">
             <div
-              className={`px-3 py-1.5 rounded-lg border backdrop-blur-sm flex items-center gap-2 min-w-0 ${
+              className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg border backdrop-blur-sm flex items-center gap-2 min-w-0 ${
                 isDark
-                  ? 'bg-slate-950/80 border-teal-500/35'
-                  : 'bg-white/90 border-teal-300/80 shadow-xs'
+                  ? 'bg-slate-950/85 border-teal-500/35'
+                  : 'bg-white/95 border-teal-300/80 shadow-xs'
               }`}
             >
               <span
@@ -705,38 +787,52 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
               >
                 0{activeSceneIndex + 1}/0{scenes.length}
               </span>
-              <span className={`text-xs font-semibold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <span className={`text-[11px] sm:text-xs font-semibold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {activeScene.chapterTitle}
               </span>
             </div>
 
-            <span
-              className={`hidden sm:inline-flex px-2.5 py-1 rounded-lg border text-[11px] font-medium shrink-0 ${
-                isDark
-                  ? 'bg-slate-950/80 border-slate-700 text-teal-200'
-                  : 'bg-white/90 border-slate-300 text-teal-800 shadow-xs'
-              }`}
-            >
-              {currentLangOption.nativeName}
-            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isPlaying && !isMuted && (
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-semibold ${
+                    isDark
+                      ? 'bg-slate-950/85 border-emerald-500/35 text-emerald-300'
+                      : 'bg-white/95 border-emerald-300 text-emerald-700 shadow-xs'
+                  }`}
+                >
+                  <Volume2 className="w-3 h-3" />
+                  <span className="hidden sm:inline">{isVoiceCurrentlySpeaking ? 'Speaking' : 'Ambient'}</span>
+                </span>
+              )}
+              <span
+                className={`hidden sm:inline-flex px-2.5 py-1 rounded-lg border text-[11px] font-medium shrink-0 ${
+                  isDark
+                    ? 'bg-slate-950/80 border-slate-700 text-teal-200'
+                    : 'bg-white/90 border-slate-300 text-teal-800 shadow-xs'
+                }`}
+              >
+                {currentLangOption.nativeName}
+              </span>
+            </div>
           </div>
 
-          {/* Animated Scene Canvas */}
-          <div className="relative z-10 w-full h-full pt-12 pb-20 px-4 sm:px-8 flex items-center justify-center">
-            {/* SCENE 1: PATIENT ONBOARDING (0 - 20s) */}
+          {/* Animated Scene Canvas (Cleanly Centered, Zero Subtitle Overlap) */}
+          <div className="relative z-10 w-full sm:h-full pt-2.5 pb-4 sm:pt-12 sm:pb-5 px-3 sm:px-8 flex items-center justify-center">
+            {/* SCENE 1: PATIENT ONBOARDING */}
             {activeSceneIndex === 0 && (
-              <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+              <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-12 gap-2.5 sm:gap-4 items-center">
                 <motion.div
-                  initial={{ opacity: 0, y: 12 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`sm:col-span-7 rounded-2xl p-4 sm:p-5 shadow-2xl border ${
+                  className={`sm:col-span-7 rounded-2xl p-3.5 sm:p-5 shadow-xl border ${
                     isDark
                       ? 'bg-slate-900/95 border-teal-700/60 text-slate-100'
                       : 'bg-white/95 border-teal-200 text-slate-900'
                   }`}
                 >
                   <div
-                    className={`flex items-center justify-between border-b pb-2.5 mb-3 ${
+                    className={`flex items-center justify-between border-b pb-2 mb-2.5 ${
                       isDark ? 'border-slate-800' : 'border-slate-100'
                     }`}
                   >
@@ -744,14 +840,14 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                       <div className="w-6 h-6 rounded-lg bg-teal-700 flex items-center justify-center text-white text-xs font-bold">
                         M
                       </div>
-                      <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      <span className={`text-xs sm:text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                         MediMitra Intake
                       </span>
                     </div>
                     <motion.div
-                      animate={{ scale: [1, 1.06, 1] }}
+                      animate={{ scale: [1, 1.05, 1] }}
                       transition={{ duration: 2.2, repeat: Infinity }}
-                      className={`px-2 py-1 rounded-lg border text-[10px] font-bold flex items-center gap-1 ${
+                      className={`px-2 py-0.5 rounded-lg border text-[10px] font-bold flex items-center gap-1 ${
                         isDark
                           ? 'bg-teal-950/80 border-teal-600 text-teal-200'
                           : 'bg-teal-50 border-teal-300 text-teal-800'
@@ -763,12 +859,12 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                   </div>
 
                   {/* Simulated Name Field */}
-                  <div className="mb-3">
+                  <div className="mb-2.5">
                     <div className={`text-[10px] font-semibold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                       Patient Name
                     </div>
                     <div
-                      className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center justify-between ${
+                      className={`px-3 py-1.5 sm:py-2 rounded-xl border text-xs font-semibold flex items-center justify-between ${
                         isDark
                           ? 'border-teal-500 bg-teal-950/40 text-slate-100'
                           : 'border-teal-500 bg-teal-50/40 text-slate-800'
@@ -778,13 +874,13 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                       <motion.span
                         animate={{ opacity: [1, 0, 1] }}
                         transition={{ duration: 0.9, repeat: Infinity }}
-                        className="w-0.5 h-4 bg-teal-500"
+                        className="w-0.5 h-3.5 bg-teal-500"
                       />
                     </div>
                   </div>
 
                   {/* Age group selector */}
-                  <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2.5">
                     {[
                       { label: 'Child', sub: 'Under 12', active: sceneProgress < 0.35 },
                       { label: 'Adult', sub: '12 - 59', active: sceneProgress >= 0.35 },
@@ -792,7 +888,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                     ].map((item) => (
                       <div
                         key={item.label}
-                        className={`p-2 rounded-xl border text-center transition-colors ${
+                        className={`p-1.5 sm:p-2 rounded-xl border text-center transition-colors ${
                           item.active
                             ? isDark
                               ? 'bg-teal-950/70 border-teal-400 ring-1 ring-teal-400'
@@ -802,16 +898,16 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                             : 'bg-slate-50 border-slate-200'
                         }`}
                       >
-                        <div className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{item.label}</div>
-                        <div className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item.sub}</div>
+                        <div className={`text-[11px] sm:text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{item.label}</div>
+                        <div className={`text-[9px] sm:text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item.sub}</div>
                       </div>
                     ))}
                   </div>
 
                   {/* Gender selector */}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                     <div
-                      className={`p-2 rounded-xl border text-center ${
+                      className={`p-1.5 sm:p-2 rounded-xl border text-center ${
                         sceneProgress >= 0.5
                           ? 'bg-teal-600 text-white border-teal-600'
                           : isDark
@@ -819,86 +915,86 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                           : 'bg-slate-50 text-slate-700 border-slate-200'
                       }`}
                     >
-                      <span className="text-xs font-bold">Female</span>
+                      <span className="text-[11px] sm:text-xs font-bold">Female</span>
                     </div>
                     <div
-                      className={`p-2 rounded-xl border text-center ${
+                      className={`p-1.5 sm:p-2 rounded-xl border text-center ${
                         isDark
                           ? 'bg-slate-800 text-slate-300 border-slate-700'
                           : 'bg-slate-50 text-slate-700 border-slate-200'
                       }`}
                     >
-                      <span className="text-xs font-bold">Male</span>
+                      <span className="text-[11px] sm:text-xs font-bold">Male</span>
                     </div>
                   </div>
                 </motion.div>
 
-                {/* Right Highlights Stack */}
-                <div className="hidden sm:flex sm:col-span-5 flex-col gap-2.5">
+                {/* Right Highlights Stack (Visible on both mobile & desktop!) */}
+                <div className="sm:col-span-5 grid grid-cols-1 gap-1.5 sm:gap-2.5">
                   {activeScene.highlights.map((item, idx) => (
                     <motion.div
                       key={item}
-                      initial={{ opacity: 0, x: 18 }}
+                      initial={{ opacity: 0, x: 14 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.2 }}
-                      className={`p-3 rounded-xl border flex items-center gap-2.5 ${
+                      transition={{ delay: idx * 0.15 }}
+                      className={`p-2 sm:p-3 rounded-xl border flex items-center gap-2 ${
                         isDark
                           ? 'bg-slate-900/90 border-teal-500/30'
-                          : 'bg-white/95 border-teal-200 shadow-sm'
+                          : 'bg-white/95 border-teal-200 shadow-xs'
                       }`}
                     >
-                      <CheckCircle2 className={`w-4 h-4 shrink-0 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
-                      <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>{item}</span>
+                      <CheckCircle2 className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                      <span className={`text-[11px] sm:text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>{item}</span>
                     </motion.div>
                   ))}
                   <div
-                    className={`p-3 rounded-xl border text-[11px] ${
+                    className={`hidden sm:block p-3 rounded-xl border text-[11px] ${
                       isDark
                         ? 'bg-teal-900/40 border-teal-500/30 text-teal-100'
                         : 'bg-teal-50 border-teal-200 text-teal-900 font-medium'
                     }`}
                   >
-                    English • हिन्दी • Hinglish • मराठी • বাংলা • தமிழ் • తెలుగు • ગુજરાતી
+                    English · हिन्दी · Hinglish · मराठी · বাংলা · தமிழ் · తెలుగు · ગુજરાતી
                   </div>
                 </div>
               </div>
             )}
 
-            {/* SCENE 2: SYMPTOMS & SMART ADAPTIVE Q&A (20 - 40s — Zero pregnancy content) */}
+            {/* SCENE 2: SYMPTOMS & SMART ADAPTIVE Q&A */}
             {activeSceneIndex === 1 && (
-              <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-                {/* 4 Patient Flows */}
-                <div className="sm:col-span-5 space-y-2">
+              <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-12 gap-2.5 sm:gap-4 items-center">
+                {/* 4 Patient Flows (2x2 on mobile so nothing clips, vertical stack on desktop) */}
+                <div className="sm:col-span-5 grid grid-cols-2 sm:grid-cols-1 gap-1.5 sm:gap-2">
                   {[
                     { group: 'Male (Adult / Senior)', tag: 'Standard Clinical Flow', active: sceneProgress < 0.25 },
-                    { group: 'Female (Adult / Senior)', tag: 'Allergy & Dose Safety Flow', active: sceneProgress >= 0.25 && sceneProgress < 0.55 },
-                    { group: 'Male-Child (Boy)', tag: 'Pediatric Boy Hydration Flow', active: sceneProgress >= 0.55 && sceneProgress < 0.78 },
-                    { group: 'Female-Child (Girl)', tag: 'Pediatric Girl Care Flow', active: sceneProgress >= 0.78 }
+                    { group: 'Female (Adult / Senior)', tag: 'Allergy & Dose Safety', active: sceneProgress >= 0.25 && sceneProgress < 0.55 },
+                    { group: 'Male-Child (Boy)', tag: 'Pediatric Boy Care', active: sceneProgress >= 0.55 && sceneProgress < 0.78 },
+                    { group: 'Female-Child (Girl)', tag: 'Pediatric Girl Care', active: sceneProgress >= 0.78 }
                   ].map((row) => (
                     <div
                       key={row.group}
-                      className={`p-2.5 rounded-xl border transition-all ${
+                      className={`p-2 sm:p-2.5 rounded-xl border transition-all ${
                         row.active
                           ? isDark
-                            ? 'bg-teal-500/20 border-teal-400 shadow-lg'
-                            : 'bg-teal-600 text-white border-teal-700 shadow-md'
+                            ? 'bg-teal-500/20 border-teal-400 shadow-md'
+                            : 'bg-teal-600 text-white border-teal-700 shadow-sm'
                           : isDark
-                          ? 'bg-slate-900/75 border-slate-700/80 opacity-75'
-                          : 'bg-white/90 border-slate-200 opacity-85'
+                          ? 'bg-slate-900/75 border-slate-700/80 opacity-80'
+                          : 'bg-white/90 border-slate-200 opacity-90'
                       }`}
                     >
                       <div
-                        className={`text-xs font-bold flex items-center justify-between ${
+                        className={`text-[11px] sm:text-xs font-bold flex items-center justify-between gap-1 ${
                           row.active || isDark ? 'text-white' : 'text-slate-900'
                         }`}
                       >
-                        <span>{row.group}</span>
+                        <span className="truncate">{row.group}</span>
                         {row.active && (
-                          <CheckCircle2 className={`w-3.5 h-3.5 ${isDark || !row.active ? 'text-emerald-400' : 'text-emerald-200'}`} />
+                          <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-emerald-400' : 'text-emerald-200'}`} />
                         )}
                       </div>
                       <div
-                        className={`text-[10px] mt-0.5 ${
+                        className={`text-[10px] mt-0.5 truncate ${
                           row.active
                             ? isDark
                               ? 'text-teal-200'
@@ -916,15 +1012,15 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
 
                 {/* Live Adaptive Question Card */}
                 <div
-                  className={`sm:col-span-7 rounded-2xl p-4 sm:p-5 shadow-2xl border ${
+                  className={`sm:col-span-7 rounded-2xl p-3.5 sm:p-5 shadow-xl border ${
                     isDark
                       ? 'bg-slate-900/95 text-slate-100 border-slate-700'
                       : 'bg-white text-slate-900 border-slate-200'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between gap-2 mb-2.5">
                     <span
-                      className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold ${
+                      className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg border text-[10px] sm:text-[11px] font-bold ${
                         isDark
                           ? 'bg-teal-950 border-teal-700 text-teal-200'
                           : 'bg-teal-50 border-teal-200 text-teal-800'
@@ -932,17 +1028,17 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                     >
                       Symptom: {sceneProgress < 0.5 ? 'Fever / Headache' : 'Stomach Upset'}
                     </span>
-                    <span className={`font-mono text-xs font-bold tabular-nums ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <span className={`font-mono text-[11px] sm:text-xs font-bold tabular-nums ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                       Step {Math.min(10, Math.max(1, Math.ceil(sceneProgress * 10)))} / 10
                     </span>
                   </div>
 
                   <div
-                    className={`p-3 rounded-xl border mb-3 ${
+                    className={`p-2.5 sm:p-3 rounded-xl border mb-2.5 ${
                       isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-slate-50 border-slate-200'
                     }`}
                   >
-                    <p className={`text-xs sm:text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    <p className={`text-xs sm:text-sm font-bold leading-snug ${isDark ? 'text-white' : 'text-slate-900'}`}>
                       {sceneProgress >= 0.25 && sceneProgress < 0.55
                         ? 'Allergy & History Check: Do you have any known medicine allergies or gastric sensitivity?'
                         : sceneProgress >= 0.55
@@ -953,16 +1049,16 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
 
                   <div className="grid grid-cols-2 gap-2">
                     <div
-                      className={`p-2 rounded-lg border text-xs font-bold text-center ${
+                      className={`p-2 rounded-lg border text-[11px] sm:text-xs font-bold text-center ${
                         isDark
                           ? 'border-teal-500 bg-teal-950/60 text-teal-200'
                           : 'border-teal-600 bg-teal-50 text-teal-900'
                       }`}
                     >
-                      Yes — Adjust Safe Medicine
+                      Yes — Adjust Safe Dose
                     </div>
                     <div
-                      className={`p-2 rounded-lg border text-xs font-semibold text-center ${
+                      className={`p-2 rounded-lg border text-[11px] sm:text-xs font-semibold text-center ${
                         isDark
                           ? 'border-slate-700 bg-slate-800 text-slate-200'
                           : 'border-slate-200 bg-white text-slate-700'
@@ -975,10 +1071,10 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
               </div>
             )}
 
-            {/* SCENE 3: CLINICAL ENGINE & RECOMMENDATION (40 - 60s) */}
+            {/* SCENE 3: CLINICAL ENGINE & RECOMMENDATION */}
             {activeSceneIndex === 2 && (
-              <div className="w-full max-w-3xl flex flex-col gap-3">
-                <div className="grid grid-cols-3 gap-2.5">
+              <div className="w-full max-w-3xl flex flex-col gap-2.5 sm:gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
                   {[
                     { icon: Activity, title: 'Severity & Red Flags', desc: 'Breathing, chest pain, high temp' },
                     { icon: ShieldCheck, title: 'Age & Allergy Safety', desc: 'Child-dose & allergy filter' },
@@ -994,67 +1090,69 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                             ? 'rgba(51,65,85,0.8)'
                             : 'rgba(203,213,225,1)'
                       }}
-                      className={`p-3 rounded-xl border shadow-xs ${
+                      className={`p-2.5 sm:p-3 rounded-xl border shadow-xs flex sm:block items-center gap-2.5 ${
                         isDark
                           ? 'bg-slate-900/90 border-slate-700 text-white'
                           : 'bg-white border-slate-200 text-slate-900'
                       }`}
                     >
-                      <node.icon className={`w-5 h-5 mb-1.5 ${isDark ? 'text-teal-300' : 'text-teal-600'}`} />
-                      <div className="text-xs font-bold">{node.title}</div>
-                      <div className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{node.desc}</div>
+                      <node.icon className={`w-4 h-4 sm:w-5 sm:h-5 sm:mb-1.5 shrink-0 ${isDark ? 'text-teal-300' : 'text-teal-600'}`} />
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold leading-tight">{node.title}</div>
+                        <div className={`text-[10px] mt-0.5 leading-snug ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{node.desc}</div>
+                      </div>
                     </motion.div>
                   ))}
                 </div>
 
                 {/* Split Outcome: Safe OTC vs Urgent Doctor */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                   <div
-                    className={`p-3.5 rounded-2xl border ${
+                    className={`p-3 sm:p-3.5 rounded-2xl border ${
                       isDark
                         ? 'bg-emerald-950/60 border-emerald-500/50 text-white'
                         : 'bg-emerald-50 border-emerald-300 text-emerald-950 shadow-xs'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center justify-between gap-2 mb-1">
                       <span className={`text-xs font-bold flex items-center gap-1.5 ${isDark ? 'text-emerald-300' : 'text-emerald-800'}`}>
-                        <Pill className="w-4 h-4" />
+                        <Pill className="w-4 h-4 shrink-0" />
                         Mild Case → Safe OTC Care
                       </span>
                       <span
-                        className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${
                           isDark ? 'bg-emerald-500/20 text-emerald-200' : 'bg-emerald-200/80 text-emerald-900'
                         }`}
                       >
                         ESP32 READY
                       </span>
                     </div>
-                    <p className={`text-[11px] ${isDark ? 'text-emerald-100/90' : 'text-emerald-900'}`}>
+                    <p className={`text-[11px] leading-snug ${isDark ? 'text-emerald-100/90' : 'text-emerald-900'}`}>
                       Calibrated medicine suggestion + hydration & dosage timing with one-tap Dispense button.
                     </p>
                   </div>
 
                   <div
-                    className={`p-3.5 rounded-2xl border ${
+                    className={`p-3 sm:p-3.5 rounded-2xl border ${
                       isDark
                         ? 'bg-rose-950/55 border-rose-500/50 text-white'
                         : 'bg-rose-50 border-rose-300 text-rose-950 shadow-xs'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center justify-between gap-2 mb-1">
                       <span className={`text-xs font-bold flex items-center gap-1.5 ${isDark ? 'text-rose-300' : 'text-rose-800'}`}>
-                        <AlertTriangle className="w-4 h-4" />
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
                         Red Flag → Nearby Doctor
                       </span>
                       <span
-                        className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${
                           isDark ? 'bg-rose-500/20 text-rose-200' : 'bg-rose-200/80 text-rose-900'
                         }`}
                       >
                         URGENT CARE
                       </span>
                     </div>
-                    <p className={`text-[11px] ${isDark ? 'text-rose-100/90' : 'text-rose-900'}`}>
+                    <p className={`text-[11px] leading-snug ${isDark ? 'text-rose-100/90' : 'text-rose-900'}`}>
                       Blocks unsafe self-medication and opens nearby clinic / emergency doctor contact immediately.
                     </p>
                   </div>
@@ -1062,32 +1160,30 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
               </div>
             )}
 
-            {/* SCENE 4: CLOUD SYNC & TOP-RIGHT ONLINE/OFFLINE BADGE (60 - 80s) */}
+            {/* SCENE 4: CLOUD SYNC & TOP-RIGHT ONLINE/OFFLINE BADGE */}
             {activeSceneIndex === 3 && (
-              <div className="w-full max-w-3xl flex flex-col gap-4">
-                {/* Simulated App Top Bar Zoom */}
+              <div className="w-full max-w-3xl flex flex-col gap-3 sm:gap-4">
                 <div
-                  className={`rounded-2xl p-3.5 sm:p-4 border shadow-xl flex items-center justify-between ${
+                  className={`rounded-2xl p-3 sm:p-4 border shadow-xl flex items-center justify-between gap-2 ${
                     isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-teal-700 text-white font-bold text-xs flex items-center justify-center">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
                       M
                     </div>
-                    <div>
-                      <div className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    <div className="min-w-0">
+                      <div className={`text-xs font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
                         MediMitra Header (Top-Right Live Status)
                       </div>
-                      <div className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      <div className={`text-[10px] truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                         10s REST Heartbeat + Clock Calibration
                       </div>
                     </div>
                   </div>
 
-                  {/* Animated Offline -> Online transition */}
                   {sceneProgress < 0.38 ? (
-                    <div className="px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-1.5">
+                    <div className="px-2.5 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-[11px] sm:text-xs font-bold flex items-center gap-1.5 shrink-0">
                       <WifiOff className="w-3.5 h-3.5" />
                       <span>Offline</span>
                     </div>
@@ -1095,7 +1191,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                     <motion.div
                       initial={{ scale: 0.9 }}
                       animate={{ scale: 1 }}
-                      className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-700 text-xs font-bold flex items-center gap-1.5 shadow-sm"
+                      className="px-2.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-700 text-[11px] sm:text-xs font-bold flex items-center gap-1.5 shadow-sm shrink-0"
                     >
                       <Wifi className="w-3.5 h-3.5" />
                       <span>Online · 192.168.43.84</span>
@@ -1103,13 +1199,13 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                   )}
                 </div>
 
-                {/* Data flow SVG diagram (schematic remains dark instrument display for clarity) */}
+                {/* Data flow SVG diagram */}
                 <div
-                  className={`border rounded-2xl p-4 ${
+                  className={`border rounded-2xl p-3 sm:p-4 ${
                     isDark ? 'bg-slate-900/90 border-slate-700' : 'bg-slate-900 border-slate-300 shadow-lg'
                   }`}
                 >
-                  <svg viewBox="0 0 680 110" className="w-full h-24">
+                  <svg viewBox="0 0 680 110" className="w-full h-20 sm:h-24">
                     <line x1="120" y1="55" x2="310" y2="55" stroke="#14b8a6" strokeWidth="3" strokeDasharray="6 6" />
                     <line x1="370" y1="55" x2="560" y2="55" stroke="#38bdf8" strokeWidth="3" strokeDasharray="6 6" />
 
@@ -1144,12 +1240,12 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
               </div>
             )}
 
-            {/* SCENE 5: INSIDE THE ESP32 HARDWARE MODULE (80 - 100s) */}
+            {/* SCENE 5: INSIDE THE ESP32 HARDWARE MODULE */}
             {activeSceneIndex === 4 && (
-              <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-center">
+              <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
                 {/* Hardware Wiring SVG */}
-                <div className="sm:col-span-7 bg-slate-900 border border-slate-700 rounded-2xl p-3 shadow-lg">
-                  <svg viewBox="0 0 420 205" className="w-full h-44 sm:h-48">
+                <div className="sm:col-span-7 bg-slate-900 border border-slate-700 rounded-2xl p-2.5 sm:p-3 shadow-lg">
+                  <svg viewBox="0 0 420 205" className="w-full h-auto max-h-[180px] sm:max-h-[210px]">
                     <rect x="12" y="16" width="108" height="62" rx="10" fill="#1e293b" stroke="#f59e0b" strokeWidth="2" />
                     <text x="66" y="40" textAnchor="middle" fill="#fcd34d" fontSize="11" fontWeight="bold">External 5V 2A</text>
                     <text x="66" y="56" textAnchor="middle" fill="#cbd5e1" fontSize="9">Dedicated Power</text>
@@ -1172,7 +1268,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
 
                     <rect x="302" y="16" width="104" height="72" rx="10" fill="#1e293b" stroke="#14b8a6" strokeWidth="2" />
                     <text x="354" y="40" textAnchor="middle" fill="#ffffff" fontSize="11" fontWeight="bold">SG90 Servo</text>
-                    <text x="354" y="56" textAnchor="middle" fill="#99f6e4" fontSize="9">45° Medicine Gate</text>
+                    <text x="354" y="56" textAnchor="middle" fill="#99f6e4" fontSize="9">25° Medicine Gate</text>
 
                     <path d="M 256 76 L 284 76 L 284 52 L 302 52" fill="none" stroke="#f97316" strokeWidth="2.5" />
                     <path d="M 120 34 L 138 34 L 138 8 L 354 8 L 354 16" fill="none" stroke="#ef4444" strokeWidth="2.5" />
@@ -1188,14 +1284,14 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
 
                 {/* Blue LED Signal Decoder Card */}
                 <div
-                  className={`sm:col-span-5 border rounded-2xl p-3.5 space-y-2 ${
+                  className={`sm:col-span-5 border rounded-2xl p-3 space-y-1.5 ${
                     isDark
                       ? 'bg-slate-900/95 border-blue-500/35 text-white'
                       : 'bg-white border-blue-200 text-slate-900 shadow-lg'
                   }`}
                 >
                   <div
-                    className={`flex items-center gap-2 text-xs font-bold border-b pb-2 ${
+                    className={`flex items-center gap-2 text-xs font-bold border-b pb-1.5 ${
                       isDark ? 'text-blue-300 border-slate-800' : 'text-blue-700 border-slate-100'
                     }`}
                   >
@@ -1204,14 +1300,13 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                   </div>
                   {[
                     { code: '0.25s Fast', desc: 'Connecting to Wi-Fi / Hotspot' },
-                    { code: '3x + Glow', desc: 'Wi-Fi Connected (Online!)' },
-                    { code: '60ms / 5s', desc: 'Idle Heartbeat Ready' },
+                    { code: 'LED OFF', desc: 'Linked Online with App' },
                     { code: '0.45s', desc: 'Setup Portal 192.168.4.1' },
                     { code: '1.2s Slow', desc: '1 Slow Blink After Dispense' }
                   ].map((led) => (
                     <div
                       key={led.code}
-                      className={`flex items-center justify-between text-[11px] px-2.5 py-1.5 rounded-lg ${
+                      className={`flex items-center justify-between text-[11px] px-2.5 py-1 rounded-lg ${
                         isDark ? 'bg-slate-800/70' : 'bg-slate-50 border border-slate-200'
                       }`}
                     >
@@ -1223,22 +1318,21 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
               </div>
             )}
 
-            {/* SCENE 6: LIVE DISPENSE & CONFIRMATION (100 - 120s) */}
+            {/* SCENE 6: LIVE DISPENSE & CONFIRMATION */}
             {activeSceneIndex === 5 && (
-              <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-                {/* Mechanical Servo Animation Stage */}
-                <div className="sm:col-span-7 bg-slate-900 border border-teal-500/40 rounded-2xl p-4 shadow-lg">
-                  <div className="flex items-center justify-between mb-2">
+              <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 items-center">
+                <div className="sm:col-span-7 bg-slate-900 border border-teal-500/40 rounded-2xl p-3 sm:p-4 shadow-lg">
+                  <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs font-bold text-teal-300 flex items-center gap-1.5">
                       <Zap className="w-4 h-4" />
                       SG90 Actuator Motion
                     </span>
-                    <span className="font-mono text-sm font-extrabold text-amber-300 tabular-nums">
+                    <span className="font-mono text-xs sm:text-sm font-extrabold text-amber-300 tabular-nums">
                       Angle: {String(servoAngle).padStart(2, '0')}°
                     </span>
                   </div>
 
-                  <svg viewBox="0 0 380 175" className="w-full h-40">
+                  <svg viewBox="0 0 380 175" className="w-full h-32 sm:h-40">
                     <rect x="34" y="46" width="110" height="66" rx="10" fill="#1e293b" stroke="#38bdf8" strokeWidth="2" />
                     <text x="89" y="75" textAnchor="middle" fill="#ffffff" fontSize="11" fontWeight="bold">SG90 SERVO</text>
                     <text x="89" y="92" textAnchor="middle" fill="#7dd3fc" fontSize="9">GPIO 18 PWM</text>
@@ -1261,19 +1355,18 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                   </svg>
                 </div>
 
-                {/* Synchronized LED + App Completed readout */}
-                <div className="sm:col-span-5 space-y-3">
+                <div className="sm:col-span-5 grid grid-cols-2 sm:grid-cols-1 gap-2.5 sm:gap-3">
                   <div
-                    className={`p-3.5 rounded-2xl border ${
+                    className={`p-3 sm:p-3.5 rounded-2xl border ${
                       isDark
                         ? 'bg-slate-900/95 border-blue-500/40 text-white'
                         : 'bg-white border-blue-200 text-slate-900 shadow-lg'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className={`text-xs font-bold ${isDark ? 'text-blue-200' : 'text-blue-800'}`}>ESP32 GPIO 2 LED</span>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`text-[11px] sm:text-xs font-bold ${isDark ? 'text-blue-200' : 'text-blue-800'}`}>GPIO 2 LED</span>
                       <span
-                        className={`w-4 h-4 rounded-full border transition-all duration-500 ${
+                        className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border transition-all duration-500 shrink-0 ${
                           slowBlueLedActive
                             ? 'bg-blue-400 border-blue-200 shadow-[0_0_18px_rgba(96,165,250,0.95)]'
                             : isDark
@@ -1282,25 +1375,25 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                         }`}
                       />
                     </div>
-                    <p className={`text-[11px] mt-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                    <p className={`text-[10px] sm:text-[11px] mt-1 leading-snug ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                       {slowBlueLedActive
-                        ? 'Slow 1.2s Blue Blink ON — Hardware Dispense Confirmed!'
-                        : 'Waits for 45° rotation before firing slow confirmation blink.'}
+                        ? 'Slow 1.2s Blue Blink ON — Confirmed!'
+                        : 'Waits for 45° cycle before confirmation blink.'}
                     </p>
                   </div>
 
                   <div
-                    className={`p-3.5 rounded-2xl border shadow-lg ${
+                    className={`p-3 sm:p-3.5 rounded-2xl border shadow-lg ${
                       isDark
                         ? 'bg-slate-900 text-slate-100 border-slate-700'
                         : 'bg-white text-slate-900 border-slate-200'
                     }`}
                   >
                     <div className={`text-[10px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Patient Web Screen Status
+                      Screen Status
                     </div>
                     <div
-                      className={`px-3 py-2 rounded-xl font-mono text-xs font-extrabold flex items-center justify-between ${
+                      className={`px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl font-mono text-[11px] sm:text-xs font-extrabold flex items-center justify-between ${
                         dispenseStatusLabel === 'COMPLETED'
                           ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                           : dispenseStatusLabel === 'PROCESSING'
@@ -1308,36 +1401,44 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                           : 'bg-slate-100 text-slate-700 border border-slate-300'
                       }`}
                     >
-                      <span>{dispenseStatusLabel}</span>
-                      <CheckCircle2 className="w-4 h-4" />
+                      <span className="truncate">{dispenseStatusLabel}</span>
+                      <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                     </div>
                   </div>
                 </div>
               </div>
             )}
           </div>
-
-          {/* Bottom Synchronized Subtitle Scrim */}
-          <div
-            className={`absolute bottom-0 inset-x-0 z-20 px-4 sm:px-6 pt-6 pb-3 pointer-events-none ${
-              isDark
-                ? 'bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent'
-                : 'bg-gradient-to-t from-white/95 via-white/90 to-transparent'
-            }`}
-          >
-            <p
-              className={`text-center text-xs sm:text-sm font-medium max-w-3xl mx-auto leading-relaxed ${
-                isDark ? 'text-white drop-shadow' : 'text-slate-900'
-              }`}
-            >
-              {activeScene.subtitle}
-            </p>
-          </div>
         </div>
 
-        {/* Standard Normal Video Control Bar (with Seek Bar, -10s/+10s, Clock, Speed, Volume, Fullscreen) */}
+        {/* Dedicated Non-Overlapping Synchronized Caption Strip */}
         <div
-          className={`px-4 py-3.5 sm:px-5 border-t space-y-3 ${
+          className={`px-3.5 py-2.5 sm:px-6 sm:py-3 border-t flex items-center justify-center gap-3 shrink-0 ${
+            isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white border-slate-200'
+          }`}
+        >
+          <p
+            className={`text-center text-xs sm:text-sm font-medium max-w-3xl leading-relaxed ${
+              isDark ? 'text-slate-100' : 'text-slate-800'
+            }`}
+          >
+            {activeScene.subtitle}
+          </p>
+          {needsMobileAudioTap && !isMuted && (
+            <button
+              type="button"
+              onClick={handleTapEnableVoice}
+              className="px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold flex items-center gap-1 shrink-0 cursor-pointer shadow-xs"
+            >
+              <Volume2 className="w-3.5 h-3.5" />
+              <span>Tap for Voice</span>
+            </button>
+          )}
+        </div>
+
+        {/* Standard Normal Video Control Bar (Mobile Touch Optimized) */}
+        <div
+          className={`px-3 py-2.5 sm:px-5 sm:py-3.5 border-t space-y-2.5 shrink-0 ${
             isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
           }`}
         >
@@ -1352,11 +1453,10 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                 className="h-full bg-teal-500 rounded-full transition-[width] duration-75"
                 style={{ width: `${totalProgressPct}%` }}
               />
-              {/* Chapter step dividers */}
-              {scenes.slice(1).map((_, idx) => (
+              {sceneTimings.slice(1).map((t, idx) => (
                 <div
                   key={idx}
-                  style={{ left: `${(((idx + 1) * SCENE_DURATION_SEC) / TOTAL_DURATION_SEC) * 100}%` }}
+                  style={{ left: `${(t.startSec / Math.max(1, totalDurationSec)) * 100}%` }}
                   className={`absolute top-0 bottom-0 w-0.5 ${isDark ? 'bg-slate-950/80' : 'bg-white/90'}`}
                 />
               ))}
@@ -1364,7 +1464,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
             <input
               type="range"
               min={0}
-              max={TOTAL_DURATION_SEC}
+              max={totalDurationSec}
               step={0.1}
               value={elapsedSec}
               onChange={(e) => handleSeekTo(Number(e.target.value))}
@@ -1375,16 +1475,16 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
 
           {/* Standard Transport & Utility Row */}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {/* Left Transport Controls + Clock Down Here */}
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            {/* Left Transport Controls + Time Clock */}
+            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
               <button
                 type="button"
                 onClick={handleTogglePlay}
-                className="px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                className="min-h-[38px] px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
                 {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                 <span>
-                  {elapsedSec >= TOTAL_DURATION_SEC
+                  {elapsedSec >= totalDurationSec
                     ? localeBundle.replayBtn
                     : isPlaying
                     ? localeBundle.pauseBtn
@@ -1397,7 +1497,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                 onClick={() => handleSkipBy(-10)}
                 aria-label="Rewind 10 seconds"
                 title="Rewind 10s (Left Arrow)"
-                className={`px-2 py-2 rounded-xl border text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                className={`min-h-[38px] px-2 py-1.5 rounded-xl border text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
@@ -1412,7 +1512,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                 onClick={() => handleSkipBy(10)}
                 aria-label="Forward 10 seconds"
                 title="Forward 10s (Right Arrow)"
-                className={`px-2 py-2 rounded-xl border text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                className={`min-h-[38px] px-2 py-1.5 rounded-xl border text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
@@ -1428,7 +1528,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                 disabled={activeSceneIndex === 0}
                 aria-label="Previous chapter"
                 title="Previous chapter"
-                className={`p-2 rounded-xl border disabled:opacity-40 transition-colors cursor-pointer ${
+                className={`min-h-[38px] min-w-[36px] p-1.5 rounded-xl border disabled:opacity-40 flex items-center justify-center transition-colors cursor-pointer ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
@@ -1443,7 +1543,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                 disabled={activeSceneIndex === scenes.length - 1}
                 aria-label="Next chapter"
                 title="Next chapter"
-                className={`p-2 rounded-xl border disabled:opacity-40 transition-colors cursor-pointer ${
+                className={`min-h-[38px] min-w-[36px] p-1.5 rounded-xl border disabled:opacity-40 flex items-center justify-center transition-colors cursor-pointer ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
@@ -1457,7 +1557,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                 onClick={handleReplay}
                 aria-label={localeBundle.replayBtn}
                 title={localeBundle.replayBtn}
-                className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+                className={`hidden sm:flex min-h-[38px] min-w-[36px] p-1.5 rounded-xl border items-center justify-center transition-colors cursor-pointer ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
@@ -1466,25 +1566,25 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
 
-              {/* Time Readout moved down into bottom control bar */}
+              {/* Time Readout */}
               <span
-                className={`px-2.5 py-1.5 rounded-xl border font-mono text-xs font-bold tabular-nums whitespace-nowrap ${
+                className={`min-h-[38px] px-2.5 py-1.5 rounded-xl border font-mono text-[11px] sm:text-xs font-bold tabular-nums whitespace-nowrap flex items-center ${
                   isDark
                     ? 'bg-slate-900 border-slate-700 text-slate-100'
                     : 'bg-white border-slate-300 text-slate-800'
                 }`}
               >
-                {formatClock(elapsedSec)} / {localeBundle.totalDurationLabel}
+                {formatClock(elapsedSec, totalDurationSec)} / {formatClock(totalDurationSec, totalDurationSec)}
               </span>
             </div>
 
             {/* Right Controls: Speed + Mute + Fullscreen */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1 sm:gap-1.5">
               <button
                 type="button"
                 onClick={handleCycleSpeed}
                 title="Playback speed"
-                className={`px-2.5 py-2 rounded-xl border font-mono text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                className={`min-h-[38px] px-2.5 py-1.5 rounded-xl border font-mono text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-teal-300'
                     : 'bg-white hover:bg-slate-100 border-slate-300 text-teal-800'
@@ -1497,7 +1597,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                 type="button"
                 onClick={handleToggleMute}
                 title="Mute / Unmute (M)"
-                className={`px-3 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                className={`min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   isMuted
                     ? isDark
                       ? 'bg-rose-950/60 border-rose-500/40 text-rose-200'
@@ -1508,7 +1608,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                 }`}
               >
                 {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                <span>{isMuted ? localeBundle.enableVoiceBtn : localeBundle.muteVoiceBtn}</span>
+                <span className="hidden sm:inline">{isMuted ? localeBundle.enableVoiceBtn : localeBundle.muteVoiceBtn}</span>
               </button>
 
               <button
@@ -1516,7 +1616,7 @@ export const AppDemoVideoModal: React.FC<AppDemoVideoModalProps> = ({
                 onClick={handleToggleFullscreen}
                 aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
                 title={isFullscreen ? 'Exit fullscreen (F)' : 'Fullscreen (F)'}
-                className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
+                className={`min-h-[38px] min-w-[38px] p-1.5 rounded-xl border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
                     : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700'

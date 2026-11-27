@@ -115,14 +115,14 @@ export const ServoRotationTester: React.FC<ServoRotationTesterProps> = ({
 
   return (
     <div
-      className={`rounded-2xl bg-white border border-slate-200 ${
+      className={`rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 transition-colors ${
         compact ? 'p-3.5' : 'p-4 sm:p-5 shadow-xs'
       } flex flex-col gap-3`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-start sm:items-center gap-3 min-w-0">
           {/* Live Mobile-Friendly 0° -> 45° -> 0° Mini Servo Dial */}
-          <div className="shrink-0 w-16 h-14 rounded-xl bg-slate-900 border border-slate-700 flex flex-col items-center justify-center px-1.5 py-1">
+          <div className="shrink-0 w-16 h-14 rounded-xl bg-slate-900 dark:bg-slate-950 border border-slate-700 flex flex-col items-center justify-center px-1.5 py-1">
             <svg viewBox="0 0 64 36" className="w-12 h-7 overflow-visible">
               <path
                 d="M 8 30 A 24 24 0 0 1 56 30"
@@ -156,12 +156,12 @@ export const ServoRotationTester: React.FC<ServoRotationTesterProps> = ({
 
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs sm:text-sm font-bold text-slate-900">
+              <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                 Servo Rotation Test (GPIO 18 • 0° → 45° → 0°)
               </span>
               <span
                 className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
-                  isEspOnline ? 'text-emerald-700' : 'text-rose-700'
+                  isEspOnline ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
                 }`}
               >
                 {isEspOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
@@ -170,15 +170,15 @@ export const ServoRotationTester: React.FC<ServoRotationTesterProps> = ({
             </div>
 
             {testError ? (
-              <p className="text-[11px] text-rose-700 font-medium">{testError}</p>
+              <p className="text-[11px] text-rose-700 dark:text-rose-400 font-medium">{testError}</p>
             ) : testCommand ? (
               <p
                 className={`text-[11px] font-medium flex items-center gap-1.5 ${
                   testCommand.status === 'COMPLETED'
-                    ? 'text-emerald-700'
+                    ? 'text-emerald-700 dark:text-emerald-400'
                     : testCommand.status === 'FAILED' || testCommand.status === 'CANCELLED'
-                    ? 'text-rose-700'
-                    : 'text-amber-700'
+                    ? 'text-rose-700 dark:text-rose-400'
+                    : 'text-amber-700 dark:text-amber-300'
                 }`}
               >
                 {testCommand.status === 'COMPLETED' ? (
@@ -201,7 +201,7 @@ export const ServoRotationTester: React.FC<ServoRotationTesterProps> = ({
                 </span>
               </p>
             ) : (
-              <p className="text-[11px] text-slate-500 leading-snug">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
                 Tap below to check the 0° → 45° → 0° motor rotation without changing medicine stock.
               </p>
             )}
@@ -214,7 +214,7 @@ export const ServoRotationTester: React.FC<ServoRotationTesterProps> = ({
             <button
               type="button"
               onClick={handleCancelTest}
-              className="flex-1 sm:flex-initial justify-center px-3 py-2.5 sm:py-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap"
+              className="flex-1 sm:flex-initial justify-center px-3 py-2.5 sm:py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap"
             >
               Cancel
             </button>
@@ -223,7 +223,7 @@ export const ServoRotationTester: React.FC<ServoRotationTesterProps> = ({
             <button
               type="button"
               onClick={onOpenFullWiring}
-              className="flex-1 sm:flex-initial justify-center px-3 py-2.5 sm:py-2 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+              className="flex-1 sm:flex-initial justify-center px-3 py-2.5 sm:py-2 rounded-xl border border-teal-200 dark:border-teal-700 bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100 dark:hover:bg-teal-900/60 text-teal-800 dark:text-teal-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
             >
               <Cpu className="w-3.5 h-3.5" />
               <span>Wiring &amp; Code</span>

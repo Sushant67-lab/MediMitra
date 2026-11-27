@@ -45,6 +45,7 @@ interface TriageResultViewProps {
   onSaveRecord: (assessment: TriageAssessment) => void;
   onOpenDoctors: () => void;
   onStartNew: () => void;
+  canAccessEsp32?: boolean;
   onRequestEsp32Access?: (onGranted: () => void) => void;
   isSaved: boolean;
 }
@@ -55,6 +56,7 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
   onSaveRecord,
   onOpenDoctors,
   onStartNew,
+  canAccessEsp32 = false,
   onRequestEsp32Access,
   isSaved
 }) => {
@@ -413,7 +415,11 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
           <DispenseStatusTracker
             command={activeDispenseCommand}
             onDismiss={() => setActiveDispenseCommand(null)}
-            onOpenHardwareGuide={() => triggerEsp32(() => setIsHardwareGuideOpen(true))}
+            onOpenHardwareGuide={
+              canAccessEsp32
+                ? () => triggerEsp32(() => setIsHardwareGuideOpen(true))
+                : undefined
+            }
           />
         )}
 
@@ -426,14 +432,16 @@ export const TriageResultView: React.FC<TriageResultViewProps> = ({
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{ui.recommendedMedsAndDispenser}</h2>
               </div>
 
-              <button
-                type="button"
-                onClick={() => triggerEsp32(() => setIsHardwareGuideOpen(true))}
-                className="text-xs font-medium text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
-              >
-                <Cpu className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                <span>{ui.esp32SchematicBtn}</span>
-              </button>
+              {canAccessEsp32 && (
+                <button
+                  type="button"
+                  onClick={() => triggerEsp32(() => setIsHardwareGuideOpen(true))}
+                  className="text-xs font-medium text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                >
+                  <Cpu className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  <span>{ui.esp32SchematicBtn}</span>
+                </button>
+              )}
             </div>
 
             <div className="space-y-3">

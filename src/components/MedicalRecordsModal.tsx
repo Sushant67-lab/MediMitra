@@ -60,8 +60,8 @@ export const MedicalRecordsModal: React.FC<MedicalRecordsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 dark:bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col max-h-[85vh] transition-colors">
         {/* Header */}
         <div className="px-6 py-4 bg-gradient-to-r from-teal-700 to-teal-800 text-white flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -84,7 +84,7 @@ export const MedicalRecordsModal: React.FC<MedicalRecordsModalProps> = ({
         </div>
 
         {/* Toolbar */}
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="relative w-full sm:w-72">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -92,7 +92,7 @@ export const MedicalRecordsModal: React.FC<MedicalRecordsModalProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={ui.searchRecordsPlaceholder}
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white"
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
 
@@ -101,16 +101,16 @@ export const MedicalRecordsModal: React.FC<MedicalRecordsModalProps> = ({
               <>
                 <button
                   onClick={handleExportJSON}
-                  className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  <Download className="w-3.5 h-3.5 text-teal-600" />
+                  <Download className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
                   <span>{ui.exportJsonBtn}</span>
                 </button>
                 <button
                   onClick={onClearRecords}
-                  className="px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                   <span>{ui.clearAllBtn}</span>
                 </button>
               </>
@@ -124,11 +124,11 @@ export const MedicalRecordsModal: React.FC<MedicalRecordsModalProps> = ({
             filteredRecords.map((rec) => (
               <div
                 key={rec.id}
-                className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-teal-300 transition-colors space-y-2"
+                className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-teal-300 dark:hover:border-teal-600 transition-colors space-y-2"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-sm text-slate-900">{rec.primarySymptom}</span>
+                    <span className="font-bold text-sm text-slate-900 dark:text-white">{rec.primarySymptom}</span>
                     {getSeverityBadge(rec.severity)}
                   </div>
                   <span className="text-[11px] text-slate-400 font-medium">
@@ -136,17 +136,17 @@ export const MedicalRecordsModal: React.FC<MedicalRecordsModalProps> = ({
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                   {rec.summary}
                 </p>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/80 text-[11px]">
-                  <span className="text-slate-500">
-                    {ui.patientLabel}: <strong className="text-slate-700">{rec.patientName}</strong> ({rec.age}{ui.yearsShort}, {rec.sex})
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/80 dark:border-slate-700 text-[11px]">
+                  <span className="text-slate-500 dark:text-slate-400">
+                    {ui.patientLabel}: <strong className="text-slate-700 dark:text-slate-200">{rec.patientName}</strong> ({rec.age}{ui.yearsShort}, {rec.sex})
                   </span>
 
                   {rec.prescribedOtcs.length > 0 && (
-                    <span className="text-teal-700 font-medium flex items-center gap-1">
+                    <span className="text-teal-700 dark:text-teal-400 font-medium flex items-center gap-1">
                       <Pill className="w-3 h-3" />
                       {rec.prescribedOtcs.slice(0, 2).join(', ')}
                     </span>
@@ -156,9 +156,9 @@ export const MedicalRecordsModal: React.FC<MedicalRecordsModalProps> = ({
             ))
           ) : (
             <div className="text-center py-12 space-y-3">
-              <FileText className="w-10 h-10 text-slate-300 mx-auto" />
-              <p className="text-sm font-semibold text-slate-700">{ui.noRecordsTitle}</p>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              <FileText className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto" />
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{ui.noRecordsTitle}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 max-w-sm mx-auto">
                 {ui.noRecordsDesc}
               </p>
             </div>
@@ -166,7 +166,7 @@ export const MedicalRecordsModal: React.FC<MedicalRecordsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+        <div className="p-3 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
           <span>{ui.encryptedDeviceFooter}</span>
           <button
             onClick={onClose}

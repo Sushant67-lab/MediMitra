@@ -6,7 +6,6 @@ import {
   Navigation
 } from 'lucide-react';
 import { SymptomCategory, UserProfile } from '../types/medical';
-import { MediMitraLogo } from './MediMitraLogo';
 import { useLanguage } from '../context/LanguageContext';
 import { getAppStrings } from '../data/appTranslations';
 
@@ -111,24 +110,17 @@ export const FrontPage: React.FC<FrontPageProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14 space-y-10 sm:space-y-12">
-      {/* Friendly Hero Greeting with MediMitra Emblem */}
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-14 space-y-10 sm:space-y-12">
+      {/* Centered Bold Hero Greeting */}
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="text-center space-y-3"
+        className="text-center"
       >
-        <div className="flex justify-center mb-1">
-          <MediMitraLogo size="md" showTagline />
-        </div>
-
-        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+        <h1 className="text-2xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
           {t.greeting}, {currentProfile.name ? currentProfile.name.split(' ')[0] : ui.thereWord}?
         </h1>
-        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-normal max-w-lg mx-auto leading-relaxed">
-          {t.frontSubtitle}
-        </p>
       </motion.div>
 
       {/* Spacious Input Bar */}
@@ -167,11 +159,10 @@ export const FrontPage: React.FC<FrontPageProps> = ({
         transition={{ duration: 0.3, delay: 0.2 }}
         className="space-y-4"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            {t.commonIssuesTitle}
+            {ui.facingCurrently}
           </span>
-          <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">{t.commonIssuesSubtitle}</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">

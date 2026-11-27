@@ -14,6 +14,7 @@ import { ServoRotationTester } from './ServoRotationTester';
 import { useLanguage } from '../context/LanguageContext';
 import { getAppStrings } from '../data/appTranslations';
 import { WIRING_VIDEO_TRANSLATIONS } from '../data/wiringVideoTranslations';
+import { videoAudioStudio } from '../utils/videoAudioEngine';
 
 const COPYABLE_WIRING_TEXT = `MediMitra ESP32 DevKit V1 (30-Pin) + SG90 Servo Wiring
 ====================================================
@@ -90,7 +91,7 @@ export const Esp32WiringDiagram: React.FC = () => {
   const vinY = pinStartY + 14 * pinStepY; // Pin 15 bottom-left (y = 364)
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden transition-colors">
       {/* Toolbar Header */}
       <div className="px-4 py-2.5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-2 text-xs">
         <span className="font-semibold tracking-tight truncate">
@@ -127,7 +128,10 @@ export const Esp32WiringDiagram: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setIsVideoOpen(true)}
+            onClick={() => {
+              videoAudioStudio.unlock();
+              setIsVideoOpen(true);
+            }}
             className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
           >
             <PlayCircle className="w-3.5 h-3.5" />
@@ -161,13 +165,13 @@ export const Esp32WiringDiagram: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-slate-50 p-2.5 sm:p-3 space-y-3">
+      <div className="bg-slate-50 dark:bg-slate-950 p-2.5 sm:p-3 space-y-3">
         {viewMode === '3d' ? (
-          <div className="rounded-xl overflow-hidden border border-slate-200 bg-white">
+          <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
             <Esp32WiringDiagram3D />
           </div>
         ) : (
-          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white overflow-hidden">
             <svg
               id="esp32-power-wiring-svg"
               viewBox="0 0 920 462"
@@ -504,65 +508,65 @@ export const Esp32WiringDiagram: React.FC = () => {
           <>
             {/* Easy-to-Read 4-Wire Connection Cards (Including ESP32 VIN Power!) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-            <div className="p-3 rounded-xl bg-white border border-orange-200 flex items-start gap-2.5">
+            <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-orange-500/35 flex items-start gap-2.5">
               <span className="w-6 h-6 rounded-lg bg-orange-500 text-white text-xs font-bold flex items-center justify-center shrink-0">
                 1
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-900">Orange / Yellow (Signal)</p>
-                <p className="text-[11px] font-mono text-orange-800 mt-0.5">
+                <p className="text-xs font-bold text-slate-900 dark:text-white">Orange / Yellow (Signal)</p>
+                <p className="text-[11px] font-mono text-orange-800 dark:text-orange-300 mt-0.5">
                   ESP32 D18 → Servo YELLOW / ORANGE
                 </p>
-                <p className="text-[10px] text-slate-500 mt-0.5">7th pin down on right header</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">7th pin down on right header</p>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-white border border-rose-200 flex items-start gap-2.5">
+            <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-500/35 flex items-start gap-2.5">
               <span className="w-6 h-6 rounded-lg bg-rose-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
                 2
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-900">Red A (Servo +5V)</p>
-                <p className="text-[11px] font-mono text-rose-800 mt-0.5">
+                <p className="text-xs font-bold text-slate-900 dark:text-white">Red A (Servo +5V)</p>
+                <p className="text-[11px] font-mono text-rose-800 dark:text-rose-300 mt-0.5">
                   5V Supply (+) → Servo RED
                 </p>
-                <p className="text-[10px] text-slate-500 mt-0.5">Powers servo motor</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Powers servo motor</p>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-rose-50/60 border border-rose-300 flex items-start gap-2.5">
+            <div className="p-3 rounded-xl bg-rose-50/60 dark:bg-rose-950/35 border border-rose-300 dark:border-rose-500/40 flex items-start gap-2.5">
               <span className="w-6 h-6 rounded-lg bg-rose-700 text-white text-xs font-bold flex items-center justify-center shrink-0">
                 3
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-900">Red B (ESP32 Power)</p>
-                <p className="text-[11px] font-mono text-rose-900 mt-0.5">
+                <p className="text-xs font-bold text-slate-900 dark:text-white">Red B (ESP32 Power)</p>
+                <p className="text-[11px] font-mono text-rose-900 dark:text-rose-200 mt-0.5">
                   5V Supply (+) → ESP32 VIN
                 </p>
-                <p className="text-[10px] text-rose-800 mt-0.5">Starts ESP32 without USB</p>
+                <p className="text-[10px] text-rose-800 dark:text-rose-300 mt-0.5">Starts ESP32 without USB</p>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-white border border-slate-300 flex items-start gap-2.5">
-              <span className="w-6 h-6 rounded-lg bg-slate-900 text-white text-xs font-bold flex items-center justify-center shrink-0">
+            <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 flex items-start gap-2.5">
+              <span className="w-6 h-6 rounded-lg bg-slate-900 dark:bg-slate-700 text-white text-xs font-bold flex items-center justify-center shrink-0">
                 4
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-900">Black / Brown (GND)</p>
-                <p className="text-[11px] font-mono text-slate-800 mt-0.5">
+                <p className="text-xs font-bold text-slate-900 dark:text-white">Black / Brown (GND)</p>
+                <p className="text-[11px] font-mono text-slate-800 dark:text-slate-200 mt-0.5">
                   PSU (-) + ESP32 GND + Servo BROWN
                 </p>
-                <p className="text-[10px] text-slate-500 mt-0.5">All 3 grounds joined together</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">All 3 grounds joined together</p>
               </div>
             </div>
           </div>
 
           {/* Crystal-Clear ESP32 Power Rule */}
-          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 text-xs flex items-start gap-2.5">
-            <Zap className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/35 border border-amber-200 dark:border-amber-500/35 text-amber-950 dark:text-amber-100 text-xs flex items-start gap-2.5">
+            <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div className="space-y-1 leading-relaxed">
               <p className="font-bold">Why didn&apos;t the ESP32 start after unplugging USB?</p>
-              <p className="text-[11px] text-amber-900">
+              <p className="text-[11px] text-amber-900 dark:text-amber-200">
                 After unplugging the PC USB cable, the ESP32 needs <strong>5V power</strong> in one of two ways:
                 <br />
                 <strong>Option A (Shown above — Red Wire 3):</strong> Connect your External 5V Supply <strong>(+)</strong> directly to the ESP32 <strong>VIN</strong> pin (bottom-left pin) and Supply <strong>(-)</strong> to ESP32 <strong>GND</strong>. Unplug this VIN wire before connecting your laptop USB again.

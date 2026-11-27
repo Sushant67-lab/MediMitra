@@ -560,12 +560,12 @@ void loop() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 bg-slate-900/65 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 bg-slate-900/65 dark:bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-200 overflow-hidden my-2 sm:my-6"
+        className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-2 sm:my-6 transition-colors"
       >
         {/* Header */}
         <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white p-3.5 sm:p-5 flex items-center justify-between gap-2">
@@ -592,47 +592,47 @@ void loop() {
         {/* Live Wi-Fi Connection Strip */}
         <div className={`px-3.5 sm:px-6 py-2 border-b flex flex-wrap items-center justify-between gap-1.5 text-xs ${
           isOnline
-            ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-            : 'bg-slate-100 border-slate-200 text-slate-600'
+            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
+            : 'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
         }`}>
           <div className="flex flex-wrap items-center gap-1.5 font-semibold">
             {isOnline ? (
               <>
-                <Wifi className="w-4 h-4 text-emerald-600" />
+                <Wifi className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>{ui.esp32OnlineStatus}</span>
                 {deviceInfo?.wifiSsid && (
-                  <span className="font-medium text-[11px] bg-white px-2 py-0.5 rounded-md border border-emerald-200 text-emerald-700">
+                  <span className="font-medium text-[11px] bg-white dark:bg-slate-900 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300">
                     {deviceInfo.wifiSsid}
                   </span>
                 )}
                 {deviceInfo?.ipAddress && (
-                  <span className="font-mono text-[11px] bg-white px-2 py-0.5 rounded-md border border-emerald-200 text-emerald-800">
+                  <span className="font-mono text-[11px] bg-white dark:bg-slate-900 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300">
                     {deviceInfo.ipAddress}
                   </span>
                 )}
               </>
             ) : (
               <div className="flex flex-wrap items-center gap-1.5">
-                <WifiOff className="w-4 h-4 text-rose-500" />
-                <span className="text-rose-700">{ui.esp32OfflineStatus}</span>
-                <span className="text-[11px] font-normal text-slate-500">
+                <WifiOff className="w-4 h-4 text-rose-500 dark:text-rose-400" />
+                <span className="text-rose-700 dark:text-rose-300">{ui.esp32OfflineStatus}</span>
+                <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
                   ({lastSeenText})
                 </span>
               </div>
             )}
           </div>
-          <span className="font-mono text-[10px] sm:text-[11px] text-slate-500">{DEFAULT_DEVICE_ID}</span>
+          <span className="font-mono text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400">{DEFAULT_DEVICE_ID}</span>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center border-b border-slate-200 bg-slate-50 px-3 sm:px-6 pt-1.5 sm:pt-2 overflow-x-auto">
+        <div className="flex items-center border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 sm:px-6 pt-1.5 sm:pt-2 overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveTab('wiring')}
             className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
               activeTab === 'wiring'
-                ? 'border-teal-600 text-teal-800'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-teal-600 dark:border-teal-400 text-teal-800 dark:text-teal-300'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             {ui.tabWiring}
@@ -642,8 +642,8 @@ void loop() {
             onClick={() => setActiveTab('sketch')}
             className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
               activeTab === 'sketch'
-                ? 'border-teal-600 text-teal-800'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-teal-600 dark:border-teal-400 text-teal-800 dark:text-teal-300'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             {ui.tabSketch}
@@ -653,8 +653,8 @@ void loop() {
             onClick={() => setActiveTab('calibration')}
             className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
               activeTab === 'calibration'
-                ? 'border-teal-600 text-teal-800'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-teal-600 dark:border-teal-400 text-teal-800 dark:text-teal-300'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             {ui.tabCalibration}
@@ -666,49 +666,49 @@ void loop() {
             <div className="space-y-4">
               <Esp32WiringDiagram />
 
-              <div className="rounded-2xl border border-slate-200 overflow-x-auto">
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                  <thead className="bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold border-b border-slate-200 dark:border-slate-700">
                     <tr>
                       <th className="p-3">{ui.servoWireCol}</th>
                       <th className="p-3">{ui.esp32PinCol}</th>
                       <th className="p-3">{ui.functionVoltageCol}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-600">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-600 dark:text-slate-300">
                     <tr>
-                      <td className="p-3 font-medium text-amber-700 flex items-center gap-1.5">
+                      <td className="p-3 font-medium text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
                         {ui.wireOrange}
                       </td>
-                      <td className="p-3 font-mono font-semibold text-slate-900">GPIO 18 (D18)</td>
+                      <td className="p-3 font-mono font-semibold text-slate-900 dark:text-white">GPIO 18 (D18)</td>
                       <td className="p-3">{ui.wireOrangeFunc}</td>
                     </tr>
                     <tr>
-                      <td className="p-3 font-medium text-rose-700 flex items-center gap-1.5">
+                      <td className="p-3 font-medium text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />
                         {ui.wireRed}
                       </td>
-                      <td className="p-3 font-mono font-semibold text-slate-900">5V PSU (+5V) / VIN</td>
+                      <td className="p-3 font-mono font-semibold text-slate-900 dark:text-white">5V PSU (+5V) / VIN</td>
                       <td className="p-3">{ui.wireRedFunc}</td>
                     </tr>
                     <tr>
-                      <td className="p-3 font-medium text-slate-800 flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-slate-800 inline-block" />
+                      <td className="p-3 font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-slate-800 dark:bg-slate-300 inline-block" />
                         {ui.wireBrown}
                       </td>
-                      <td className="p-3 font-mono font-semibold text-slate-900">Common GND (PSU + ESP32)</td>
+                      <td className="p-3 font-mono font-semibold text-slate-900 dark:text-white">Common GND (PSU + ESP32)</td>
                       <td className="p-3">{ui.wireBrownFunc}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/35 border border-amber-200 dark:border-amber-500/35 text-amber-950 dark:text-amber-100 text-xs flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <span className="font-semibold block">{ui.powerSupplyTitle}:</span>
-                  <span className="text-[11px] text-amber-900 block leading-relaxed">
+                  <span className="text-[11px] text-amber-900 dark:text-amber-200 block leading-relaxed">
                     {ui.powerSupplyDesc}
                   </span>
                 </div>
@@ -719,17 +719,17 @@ void loop() {
           {activeTab === 'sketch' && (
             <div className="space-y-4">
               {/* Mobile Hotspot / Wi-Fi Quick Fill Helper */}
-              <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 space-y-3">
+              <div className="p-3.5 rounded-2xl bg-teal-50 dark:bg-teal-950/35 border border-teal-200 dark:border-teal-700/70 space-y-3">
                 <div className="flex items-start gap-2.5">
-                  <Smartphone className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
+                  <Smartphone className="w-4 h-4 text-teal-700 dark:text-teal-400 shrink-0 mt-0.5" />
                   <div className="space-y-0.5">
-                    <h4 className="text-xs font-bold text-teal-950">{ui.hotspotSetupTitle}</h4>
-                    <p className="text-[11px] text-teal-900">{ui.hotspotSetupDesc}</p>
+                    <h4 className="text-xs font-bold text-teal-950 dark:text-teal-100">{ui.hotspotSetupTitle}</h4>
+                    <p className="text-[11px] text-teal-900 dark:text-teal-300">{ui.hotspotSetupDesc}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-[11px] font-semibold text-teal-900 mb-1">
+                    <label className="block text-[11px] font-semibold text-teal-900 dark:text-teal-200 mb-1">
                       {ui.ssidInputLabel}
                     </label>
                     <input
@@ -737,11 +737,11 @@ void loop() {
                       value={hotspotSsid}
                       onChange={(e) => setHotspotSsid(e.target.value)}
                       placeholder="e.g. MediMitraHotspot"
-                      className="w-full px-3 py-1.5 rounded-xl bg-white border border-teal-200 text-xs text-slate-900 focus:outline-none focus:border-teal-500"
+                      className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-teal-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-teal-900 mb-1">
+                    <label className="block text-[11px] font-semibold text-teal-900 dark:text-teal-200 mb-1">
                       {ui.passwordInputLabel}
                     </label>
                     <input
@@ -749,18 +749,18 @@ void loop() {
                       value={hotspotPass}
                       onChange={(e) => setHotspotPass(e.target.value)}
                       placeholder="Hotspot password"
-                      className="w-full px-3 py-1.5 rounded-xl bg-white border border-teal-200 text-xs text-slate-900 focus:outline-none focus:border-teal-500"
+                      className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-teal-500"
                     />
                   </div>
                 </div>
-                <p className="text-[11px] leading-relaxed text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                <p className="text-[11px] leading-relaxed text-amber-900 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/35 rounded-xl px-3 py-2">
                   {ui.band24GhzTip}
                 </p>
               </div>
 
               {!hotspotSsid.trim() && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                   <span>
                     <strong>Enter your 2.4 GHz Hotspot Name &amp; Password above first</strong> before copying and uploading the sketch — otherwise your ESP32 cannot join your Wi-Fi!
                   </span>
@@ -769,10 +769,10 @@ void loop() {
 
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     {ui.arduinoFirmwareTitle}
                   </h3>
-                  <span className="text-[11px] text-slate-400">esp32_firmware/esp32_dispenser.ino</span>
+                  <span className="text-[11px] text-slate-400 dark:text-slate-500">esp32_firmware/esp32_dispenser.ino</span>
                 </div>
                 <button
                   type="button"
@@ -784,15 +784,15 @@ void loop() {
                 </button>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-900 text-slate-200 font-mono text-[11px] overflow-x-auto max-h-72 border border-slate-800">
+              <div className="p-3.5 rounded-2xl bg-slate-900 dark:bg-slate-950 text-slate-200 font-mono text-[11px] overflow-x-auto max-h-72 border border-slate-800">
                 <pre>{sketchSnippet}</pre>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2 text-slate-700">
-                <span className="font-bold text-slate-900 block">
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs space-y-2 text-slate-700 dark:text-slate-300">
+                <span className="font-bold text-slate-900 dark:text-white block">
                   Complete Plug-In, Upload &amp; Connect Guide (ESP32 Dev Module):
                 </span>
-                <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-slate-700 leading-relaxed">
+                <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">
                   <li>
                     <b>Enter Wi-Fi / Mobile Hotspot above:</b> Type your 2.4 GHz Wi-Fi or Phone Hotspot Name &amp; Password, then click <b>{ui.copySketchBtn}</b>.
                   </li>
@@ -817,16 +817,16 @@ void loop() {
           )}
 
           {activeTab === 'calibration' && (
-            <div className="space-y-3 text-xs text-slate-700">
-              <div className="p-4 rounded-2xl bg-teal-50 border border-teal-200 space-y-2">
-                <h3 className="font-bold text-teal-950 flex items-center gap-1.5">
-                  <Activity className="w-4 h-4 text-teal-700" />
+            <div className="space-y-3 text-xs text-slate-700 dark:text-slate-300">
+              <div className="p-4 rounded-2xl bg-teal-50 dark:bg-teal-950/35 border border-teal-200 dark:border-teal-700/70 space-y-2">
+                <h3 className="font-bold text-teal-950 dark:text-teal-100 flex items-center gap-1.5">
+                  <Activity className="w-4 h-4 text-teal-700 dark:text-teal-400" />
                   <span>{ui.motionCalibTitle}</span>
                 </h3>
-                <p className="text-[11px] leading-relaxed text-teal-900">
+                <p className="text-[11px] leading-relaxed text-teal-900 dark:text-teal-200">
                   {ui.motionCalibDesc}
                 </p>
-                <ul className="list-disc list-inside space-y-1 pl-1 text-[11px] text-teal-900">
+                <ul className="list-disc list-inside space-y-1 pl-1 text-[11px] text-teal-900 dark:text-teal-200">
                   <li>{ui.calibRule1}</li>
                   <li>{ui.calibRule2}</li>
                   <li>{ui.calibRule3}</li>
@@ -834,9 +834,9 @@ void loop() {
                 </ul>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
-                <span className="font-semibold text-slate-900 block">{ui.whySmallArcTitle}</span>
-                <p className="text-[11px] text-slate-600 leading-relaxed">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1.5">
+                <span className="font-semibold text-slate-900 dark:text-white block">{ui.whySmallArcTitle}</span>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
                   {ui.whySmallArcDesc}
                 </p>
               </div>
@@ -845,11 +845,11 @@ void loop() {
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end">
+        <div className="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-slate-900 dark:bg-teal-600 hover:bg-slate-800 dark:hover:bg-teal-700 text-white text-xs font-semibold cursor-pointer"
           >
             {ui.closeGuideBtn}
           </button>

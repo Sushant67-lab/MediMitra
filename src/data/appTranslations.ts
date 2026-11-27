@@ -50,6 +50,7 @@ export interface AppUiStrings {
   step2ChatTitle: string;
   step2ChatDesc: string;
   selectLanguageHeader: string;
+  facingCurrently: string;
 
   // AuthModal
   editPatientInfoSubtitle: string;
@@ -332,6 +333,7 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     step2ChatTitle: '10-Question Chat',
     step2ChatDesc: 'MediMitra asks 10 sequential, adaptive questions tailored to your age and gender.',
     selectLanguageHeader: 'Select Language',
+    facingCurrently: 'What are you facing currently',
 
     editPatientInfoSubtitle: 'Update who is receiving checkup care',
     saveDetailsBtn: 'Save Details',
@@ -604,6 +606,7 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     step2ChatTitle: '10 सवालों की जांच',
     step2ChatDesc: 'मेडीमित्र आपकी उम्र और लिंग के अनुसार 10 आसान सवाल पूछता है।',
     selectLanguageHeader: 'भाषा चुनें',
+    facingCurrently: 'अभी आप किस समस्या का सामना कर रहे हैं',
 
     editPatientInfoSubtitle: 'जांच कराने वाले मरीज की जानकारी अपडेट करें',
     saveDetailsBtn: 'विवरण सहेजें',
@@ -876,6 +879,7 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     step2ChatTitle: '10-Question Chat',
     step2ChatDesc: 'MediMitra aapki age aur gender ke hisaab se 10 adaptive sawaal poochta hai.',
     selectLanguageHeader: 'Language Chunein',
+    facingCurrently: 'Abhi aap kya problem face kar rahe hain',
 
     editPatientInfoSubtitle: 'Check-up karwane wale patient ki details update karein',
     saveDetailsBtn: 'Details Save Karein',
@@ -1148,6 +1152,7 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     step2ChatTitle: '10 प्रश्नांची तपासणी',
     step2ChatDesc: 'मेदीमित्र तुमच्या वयानुसार आणि लिंगानुसार 10 सोपे प्रश्न विचारतो.',
     selectLanguageHeader: 'भाषा निवडा',
+    facingCurrently: 'सध्या तुम्हाला कोणता त्रास होत आहे',
 
     editPatientInfoSubtitle: 'तपासणी घेणाऱ्या रुग्णाची माहिती बदला',
     saveDetailsBtn: 'माहिती जतन करा',
@@ -1420,6 +1425,7 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     step2ChatTitle: '১০ প্রশ্নের পরীক্ষা',
     step2ChatDesc: 'মেডিমিথ্র আপনার বয়স ও লিঙ্গ অনুযায়ী ১০টি সহজ প্রশ্ন করে।',
     selectLanguageHeader: 'ভাষা নির্বাচন করুন',
+    facingCurrently: 'বর্তমানে আপনি কী সমস্যায় ভুগছেন',
 
     editPatientInfoSubtitle: 'রোগীর তথ্য পরিবর্তন করুন',
     saveDetailsBtn: 'তথ্য সেভ করুন',
@@ -1692,6 +1698,7 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     step2ChatTitle: '10 கேள்வி உரையாடல்',
     step2ChatDesc: 'உங்கள் வயது மற்றும் பாலினத்திற்கு ஏற்ப மெடிமித்ரா 10 எளிய கேள்விகள் கேட்கும்.',
     selectLanguageHeader: 'மொழியை தேர்ந்தெடுக்கவும்',
+    facingCurrently: 'தற்போது நீங்கள் என்ன பிரச்சனையை எதிர்கொள்கிறீர்கள்',
 
     editPatientInfoSubtitle: 'நோயாளியின் விவரங்களை புதுப்பிக்கவும்',
     saveDetailsBtn: 'விவரங்களை சேமி',
@@ -1964,6 +1971,7 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     step2ChatTitle: '10 ప్రశ్నల చాట్',
     step2ChatDesc: 'మీ వయస్సు మరియు లింగానికి అనుగుణంగా మెడిమిత్ర 10 సులభ ప్రశ్నలు అడుగుతుంది.',
     selectLanguageHeader: 'భాషను ఎంచుకోండి',
+    facingCurrently: 'ప్రస్తుతం మీరు ఏ సమస్యను ఎదుర్కొంటున్నారు',
 
     editPatientInfoSubtitle: 'రోగి వివరాలను నవీకరించండి',
     saveDetailsBtn: 'వివరాలు సేవ్ చేయి',
@@ -2236,6 +2244,7 @@ export const APP_UI_STRINGS: Record<LanguageCode, AppUiStrings> = {
     step2ChatTitle: '10 પ્રશ્નોની તપાસ',
     step2ChatDesc: 'મેડીમિત્ર તમારી ઉંમર અને જાતિ મુજબ 10 સરળ પ્રશ્નો પૂછે છે.',
     selectLanguageHeader: 'ભાષા પસંદ કરો',
+    facingCurrently: 'હાલમાં તમે કઈ સમસ્યાનો સામનો કરી રહ્યા છો',
 
     editPatientInfoSubtitle: 'તપાસ લેનાર દર્દીની વિગતો બદલો',
     saveDetailsBtn: 'વિગતો સાચવો',

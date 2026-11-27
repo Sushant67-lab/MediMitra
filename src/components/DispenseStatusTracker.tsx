@@ -23,7 +23,7 @@ import { getAppStrings } from '../data/appTranslations';
 interface DispenseStatusTrackerProps {
   command: DispensingCommand;
   onDismiss: () => void;
-  onOpenHardwareGuide: () => void;
+  onOpenHardwareGuide?: () => void;
 }
 
 export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
@@ -129,17 +129,17 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -15 }}
-      className="bg-white rounded-3xl border-2 border-teal-500/30 shadow-xl overflow-hidden p-6 space-y-6"
+      className="bg-white dark:bg-slate-900 rounded-3xl border-2 border-teal-500/30 dark:border-teal-500/40 shadow-xl overflow-hidden p-6 space-y-6 transition-colors"
     >
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 gap-3">
         <div className="flex items-center gap-3">
           <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${
             isCompleted 
-              ? 'bg-emerald-100 text-emerald-700' 
+              ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' 
               : isFailed 
-              ? 'bg-rose-100 text-rose-700' 
-              : 'bg-teal-100 text-teal-700'
+              ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300' 
+              : 'bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300'
           }`}>
             {isCompleted ? (
               <CheckCircle2 className="w-6 h-6" />
@@ -151,20 +151,20 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">
                 {command.commandId}
               </span>
               <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
                 isCompleted 
-                  ? 'bg-emerald-100 text-emerald-800' 
+                  ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300' 
                   : isFailed || isCancelled
-                  ? 'bg-rose-100 text-rose-800' 
-                  : 'bg-teal-100 text-teal-800'
+                  ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-300' 
+                  : 'bg-teal-100 dark:bg-teal-950/70 text-teal-800 dark:text-teal-300'
               }`}>
                 {command.status}
               </span>
             </div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-0.5">
               {isCompleted 
                 ? ui.statusCompletedTitle
                 : isProcessing 
@@ -180,13 +180,15 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
           </div>
         </div>
 
-        <button
-          onClick={onOpenHardwareGuide}
-          className="text-xs text-teal-700 hover:text-teal-900 font-medium flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-teal-200 hover:bg-teal-50 transition-colors cursor-pointer self-start sm:self-auto"
-        >
-          <Cpu className="w-3.5 h-3.5" />
-          <span>{ui.hardwareGuidePinoutBtn}</span>
-        </button>
+        {onOpenHardwareGuide && (
+          <button
+            onClick={onOpenHardwareGuide}
+            className="text-xs text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-white font-medium flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-teal-200 dark:border-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950/50 transition-colors cursor-pointer self-start sm:self-auto"
+          >
+            <Cpu className="w-3.5 h-3.5" />
+            <span>{ui.hardwareGuidePinoutBtn}</span>
+          </button>
+        )}
       </div>
 
       {/* Progress Stepper */}
@@ -199,10 +201,10 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
               key={i}
               className={`p-3 rounded-2xl border transition-all ${
                 isPassed 
-                  ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950' 
+                  ? 'bg-emerald-50/60 dark:bg-emerald-950/35 border-emerald-200 dark:border-emerald-700/70 text-emerald-950 dark:text-emerald-100' 
                   : isCurrent 
-                  ? 'bg-teal-50/80 border-teal-400 text-teal-950 ring-2 ring-teal-500/20 shadow-xs' 
-                  : 'bg-slate-50 border-slate-200/80 text-slate-400'
+                  ? 'bg-teal-50/80 dark:bg-teal-950/50 border-teal-400 dark:border-teal-500 text-teal-950 dark:text-white ring-2 ring-teal-500/20 shadow-xs' 
+                  : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700 text-slate-400 dark:text-slate-500'
               }`}
             >
               <div className="flex items-center gap-2 mb-1">
@@ -211,13 +213,13 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
                     ? 'bg-emerald-600 text-white' 
                     : isCurrent 
                     ? 'bg-teal-600 text-white animate-pulse' 
-                    : 'bg-slate-200 text-slate-500'
+                    : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
                 }`}>
                   {isPassed ? '✓' : i + 1}
                 </div>
                 <span className="text-xs font-semibold">{st.label}</span>
               </div>
-              <p className="text-[10px] leading-tight text-slate-500 font-normal">
+              <p className="text-[10px] leading-tight text-slate-500 dark:text-slate-400 font-normal">
                 {st.desc}
               </p>
             </div>
@@ -227,25 +229,25 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
 
       {/* Command & Hardware Status Details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200/70 gap-2">
-            <span className="text-slate-500 font-medium shrink-0">{ui.prescribedItemLabel}</span>
-            <span className="font-bold text-slate-900 text-right">{command.medicineName}</span>
+        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-200/70 dark:border-slate-700 gap-2">
+            <span className="text-slate-500 dark:text-slate-400 font-medium shrink-0">{ui.prescribedItemLabel}</span>
+            <span className="font-bold text-slate-900 dark:text-white text-right">{command.medicineName}</span>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <span className="text-slate-500">{ui.authorizedQtyLabel}</span>
-            <span className="font-semibold text-slate-800">
+            <span className="text-slate-500 dark:text-slate-400">{ui.authorizedQtyLabel}</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">
               {command.requestedQuantity} ({command.cycles} {command.cycles > 1 ? ui.cyclesWord : ui.cycleWord})
             </span>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <span className="text-slate-500">{ui.targetDeviceLabel}</span>
+            <span className="text-slate-500 dark:text-slate-400">{ui.targetDeviceLabel}</span>
             <div className="flex items-center gap-1.5 flex-wrap justify-end">
-              <span className="font-mono text-teal-800 font-medium">{command.deviceId}</span>
+              <span className="font-mono text-teal-800 dark:text-teal-300 font-medium">{command.deviceId}</span>
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                 isDeviceOnline
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-slate-200 text-slate-600'
+                  ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300'
+                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
               }`}>
                 {isDeviceOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
                 <span>
@@ -257,20 +259,20 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
             </div>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <span className="text-slate-500">{ui.servoMovementLabel}</span>
-            <span className="font-semibold text-slate-800">
+            <span className="text-slate-500 dark:text-slate-400">{ui.servoMovementLabel}</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">
               GPIO {command.servoConfig.gpioPin} (0° → {command.servoConfig.dispenseAngle}° → 0°)
             </span>
           </div>
-          <div className="pt-2 border-t border-slate-200/70 text-[11px] text-slate-600">
+          <div className="pt-2 border-t border-slate-200/70 dark:border-slate-700 text-[11px] text-slate-600 dark:text-slate-300">
             <strong>{ui.executionLogLabel}:</strong> {command.executionResult}
           </div>
         </div>
 
         {/* Live SG90 Servo Arc Gauge */}
-        <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-200/70 flex flex-col items-center justify-center text-center space-y-2 relative overflow-hidden">
-          <div className="text-xs font-semibold text-teal-950 flex items-center gap-1.5">
-            <Cpu className="w-4 h-4 text-teal-700" />
+        <div className="p-4 rounded-2xl bg-teal-50/50 dark:bg-teal-950/30 border border-teal-200/70 dark:border-teal-800 flex flex-col items-center justify-center text-center space-y-2 relative overflow-hidden">
+          <div className="text-xs font-semibold text-teal-950 dark:text-teal-200 flex items-center gap-1.5">
+            <Cpu className="w-4 h-4 text-teal-700 dark:text-teal-400" />
             <span>{ui.servoMotionStatusTitle}</span>
           </div>
 
@@ -295,22 +297,22 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
                 y1="50"
                 x2={50 - 35 * Math.cos(((simAngle || 0) * Math.PI) / 180)}
                 y2={50 - 35 * Math.sin(((simAngle || 0) * Math.PI) / 180)}
-                stroke="#0f766e"
+                stroke="#14b8a6"
                 strokeWidth="3.5"
                 strokeLinecap="round"
               />
-              <circle cx="50" cy="50" r="4" fill="#0f766e" />
+              <circle cx="50" cy="50" r="4" fill="#14b8a6" />
             </svg>
           </div>
 
           <div className="text-xs">
-            <span className="text-slate-500 font-medium">{ui.currentPositionLabel}: </span>
-            <strong className="text-teal-900 font-mono text-sm">{simAngle || 0}°</strong>
+            <span className="text-slate-500 dark:text-slate-400 font-medium">{ui.currentPositionLabel}: </span>
+            <strong className="text-teal-900 dark:text-teal-300 font-mono text-sm">{simAngle || 0}°</strong>
             <span className="text-slate-400 text-[10px] ml-1">(0° → 45°)</span>
           </div>
 
           {simStepMsg && (
-            <p className="text-[11px] text-teal-800 font-medium bg-white px-2.5 py-0.5 rounded-full border border-teal-200">
+            <p className="text-[11px] text-teal-800 dark:text-teal-200 font-medium bg-white dark:bg-slate-800 px-2.5 py-0.5 rounded-full border border-teal-200 dark:border-teal-700">
               {simStepMsg}
             </p>
           )}
@@ -318,13 +320,13 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
       </div>
 
       {/* Simulator Banner / Actions */}
-      <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+      <div className="p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/35 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
         <div className="space-y-0.5 text-center sm:text-left">
-          <span className="font-semibold text-amber-950 flex items-center justify-center sm:justify-start gap-1">
-            <Play className="w-3.5 h-3.5 text-amber-700" />
+          <span className="font-semibold text-amber-950 dark:text-amber-200 flex items-center justify-center sm:justify-start gap-1">
+            <Play className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
             <span>{ui.simBannerTitle}:</span>
           </span>
-          <p className="text-[11px] text-amber-800">
+          <p className="text-[11px] text-amber-800 dark:text-amber-300">
             {ui.simBannerDesc}
           </p>
         </div>
@@ -350,12 +352,12 @@ export const DispenseStatusTracker: React.FC<DispenseStatusTrackerProps> = ({
       </div>
 
       {/* Footer Controls */}
-      <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-2 border-t border-slate-100">
+      <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
         {isPending && (
           <button
             onClick={handleCancel}
             disabled={isCancelling}
-            className="px-4 py-2 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold transition-colors cursor-pointer w-full sm:w-auto"
+            className="px-4 py-2 rounded-xl border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold transition-colors cursor-pointer w-full sm:w-auto"
           >
             {isCancelling ? ui.cancellingBtn : ui.cancelRequestBtn}
           </button>

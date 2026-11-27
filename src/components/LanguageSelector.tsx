@@ -21,6 +21,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   const [coords, setCoords] = useState<{ top: number; left?: number; right?: number }>({ top: 0, right: 16 });
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const desktopMenuRef = useRef<HTMLDivElement>(null);
 
   const currentOption = languages.find(l => l.code === language) || languages[0];
@@ -43,8 +44,9 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       const inTrigger = containerRef.current?.contains(target);
+      const inMobileMenu = mobileMenuRef.current?.contains(target);
       const inDesktopMenu = desktopMenuRef.current?.contains(target);
-      if (!inTrigger && !inDesktopMenu) {
+      if (!inTrigger && !inMobileMenu && !inDesktopMenu) {
         setIsOpen(false);
       }
     };
@@ -99,10 +101,11 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
         <>
           {/* Mobile Full-Visibility Language Sheet (< 640px) - Never clipped by parent overflow */}
           <div
-            className="sm:hidden fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-xs flex items-end justify-center p-3"
+            className="sm:hidden fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-xs flex items-end justify-center p-3 pb-5"
             onClick={() => setIsOpen(false)}
           >
             <div
+              ref={mobileMenuRef}
               className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
               role="menu"
               onClick={(e) => e.stopPropagation()}
@@ -135,7 +138,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                         setLanguage(item.code);
                         setIsOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs transition-colors cursor-pointer ${
+                      className={`w-full text-left px-3 py-3 rounded-xl border flex items-center justify-between gap-2 text-xs transition-colors cursor-pointer touch-manipulation ${
                         isSelected
                           ? 'bg-teal-50 dark:bg-teal-950/70 border-teal-500 text-teal-900 dark:text-teal-200 font-semibold shadow-2xs'
                           : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium'

@@ -24,10 +24,11 @@ import { AppDemoVideoModal } from './AppDemoVideoModal';
 import { useLanguage } from '../context/LanguageContext';
 import { getAppStrings } from '../data/appTranslations';
 import { DEMO_VIDEO_TRANSLATIONS } from '../data/demoVideoTranslations';
-import { authenticateWithEmail, authenticateWithGoogle } from '../services/firebase';
+import { authenticateWithEmail, authenticateWithGoogle, verifyEsp32OperatorCredentials } from '../services/firebase';
+import { videoAudioStudio } from '../utils/videoAudioEngine';
 
 interface AuthScreenProps {
-  onLogin: (profile: UserProfile) => void;
+  onLogin: (profile: UserProfile, options?: { isEsp32Operator?: boolean }) => void;
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({
@@ -96,6 +97,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         authMode
       );
 
+      const isEsp32Operator = await verifyEsp32OperatorCredentials(email, password);
+
       setFirebaseStatus(
         authMode === 'signin'
           ? '✓ Email verified in database!'
@@ -111,7 +114,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       }
 
       setTimeout(() => {
-        onLogin(user);
+        onLogin(user, { isEsp32Operator });
       }, 400);
     } catch (err: any) {
       setFirebaseStatus(null);
@@ -144,7 +147,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       }
 
       setTimeout(() => {
-        onLogin(user);
+        onLogin(user, { isEsp32Operator: false });
       }, 400);
     } catch {
       setFirebaseStatus(null);
@@ -380,7 +383,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           <div className="absolute top-3 left-3 z-30 flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => setIsDemoVideoOpen(true)}
+              onClick={() => {
+                videoAudioStudio.unlock();
+                setIsDemoVideoOpen(true);
+              }}
               aria-label={demoVideoCopy.buttonLabel}
               title={demoVideoCopy.buttonLabel}
               className="p-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white backdrop-blur-xs transition-colors cursor-pointer flex items-center justify-center shrink-0"
@@ -625,7 +631,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           <div className="pt-4 mt-4 border-t border-teal-800/70 text-[11px] text-teal-300/80 flex items-center justify-between gap-3 relative z-10">
             <button
               type="button"
-              onClick={() => setIsDemoVideoOpen(true)}
+              onClick={() => {
+                videoAudioStudio.unlock();
+                setIsDemoVideoOpen(true);
+              }}
               className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-teal-400/35 text-white font-semibold text-xs flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shrink-0 shadow-xs"
             >
               <PlayCircle className="w-4 h-4 text-teal-300 shrink-0" />

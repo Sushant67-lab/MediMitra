@@ -88,9 +88,14 @@ function MainApp() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isHardwareGuideOpen, setIsHardwareGuideOpen] = useState(false);
   const [isEsp32PasswordOpen, setIsEsp32PasswordOpen] = useState(false);
+  const [isEsp32Authorized, setIsEsp32Authorized] = useState<boolean>(false);
   const [pendingEsp32Action, setPendingEsp32Action] = useState<(() => void) | null>(null);
 
   const requestEsp32Access = (onGranted: () => void) => {
+    if (isEsp32Authorized) {
+      onGranted();
+      return;
+    }
     setPendingEsp32Action(() => onGranted);
     setIsEsp32PasswordOpen(true);
   };
@@ -106,9 +111,10 @@ function MainApp() {
     }
   }, [currentProfile]);
 
-  const handleLogin = (profile: UserProfile) => {
+  const handleLogin = (profile: UserProfile, options?: { isEsp32Operator?: boolean }) => {
     setCurrentProfile(profile);
     setIsAuthenticated(true);
+    setIsEsp32Authorized(Boolean(options?.isEsp32Operator));
     try {
       localStorage.setItem('curahealth_auth', 'true');
       localStorage.setItem('curahealth_user_email', profile.email);
@@ -123,6 +129,7 @@ function MainApp() {
   const handleSignOut = () => {
     logOutFromFirebase();
     setIsAuthenticated(false);
+    setIsEsp32Authorized(false);
     setIsHardwareGuideOpen(false);
     setPendingEsp32Action(null);
     setIsEsp32PasswordOpen(false);
@@ -177,7 +184,9 @@ function MainApp() {
         onOpenDoctors={() => setCurrentView('doctors')}
         onGoHome={() => setCurrentView('front')}
         onSignOut={handleSignOut}
-        onOpenHardwareGuide={() => requestEsp32Access(() => setIsHardwareGuideOpen(true))}
+        onOpenHardwareGuide={
+          isEsp32Authorized ? () => setIsHardwareGuideOpen(true) : undefined
+        }
       />
 
       {/* Main Views */}
@@ -208,6 +217,7 @@ function MainApp() {
             onSaveRecord={handleSaveRecord}
             onOpenDoctors={() => setCurrentView('doctors')}
             onStartNew={() => setCurrentView('front')}
+            canAccessEsp32={isEsp32Authorized}
             onRequestEsp32Access={requestEsp32Access}
             isSaved={isAssessmentSaved}
           />
@@ -246,11 +256,13 @@ function MainApp() {
       {/* ESP32 Password Gate Modal */}
       <Esp32PasswordModal
         isOpen={isEsp32PasswordOpen}
+        defaultEmail={currentProfile.email || ''}
         onClose={() => {
           setIsEsp32PasswordOpen(false);
           setPendingEsp32Action(null);
         }}
         onVerified={() => {
+          setIsEsp32Authorized(true);
           setIsEsp32PasswordOpen(false);
           const action = pendingEsp32Action;
           setPendingEsp32Action(null);

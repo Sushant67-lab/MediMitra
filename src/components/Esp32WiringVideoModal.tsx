@@ -29,101 +29,25 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { ThemeToggle } from './ThemeToggle';
 import { WIRING_VIDEO_TRANSLATIONS } from '../data/wiringVideoTranslations';
+import {
+  chunkSpeechSmoothly,
+  estimateVoiceoverDurationSec,
+  resolveBestVoice,
+  videoAudioStudio
+} from '../utils/videoAudioEngine';
 
 interface Esp32WiringVideoModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const SCENE_DURATION_SEC = 30;
-const TOTAL_DURATION_SEC = 300; // 5 minutes (10 scenes x 30s)
 const PLAYBACK_SPEEDS = [0.75, 1, 1.25, 1.5] as const;
 
-const LANGUAGE_VOICE_PRIORITY: Record<LanguageCode, string[]> = {
-  en: ['en-IN', 'en-US', 'en-GB', 'en'],
-  hi: ['hi-IN', 'hi'],
-  hinglish: ['en-IN', 'hi-IN', 'en-GB', 'en'],
-  mr: ['mr-IN', 'hi-IN', 'mr', 'hi'],
-  bn: ['bn-IN', 'bn-BD', 'bn'],
-  ta: ['ta-IN', 'ta'],
-  te: ['te-IN', 'te'],
-  gu: ['gu-IN', 'gu']
-};
-
-function formatClock(totalSeconds: number): string {
-  const clamped = Math.max(0, Math.min(TOTAL_DURATION_SEC, Math.floor(totalSeconds)));
+function formatClock(totalSeconds: number, maxDuration: number): string {
+  const clamped = Math.max(0, Math.min(maxDuration, Math.floor(totalSeconds)));
   const mins = Math.floor(clamped / 60);
   const secs = clamped % 60;
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-}
-
-function scoreVoiceQuality(v: SpeechSynthesisVoice): number {
-  const name = `${v.name} ${v.voiceURI}`.toLowerCase();
-  let score = 0;
-  if (name.includes('natural')) score += 120;
-  if (name.includes('neural')) score += 110;
-  if (name.includes('online')) score += 95;
-  if (name.includes('wavenet') || name.includes('studio')) score += 90;
-  if (name.includes('enhanced') || name.includes('premium')) score += 80;
-  if (name.includes('google')) score += 70;
-
-  const pleasantNames = [
-    'neerja',
-    'swara',
-    'ananya',
-    'kavya',
-    'aria',
-    'jenny',
-    'sonia',
-    'libby',
-    'samantha',
-    'lekha',
-    'rishi',
-    'heera',
-    'prabhat',
-    'madhur',
-    'karen',
-    'daniel'
-  ];
-  if (pleasantNames.some((n) => name.includes(n))) score += 65;
-
-  if (name.includes('espeak') || name.includes('festival') || name.includes('mbrola') || name.includes('compact')) {
-    score -= 150;
-  }
-  if (!v.localService) score += 20;
-  return score;
-}
-
-function resolveBestVoice(
-  voices: SpeechSynthesisVoice[],
-  lang: LanguageCode
-): { voice: SpeechSynthesisVoice | null; bcp47: string } {
-  const priorities = LANGUAGE_VOICE_PRIORITY[lang] || ['en-IN', 'en-US'];
-  for (const tag of priorities) {
-    const lowerTag = tag.toLowerCase();
-    const prefix = lowerTag.split('-')[0];
-    const matches = voices.filter(
-      (v) =>
-        v.lang.toLowerCase() === lowerTag ||
-        v.lang.toLowerCase().startsWith(`${prefix}-`) ||
-        v.lang.toLowerCase() === prefix
-    );
-    if (matches.length > 0) {
-      const ranked = [...matches].sort((a, b) => {
-        const aExact = a.lang.toLowerCase() === lowerTag ? 25 : 0;
-        const bExact = b.lang.toLowerCase() === lowerTag ? 25 : 0;
-        return scoreVoiceQuality(b) + bExact - (scoreVoiceQuality(a) + aExact);
-      });
-      return { voice: ranked[0], bcp47: ranked[0].lang };
-    }
-  }
-  return { voice: null, bcp47: priorities[0] };
-}
-
-function splitIntoSentences(text: string): string[] {
-  const matches = text.match(/[^.!?।]+(?:[.!?।]+|$)/g);
-  if (!matches) return text.trim() ? [text.trim()] : [];
-  return matches.map((s) => s.trim()).filter(Boolean);
 }
 
 export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
@@ -138,30 +62,56 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [isVoiceCurrentlySpeaking, setIsVoiceCurrentlySpeaking] = useState(false);
+  const [needsMobileAudioTap, setNeedsMobileAudioTap] = useState(false);
 
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
   const lastFrameTimeRef = useRef<number | null>(null);
   const lastSpokenKeyRef = useRef<string | null>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
-  const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const sentencePauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeUtterancesRef = useRef<SpeechSynthesisUtterance[]>([]);
   const speechSessionIdRef = useRef(0);
   const isVoiceSpeakingRef = useRef(false);
   const voiceHoldStartedAtRef = useRef<number | null>(null);
+  const voiceFinishedAtRef = useRef<number | null>(null);
+  const speechStartConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggeredCuesRef = useRef<Set<string>>(new Set());
   const playbackSpeedRef = useRef<number>(playbackSpeed);
   playbackSpeedRef.current = playbackSpeed;
 
   const localeBundle = WIRING_VIDEO_TRANSLATIONS[language] || WIRING_VIDEO_TRANSLATIONS.en;
   const scenes = localeBundle.scenes;
 
-  const activeSceneIndex = Math.min(
-    scenes.length - 1,
-    Math.max(0, Math.floor(elapsedSec / SCENE_DURATION_SEC))
+  const sceneTimings = useMemo(() => {
+    let cursor = 0;
+    return scenes.map((sc) => {
+      const dur = estimateVoiceoverDurationSec(sc.voiceover, language);
+      const startSec = cursor;
+      const endSec = cursor + dur;
+      cursor = endSec;
+      return { startSec, endSec, durationSec: dur };
+    });
+  }, [scenes, language]);
+
+  const totalDurationSec = useMemo(
+    () => (sceneTimings.length > 0 ? sceneTimings[sceneTimings.length - 1].endSec : 90),
+    [sceneTimings]
   );
+
+  const activeSceneIndex = useMemo(() => {
+    for (let i = 0; i < sceneTimings.length; i++) {
+      if (elapsedSec < sceneTimings[i].endSec - 0.001) {
+        return i;
+      }
+    }
+    return Math.max(0, scenes.length - 1);
+  }, [elapsedSec, sceneTimings, scenes.length]);
+
+  const activeTiming = sceneTimings[activeSceneIndex] || { startSec: 0, endSec: 12, durationSec: 12 };
   const activeScene = scenes[activeSceneIndex];
-  const sceneElapsedSec = Math.max(0, elapsedSec - activeSceneIndex * SCENE_DURATION_SEC);
-  const sceneProgress = Math.min(1, sceneElapsedSec / SCENE_DURATION_SEC);
-  const totalProgressPct = Math.min(100, Math.max(0, (elapsedSec / TOTAL_DURATION_SEC) * 100));
+  const sceneElapsedSec = Math.max(0, elapsedSec - activeTiming.startSec);
+  const sceneProgress = Math.min(1, sceneElapsedSec / Math.max(1, activeTiming.durationSec));
+  const totalProgressPct = Math.min(100, Math.max(0, (elapsedSec / Math.max(1, totalDurationSec)) * 100));
 
   useEffect(() => {
     voicesRef.current = voices;
@@ -177,14 +127,17 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
 
   const stopSpeech = useCallback(() => {
     speechSessionIdRef.current += 1;
-    if (sentencePauseTimerRef.current) {
-      clearTimeout(sentencePauseTimerRef.current);
-      sentencePauseTimerRef.current = null;
+    if (speechStartConfirmTimerRef.current) {
+      clearTimeout(speechStartConfirmTimerRef.current);
+      speechStartConfirmTimerRef.current = null;
     }
     isVoiceSpeakingRef.current = false;
+    setIsVoiceCurrentlySpeaking(false);
     voiceHoldStartedAtRef.current = null;
-    activeUtteranceRef.current = null;
+    voiceFinishedAtRef.current = null;
+    activeUtterancesRef.current = [];
     lastSpokenKeyRef.current = null;
+    videoAudioStudio.setVoiceActive(false);
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
@@ -194,6 +147,9 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
     (sceneIdx: number, targetLang: LanguageCode, muted: boolean, speed = playbackSpeedRef.current) => {
       if (muted || typeof window === 'undefined' || !('speechSynthesis' in window)) {
         isVoiceSpeakingRef.current = false;
+        setIsVoiceCurrentlySpeaking(false);
+        voiceFinishedAtRef.current = null;
+        videoAudioStudio.setVoiceActive(false);
         return;
       }
       const bundle = WIRING_VIDEO_TRANSLATIONS[targetLang] || WIRING_VIDEO_TRANSLATIONS.en;
@@ -206,15 +162,17 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
       const synth = window.speechSynthesis;
       speechSessionIdRef.current += 1;
       const sessionId = speechSessionIdRef.current;
-      if (sentencePauseTimerRef.current) {
-        clearTimeout(sentencePauseTimerRef.current);
-        sentencePauseTimerRef.current = null;
+      if (speechStartConfirmTimerRef.current) {
+        clearTimeout(speechStartConfirmTimerRef.current);
+        speechStartConfirmTimerRef.current = null;
       }
       synth.cancel();
 
-      const sentences = splitIntoSentences(targetScene.voiceover);
-      if (sentences.length === 0) {
+      const chunks = chunkSpeechSmoothly(targetScene.voiceover, 155);
+      if (chunks.length === 0) {
         isVoiceSpeakingRef.current = false;
+        setIsVoiceCurrentlySpeaking(false);
+        videoAudioStudio.setVoiceActive(false);
         return;
       }
 
@@ -224,45 +182,67 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
       lastSpokenKeyRef.current = key;
       isVoiceSpeakingRef.current = true;
       voiceHoldStartedAtRef.current = null;
+      voiceFinishedAtRef.current = null;
 
-      let sentenceIndex = 0;
-      const speakNextSentence = () => {
-        if (speechSessionIdRef.current !== sessionId) return;
-        if (sentenceIndex >= sentences.length) {
-          activeUtteranceRef.current = null;
+      const baseRate = targetLang === 'en' || targetLang === 'hinglish' ? 1.03 : 1.0;
+      const effectiveRate = Math.max(0.75, Math.min(1.65, baseRate * speed));
+
+      let startedAtLeastOnce = false;
+      const utterances: SpeechSynthesisUtterance[] = [];
+
+      speechStartConfirmTimerRef.current = setTimeout(() => {
+        if (speechSessionIdRef.current === sessionId && !startedAtLeastOnce) {
           isVoiceSpeakingRef.current = false;
-          voiceHoldStartedAtRef.current = null;
-          return;
+          setIsVoiceCurrentlySpeaking(false);
+          setNeedsMobileAudioTap(true);
+          videoAudioStudio.setVoiceActive(false);
         }
+      }, 1150);
 
-        const sentenceText = sentences[sentenceIndex];
-        const utterance = new SpeechSynthesisUtterance(sentenceText);
+      chunks.forEach((chunkText, idx) => {
+        const utterance = new SpeechSynthesisUtterance(chunkText);
         utterance.lang = bcp47;
         if (voice) utterance.voice = voice;
-        utterance.rate = Math.max(0.7, Math.min(1.6, 0.94 * speed));
-        utterance.pitch = 1.03;
+        utterance.rate = effectiveRate;
+        utterance.pitch = 1.0;
         utterance.volume = 1;
 
-        const scheduleNext = () => {
+        utterance.onstart = () => {
           if (speechSessionIdRef.current !== sessionId) return;
-          sentenceIndex += 1;
-          if (sentenceIndex >= sentences.length) {
-            speakNextSentence();
-            return;
+          startedAtLeastOnce = true;
+          setNeedsMobileAudioTap(false);
+          setIsVoiceCurrentlySpeaking(true);
+          videoAudioStudio.setVoiceActive(true);
+          if (speechStartConfirmTimerRef.current) {
+            clearTimeout(speechStartConfirmTimerRef.current);
+            speechStartConfirmTimerRef.current = null;
           }
-          sentencePauseTimerRef.current = setTimeout(() => {
-            sentencePauseTimerRef.current = null;
-            speakNextSentence();
-          }, 220);
         };
 
-        utterance.onend = scheduleNext;
-        utterance.onerror = scheduleNext;
-        activeUtteranceRef.current = utterance;
-        synth.speak(utterance);
-      };
+        if (idx === chunks.length - 1) {
+          const finishSceneVoice = () => {
+            if (speechSessionIdRef.current !== sessionId) return;
+            isVoiceSpeakingRef.current = false;
+            setIsVoiceCurrentlySpeaking(false);
+            voiceHoldStartedAtRef.current = null;
+            voiceFinishedAtRef.current = performance.now();
+            videoAudioStudio.setVoiceActive(false);
+          };
+          utterance.onend = finishSceneVoice;
+          utterance.onerror = () => {
+            if (speechSessionIdRef.current !== sessionId) return;
+            isVoiceSpeakingRef.current = false;
+            setIsVoiceCurrentlySpeaking(false);
+            voiceHoldStartedAtRef.current = null;
+            videoAudioStudio.setVoiceActive(false);
+          };
+        }
 
-      speakNextSentence();
+        utterances.push(utterance);
+      });
+
+      activeUtterancesRef.current = utterances;
+      utterances.forEach((u) => synth.speak(u));
     },
     []
   );
@@ -282,14 +262,23 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      triggeredCuesRef.current.clear();
       setElapsedSec(0);
       setIsPlaying(true);
+      setNeedsMobileAudioTap(false);
       lastFrameTimeRef.current = null;
       lastSpokenKeyRef.current = null;
+      videoAudioStudio.unlock();
+      videoAudioStudio.setMuted(isMuted);
+      if (!isMuted) {
+        videoAudioStudio.startAmbient();
+        videoAudioStudio.playCue('chapter');
+      }
       speakScene(0, language, isMuted, playbackSpeedRef.current);
     } else {
       setIsPlaying(false);
       stopSpeech();
+      videoAudioStudio.stopAmbient();
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
@@ -297,41 +286,69 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    return () => stopSpeech();
+    return () => {
+      stopSpeech();
+      videoAudioStudio.stopAmbient();
+    };
   }, [stopSpeech]);
+
+  useEffect(() => {
+    videoAudioStudio.setMuted(isMuted);
+    if (isOpen && isPlaying && !isMuted) {
+      videoAudioStudio.startAmbient();
+    } else {
+      videoAudioStudio.stopAmbient();
+    }
+  }, [isOpen, isPlaying, isMuted]);
 
   const handleSeekTo = useCallback(
     (targetSec: number) => {
-      const clamped = Math.max(0, Math.min(TOTAL_DURATION_SEC, targetSec));
-      const nextSceneIdx = Math.min(scenes.length - 1, Math.max(0, Math.floor(clamped / SCENE_DURATION_SEC)));
+      const clamped = Math.max(0, Math.min(totalDurationSec, targetSec));
+      let nextSceneIdx = Math.max(0, scenes.length - 1);
+      for (let i = 0; i < sceneTimings.length; i++) {
+        if (clamped < sceneTimings[i].endSec - 0.001) {
+          nextSceneIdx = i;
+          break;
+        }
+      }
       const prevSceneIdx = activeSceneIndex;
       setElapsedSec(clamped);
       if (nextSceneIdx !== prevSceneIdx) {
+        triggeredCuesRef.current.clear();
         stopSpeech();
-        if (isPlaying && !isMuted && clamped < TOTAL_DURATION_SEC) {
+        if (isPlaying && !isMuted && clamped < totalDurationSec) {
+          videoAudioStudio.unlock();
+          videoAudioStudio.playCue('chapter');
           speakScene(nextSceneIdx, language, false, playbackSpeedRef.current);
         }
       }
-      if (clamped >= TOTAL_DURATION_SEC) {
+      if (clamped >= totalDurationSec) {
         setIsPlaying(false);
         stopSpeech();
       }
     },
-    [scenes.length, activeSceneIndex, stopSpeech, isPlaying, isMuted, speakScene, language]
+    [totalDurationSec, scenes.length, sceneTimings, activeSceneIndex, stopSpeech, isPlaying, isMuted, speakScene, language]
   );
 
   const handleSkipBy = useCallback(
     (deltaSec: number) => {
+      videoAudioStudio.unlock();
       handleSeekTo(elapsedSec + deltaSec);
     },
     [elapsedSec, handleSeekTo]
   );
 
   const handleTogglePlay = useCallback(() => {
-    if (elapsedSec >= TOTAL_DURATION_SEC) {
+    videoAudioStudio.unlock();
+    if (elapsedSec >= totalDurationSec) {
+      triggeredCuesRef.current.clear();
       stopSpeech();
       setElapsedSec(0);
       setIsPlaying(true);
+      if (!isMuted) {
+        videoAudioStudio.startAmbient();
+        videoAudioStudio.playCue('chapter');
+      }
       speakScene(0, language, isMuted, playbackSpeedRef.current);
       return;
     }
@@ -340,17 +357,40 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
       stopSpeech();
     } else {
       setIsPlaying(true);
+      setNeedsMobileAudioTap(false);
       lastSpokenKeyRef.current = null;
+      if (!isMuted) {
+        videoAudioStudio.startAmbient();
+        videoAudioStudio.playCue('click');
+      }
       speakScene(activeSceneIndex, language, isMuted, playbackSpeedRef.current);
     }
-  }, [elapsedSec, stopSpeech, speakScene, language, isMuted, isPlaying, activeSceneIndex]);
+  }, [elapsedSec, totalDurationSec, stopSpeech, speakScene, language, isMuted, isPlaying, activeSceneIndex]);
+
+  const handleTapEnableVoice = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      videoAudioStudio.unlock();
+      setIsMuted(false);
+      videoAudioStudio.setMuted(false);
+      videoAudioStudio.startAmbient();
+      setNeedsMobileAudioTap(false);
+      lastSpokenKeyRef.current = null;
+      speakScene(activeSceneIndex, language, false, playbackSpeedRef.current);
+    },
+    [activeSceneIndex, language, speakScene]
+  );
 
   const handleToggleMute = useCallback(() => {
+    videoAudioStudio.unlock();
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
+    videoAudioStudio.setMuted(nextMuted);
     if (nextMuted) {
       stopSpeech();
+      setNeedsMobileAudioTap(false);
     } else if (isPlaying) {
+      videoAudioStudio.startAmbient();
       lastSpokenKeyRef.current = null;
       speakScene(activeSceneIndex, language, false, playbackSpeedRef.current);
     }
@@ -382,6 +422,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
           return;
         }
         stopSpeech();
+        videoAudioStudio.stopAmbient();
         onClose();
       } else if (e.key === ' ') {
         e.preventDefault();
@@ -416,19 +457,41 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
       if (lastFrameTimeRef.current !== null) {
         const dtSec = Math.min(0.1, (now - lastFrameTimeRef.current) / 1000) * playbackSpeedRef.current;
         setElapsedSec((prev) => {
-          const currentSceneIdx = Math.min(
-            scenes.length - 1,
-            Math.max(0, Math.floor(prev / SCENE_DURATION_SEC))
-          );
-          const sceneEndSec = (currentSceneIdx + 1) * SCENE_DURATION_SEC;
+          let currentIdx = sceneTimings.length - 1;
+          for (let i = 0; i < sceneTimings.length; i++) {
+            if (prev < sceneTimings[i].endSec - 0.001) {
+              currentIdx = i;
+              break;
+            }
+          }
+          const timing = sceneTimings[currentIdx];
+          if (!timing) return totalDurationSec;
+          const sceneEndSec = timing.endSec;
           const next = prev + dtSec;
 
-          if (!isMuted && isVoiceSpeakingRef.current && next >= sceneEndSec - 0.05) {
+          // Brief natural 0.45s breath after voiceover finishes, then advance (no dead air)
+          if (
+            !isMuted &&
+            !isVoiceSpeakingRef.current &&
+            voiceFinishedAtRef.current !== null &&
+            now - voiceFinishedAtRef.current >= 450 &&
+            sceneEndSec - prev > 0.2
+          ) {
+            voiceFinishedAtRef.current = null;
+            if (currentIdx >= sceneTimings.length - 1) {
+              setIsPlaying(false);
+              return totalDurationSec;
+            }
+            return sceneEndSec;
+          }
+
+          // Gently hold if slower voice engine is still finishing its sentence
+          if (!isMuted && isVoiceSpeakingRef.current && next >= sceneEndSec - 0.06) {
             if (voiceHoldStartedAtRef.current === null) {
               voiceHoldStartedAtRef.current = now;
             }
-            if (now - voiceHoldStartedAtRef.current < 16000) {
-              return Math.min(prev, sceneEndSec - 0.05);
+            if (now - voiceHoldStartedAtRef.current < 7500) {
+              return Math.min(prev, sceneEndSec - 0.06);
             }
             isVoiceSpeakingRef.current = false;
             voiceHoldStartedAtRef.current = null;
@@ -436,9 +499,9 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
             voiceHoldStartedAtRef.current = null;
           }
 
-          if (next >= TOTAL_DURATION_SEC) {
+          if (next >= totalDurationSec) {
             setIsPlaying(false);
-            return TOTAL_DURATION_SEC;
+            return totalDurationSec;
           }
           return next;
         });
@@ -449,32 +512,70 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [isOpen, isPlaying, isMuted, scenes.length]);
+  }, [isOpen, isPlaying, isMuted, sceneTimings, totalDurationSec]);
 
   useEffect(() => {
     if (!isOpen || !isPlaying || isMuted) return;
     const key = `${activeSceneIndex}:${language}`;
     if (lastSpokenKeyRef.current !== key) {
+      if (activeSceneIndex > 0) {
+        videoAudioStudio.playCue('chapter');
+      }
       speakScene(activeSceneIndex, language, isMuted, playbackSpeedRef.current);
     }
   }, [isOpen, isPlaying, isMuted, activeSceneIndex, language, speakScene]);
 
+  // Trigger tactile hardware & connection audio cues synced with visual highlights
+  useEffect(() => {
+    if (!isOpen || !isPlaying || isMuted) return;
+    const fireOnce = (cueKey: string, cueType: 'click' | 'success' | 'servo' | 'alert') => {
+      if (!triggeredCuesRef.current.has(cueKey)) {
+        triggeredCuesRef.current.add(cueKey);
+        videoAudioStudio.playCue(cueType);
+      }
+    };
+
+    if (activeSceneIndex === 7) {
+      fireOnce('w7:safety', 'alert');
+    } else if (activeSceneIndex === 8 && sceneProgress >= 0.52) {
+      fireOnce('w8:online', 'success');
+    } else if (activeSceneIndex === 9 && sceneProgress >= 0.25 && sceneProgress < 0.76) {
+      fireOnce('w9:servo', 'servo');
+    } else if (activeSceneIndex === 9 && sceneProgress >= 0.90) {
+      fireOnce('w9:done', 'success');
+    }
+  }, [isOpen, isPlaying, isMuted, activeSceneIndex, sceneProgress]);
+
   const handleReplay = () => {
+    videoAudioStudio.unlock();
+    triggeredCuesRef.current.clear();
     stopSpeech();
     setElapsedSec(0);
     setIsPlaying(true);
+    if (!isMuted) {
+      videoAudioStudio.startAmbient();
+      videoAudioStudio.playCue('chapter');
+    }
     speakScene(0, language, isMuted, playbackSpeed);
   };
 
   const handleJumpToScene = (index: number) => {
+    videoAudioStudio.unlock();
     const clampedIndex = Math.max(0, Math.min(scenes.length - 1, index));
+    const targetTime = sceneTimings[clampedIndex]?.startSec ?? 0;
+    triggeredCuesRef.current.clear();
     stopSpeech();
-    setElapsedSec(clampedIndex * SCENE_DURATION_SEC);
+    setElapsedSec(targetTime);
     setIsPlaying(true);
+    if (!isMuted) {
+      videoAudioStudio.startAmbient();
+      videoAudioStudio.playCue('chapter');
+    }
     speakScene(clampedIndex, language, isMuted, playbackSpeed);
   };
 
   const handleCycleSpeed = () => {
+    videoAudioStudio.unlock();
     const idx = PLAYBACK_SPEEDS.indexOf(playbackSpeed as (typeof PLAYBACK_SPEEDS)[number]);
     const nextSpeed = PLAYBACK_SPEEDS[(idx + 1) % PLAYBACK_SPEEDS.length];
     setPlaybackSpeed(nextSpeed);
@@ -485,6 +586,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
   };
 
   const handleLanguageChange = (newLang: LanguageCode) => {
+    videoAudioStudio.unlock();
     setLanguage(newLang);
     stopSpeech();
     if (isPlaying && !isMuted) {
@@ -521,7 +623,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-[60] backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto transition-colors ${
+      className={`fixed inset-0 z-[60] backdrop-blur-md flex items-center justify-center p-1.5 sm:p-4 overflow-y-auto transition-colors ${
         isDark ? 'bg-slate-950/90' : 'bg-slate-900/60'
       }`}
       role="dialog"
@@ -531,24 +633,26 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
       <div
         ref={playerContainerRef}
         className={`w-full ${
-          isFullscreen ? 'max-w-none h-full rounded-none border-0' : 'max-w-5xl rounded-2xl border my-auto'
+          isFullscreen
+            ? 'max-w-none h-full rounded-none border-0'
+            : 'max-w-5xl max-h-[96dvh] rounded-xl sm:rounded-2xl border my-auto'
         } shadow-2xl overflow-hidden flex flex-col transition-colors ${
           isDark
             ? 'bg-slate-900 border-slate-700/80 text-white'
             : 'bg-white border-slate-200 text-slate-900'
         }`}
       >
-        {/* Top Modal Header */}
+        {/* Top Modal Header (Mobile-First Single Row) */}
         <div
-          className={`px-4 py-3 sm:px-5 border-b flex flex-wrap items-center justify-between gap-3 ${
+          className={`px-3 py-2.5 sm:px-5 sm:py-3 border-b flex items-center justify-between gap-2 shrink-0 ${
             isDark
               ? 'bg-slate-950 border-slate-800'
               : 'bg-slate-50 border-slate-200'
           }`}
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div
-              className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${
+              className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl border flex items-center justify-center shrink-0 ${
                 isDark
                   ? 'bg-amber-500/15 border-amber-400/35'
                   : 'bg-amber-50 border-amber-200'
@@ -558,7 +662,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className={`text-sm sm:text-base font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                <h2 className={`text-xs sm:text-base font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   {localeBundle.modalTitle}
                 </h2>
                 <span
@@ -571,17 +675,17 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                   {localeBundle.noBreadboardBadge}
                 </span>
               </div>
-              <p className={`text-[11px] truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p className={`hidden sm:block text-[11px] truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 {localeBundle.voiceNotice}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <ThemeToggle variant="video" showLabel />
 
             <label
-              className={`flex items-center gap-1.5 border rounded-xl px-2.5 py-1.5 text-xs ${
+              className={`flex items-center gap-1 sm:gap-1.5 border rounded-xl px-2 py-1.5 text-xs ${
                 isDark
                   ? 'bg-slate-800 border-slate-700 text-slate-200'
                   : 'bg-white border-slate-300 text-slate-800'
@@ -592,7 +696,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                 value={language}
                 onChange={(e) => handleLanguageChange(e.target.value as LanguageCode)}
                 aria-label={localeBundle.voiceLanguageLabel}
-                className={`bg-transparent font-semibold text-xs focus:outline-none cursor-pointer ${
+                className={`bg-transparent font-semibold text-xs focus:outline-none cursor-pointer max-w-[82px] sm:max-w-none ${
                   isDark ? 'text-white' : 'text-slate-900'
                 }`}
               >
@@ -612,10 +716,11 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
               type="button"
               onClick={() => {
                 stopSpeech();
+                videoAudioStudio.stopAmbient();
                 onClose();
               }}
               aria-label={localeBundle.closeBtn}
-              className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
+              className={`min-w-[36px] min-h-[36px] p-1.5 sm:p-2 rounded-xl border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
                 isDark
                   ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
                   : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-600 hover:text-slate-900'
@@ -626,22 +731,24 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
           </div>
         </div>
 
-        {/* 16:9 Animated Wiring Stage */}
+        {/* Animated Wiring Stage (Zero Subtitle Clipping on Mobile) */}
         <div
           onClick={handleTogglePlay}
           title={isPlaying ? localeBundle.pauseBtn : localeBundle.playBtn}
           className={`relative w-full ${
-            isFullscreen ? 'flex-1 min-h-0' : 'aspect-video min-h-[300px] sm:min-h-[410px]'
-          } overflow-hidden select-none cursor-pointer transition-colors ${
+            isFullscreen
+              ? 'flex-1 min-h-0'
+              : 'min-h-[300px] sm:min-h-[395px] sm:aspect-video'
+          } overflow-y-auto sm:overflow-hidden select-none cursor-pointer transition-colors ${
             isDark
               ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-teal-950/60'
               : 'bg-gradient-to-br from-slate-50 via-white to-teal-50/75'
           }`}
         >
-          {/* Top-left Chapter HUD & Language Tag (Clock moved down to bottom control deck) */}
-          <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between gap-2 pointer-events-none">
+          {/* Top Chapter HUD & Sound Wave Badge */}
+          <div className="relative sm:absolute sm:top-3 sm:left-3 sm:right-3 z-20 px-3 pt-2.5 sm:px-0 sm:pt-0 flex items-center justify-between gap-2 pointer-events-none">
             <div
-              className={`px-3 py-1.5 rounded-lg border flex items-center gap-2 min-w-0 ${
+              className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg border flex items-center gap-2 min-w-0 ${
                 isDark
                   ? 'bg-slate-950/85 border-teal-500/40'
                   : 'bg-white/95 border-teal-300/80 shadow-xs'
@@ -650,24 +757,38 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
               <span className={`text-[11px] font-mono font-bold tabular-nums shrink-0 ${isDark ? 'text-teal-300' : 'text-teal-700'}`}>
                 {String(activeSceneIndex + 1).padStart(2, '0')}/{scenes.length}
               </span>
-              <span className={`text-xs font-semibold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <span className={`text-[11px] sm:text-xs font-semibold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {activeScene.chapterTitle}
               </span>
             </div>
 
-            <span
-              className={`hidden sm:inline-flex px-2.5 py-1 rounded-lg border text-[11px] font-medium shrink-0 ${
-                isDark
-                  ? 'bg-slate-950/85 border-slate-700 text-teal-200'
-                  : 'bg-white/95 border-slate-300 text-teal-800 shadow-xs'
-              }`}
-            >
-              {currentLangOption.nativeName}
-            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isPlaying && !isMuted && (
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-semibold ${
+                    isDark
+                      ? 'bg-slate-950/85 border-emerald-500/35 text-emerald-300'
+                      : 'bg-white/95 border-emerald-300 text-emerald-700 shadow-xs'
+                  }`}
+                >
+                  <Volume2 className="w-3 h-3" />
+                  <span className="hidden sm:inline">{isVoiceCurrentlySpeaking ? 'Speaking' : 'Ambient'}</span>
+                </span>
+              )}
+              <span
+                className={`hidden sm:inline-flex px-2.5 py-1 rounded-lg border text-[11px] font-medium shrink-0 ${
+                  isDark
+                    ? 'bg-slate-950/85 border-slate-700 text-teal-200'
+                    : 'bg-white/95 border-slate-300 text-teal-800 shadow-xs'
+                }`}
+              >
+                {currentLangOption.nativeName}
+              </span>
+            </div>
           </div>
 
           {/* Main Visual Stage */}
-          <div className="relative z-10 w-full h-full pt-12 pb-20 px-3 sm:px-6 flex flex-col justify-center">
+          <div className="relative z-10 w-full sm:h-full pt-2.5 pb-4 sm:pt-12 sm:pb-5 px-3 sm:px-6 flex flex-col justify-center">
             {/* Key Tip Ribbon */}
             <div
               className={`mb-2 mx-auto max-w-3xl w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl border text-[11px] ${
@@ -1116,32 +1237,40 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
               </div>
             )}
           </div>
-
-          {/* Bottom Synchronized Subtitle Scrim */}
-          <div
-            className={`absolute bottom-0 inset-x-0 z-20 px-4 sm:px-6 pt-6 pb-3 pointer-events-none ${
-              isDark
-                ? 'bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent'
-                : 'bg-gradient-to-t from-white/95 via-white/90 to-transparent'
-            }`}
-          >
-            <p
-              className={`text-center text-xs sm:text-sm font-medium max-w-3xl mx-auto leading-relaxed ${
-                isDark ? 'text-white drop-shadow' : 'text-slate-900'
-              }`}
-            >
-              {activeScene.subtitle}
-            </p>
-          </div>
         </div>
 
-        {/* Standard Normal Video Control Bar */}
+        {/* Dedicated Non-Overlapping Synchronized Caption Strip */}
         <div
-          className={`px-4 py-3.5 sm:px-5 border-t space-y-3 ${
+          className={`px-3.5 py-2.5 sm:px-6 sm:py-3 border-t flex items-center justify-center gap-3 shrink-0 ${
+            isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white border-slate-200'
+          }`}
+        >
+          <p
+            className={`text-center text-xs sm:text-sm font-medium max-w-3xl leading-relaxed ${
+              isDark ? 'text-slate-100' : 'text-slate-800'
+            }`}
+          >
+            {activeScene.subtitle}
+          </p>
+          {needsMobileAudioTap && !isMuted && (
+            <button
+              type="button"
+              onClick={handleTapEnableVoice}
+              className="px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold flex items-center gap-1 shrink-0 cursor-pointer shadow-xs"
+            >
+              <Volume2 className="w-3.5 h-3.5" />
+              <span>Tap for Voice</span>
+            </button>
+          )}
+        </div>
+
+        {/* Standard Normal Video Control Bar (Mobile Touch Optimized) */}
+        <div
+          className={`px-3 py-2.5 sm:px-5 sm:py-3.5 border-t space-y-2.5 shrink-0 ${
             isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
           }`}
         >
-          {/* Interactive Seek Slider with Chapter Markers */}
+          {/* Interactive Seek Slider with Dynamic Chapter Markers */}
           <div className="relative h-5 flex items-center group">
             <div
               className={`w-full h-1.5 group-hover:h-2 rounded-full overflow-hidden relative transition-all ${
@@ -1152,10 +1281,10 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                 className="h-full bg-teal-500 rounded-full transition-[width] duration-75"
                 style={{ width: `${totalProgressPct}%` }}
               />
-              {scenes.slice(1).map((_, idx) => (
+              {sceneTimings.slice(1).map((t, idx) => (
                 <div
                   key={idx}
-                  style={{ left: `${(((idx + 1) * SCENE_DURATION_SEC) / TOTAL_DURATION_SEC) * 100}%` }}
+                  style={{ left: `${(t.startSec / Math.max(1, totalDurationSec)) * 100}%` }}
                   className={`absolute top-0 bottom-0 w-0.5 ${isDark ? 'bg-slate-950/80' : 'bg-white/90'}`}
                 />
               ))}
@@ -1163,7 +1292,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
             <input
               type="range"
               min={0}
-              max={TOTAL_DURATION_SEC}
+              max={totalDurationSec}
               step={0.1}
               value={elapsedSec}
               onChange={(e) => handleSeekTo(Number(e.target.value))}
@@ -1173,15 +1302,15 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
               <button
                 type="button"
                 onClick={handleTogglePlay}
-                className="px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                className="min-h-[38px] px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
                 {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                 <span>
-                  {elapsedSec >= TOTAL_DURATION_SEC
+                  {elapsedSec >= totalDurationSec
                     ? localeBundle.replayBtn
                     : isPlaying
                     ? localeBundle.pauseBtn
@@ -1194,7 +1323,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                 onClick={() => handleSkipBy(-10)}
                 aria-label="Rewind 10 seconds"
                 title="Rewind 10s"
-                className={`px-2 py-2 rounded-xl border text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                className={`min-h-[38px] px-2 py-1.5 rounded-xl border text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
@@ -1209,7 +1338,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                 onClick={() => handleSkipBy(10)}
                 aria-label="Forward 10 seconds"
                 title="Forward 10s"
-                className={`px-2 py-2 rounded-xl border text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                className={`min-h-[38px] px-2 py-1.5 rounded-xl border text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
@@ -1225,7 +1354,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                 disabled={activeSceneIndex === 0}
                 aria-label="Previous step"
                 title="Previous step"
-                className={`p-2 rounded-xl border disabled:opacity-40 transition-colors cursor-pointer ${
+                className={`min-h-[38px] min-w-[36px] p-1.5 rounded-xl border disabled:opacity-40 flex items-center justify-center transition-colors cursor-pointer ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
@@ -1240,7 +1369,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                 disabled={activeSceneIndex === scenes.length - 1}
                 aria-label="Next step"
                 title="Next step"
-                className={`p-2 rounded-xl border disabled:opacity-40 transition-colors cursor-pointer ${
+                className={`min-h-[38px] min-w-[36px] p-1.5 rounded-xl border disabled:opacity-40 flex items-center justify-center transition-colors cursor-pointer ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
@@ -1254,7 +1383,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                 onClick={handleReplay}
                 aria-label={localeBundle.replayBtn}
                 title={localeBundle.replayBtn}
-                className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+                className={`hidden sm:flex min-h-[38px] min-w-[36px] p-1.5 rounded-xl border items-center justify-center transition-colors cursor-pointer ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
@@ -1265,22 +1394,22 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
 
               {/* Time Readout moved down into bottom control bar */}
               <span
-                className={`px-2.5 py-1.5 rounded-xl border font-mono text-xs font-bold tabular-nums whitespace-nowrap ${
+                className={`min-h-[38px] px-2.5 py-1.5 rounded-xl border font-mono text-[11px] sm:text-xs font-bold tabular-nums whitespace-nowrap flex items-center ${
                   isDark
                     ? 'bg-slate-900 border-slate-700 text-slate-100'
                     : 'bg-white border-slate-300 text-slate-800'
                 }`}
               >
-                {formatClock(elapsedSec)} / {localeBundle.totalDurationLabel}
+                {formatClock(elapsedSec, totalDurationSec)} / {formatClock(totalDurationSec, totalDurationSec)}
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1 sm:gap-1.5">
               <button
                 type="button"
                 onClick={handleCycleSpeed}
                 title="Playback speed"
-                className={`px-2.5 py-2 rounded-xl border font-mono text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                className={`min-h-[38px] px-2.5 py-1.5 rounded-xl border font-mono text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-teal-300'
                     : 'bg-white hover:bg-slate-100 border-slate-300 text-teal-800'
@@ -1293,7 +1422,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                 type="button"
                 onClick={handleToggleMute}
                 title="Mute / Unmute"
-                className={`px-3 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                className={`min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   isMuted
                     ? isDark
                       ? 'bg-rose-950/60 border-rose-500/40 text-rose-200'
@@ -1304,7 +1433,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                 }`}
               >
                 {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                <span>{isMuted ? localeBundle.enableVoiceBtn : localeBundle.muteVoiceBtn}</span>
+                <span className="hidden sm:inline">{isMuted ? localeBundle.enableVoiceBtn : localeBundle.muteVoiceBtn}</span>
               </button>
 
               <button
@@ -1312,7 +1441,7 @@ export const Esp32WiringVideoModal: React.FC<Esp32WiringVideoModalProps> = ({
                 onClick={handleToggleFullscreen}
                 aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
                 title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-                className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
+                className={`min-h-[38px] min-w-[38px] p-1.5 rounded-xl border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
                     : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700'
