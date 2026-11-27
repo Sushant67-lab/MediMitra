@@ -129,25 +129,28 @@ export const FrontPage: React.FC<FrontPageProps> = ({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.1 }}
       >
-        <form onSubmit={handleCustomSubmit} className="relative max-w-2xl mx-auto">
+        <form
+          onSubmit={handleCustomSubmit}
+          className="max-w-2xl mx-auto p-1.5 sm:p-2 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xs focus-within:ring-2 focus-within:ring-teal-500/20 focus-within:border-teal-600 dark:focus-within:border-teal-500 flex flex-col sm:flex-row sm:items-center gap-2 transition-colors"
+        >
           <input
             type="text"
             value={customComplaint}
             onChange={(e) => setCustomComplaint(e.target.value)}
             placeholder={t.customSearchPlaceholder}
-            className="w-full pl-5 pr-28 py-4 text-sm font-normal rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-500 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors"
+            className="flex-1 min-w-0 px-3.5 py-2.5 sm:py-2 text-sm font-normal bg-transparent border-0 focus:outline-none text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
           <button
             type="submit"
             disabled={!customComplaint.trim()}
-            className={`absolute right-2.5 top-2.5 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 whitespace-nowrap touch-manipulation ${
               customComplaint.trim()
                 ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-xs'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
             }`}
           >
             <span>{t.startCheckupBtn}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-3.5 h-3.5 shrink-0" />
           </button>
         </form>
       </motion.div>
